@@ -1,8 +1,9 @@
 object Form1: TForm1
-  Left = 220
+  Left = 669
   Height = 754
-  Top = 118
+  Top = 108
   Width = 1212
+  ActiveControl = Puerto
   Caption = 'Form1'
   ClientHeight = 754
   ClientWidth = 1212
@@ -409,7 +410,6 @@ object Form1: TForm1
     Board = Board1
     Pin = 13
     Mode = PIN_MODE_OUTPUT
-    Value = 0
     left = 500
     top = 31
   end
@@ -417,7 +417,6 @@ object Form1: TForm1
     Board = Board1
     Pin = 2
     Mode = PIN_MODE_OUTPUT
-    Value = 0
     OnPinValue = Pin2PinValue
     left = 419
     top = 65

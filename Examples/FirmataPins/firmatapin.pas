@@ -197,12 +197,12 @@ end;
 
 procedure TForm1.LedOnClick(Sender: TObject);
 begin
-  Pin13.Value:=HIGH;
+  Pin13.WriteValue(HIGH);
 end;
 
 procedure TForm1.LedOffClick(Sender: TObject);
 begin
-  Pin13.Value:=LOW;
+  Pin13.WriteValue(LOW);
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
@@ -375,7 +375,7 @@ end;
 procedure TForm1.SetValueClick(Sender: TObject);
 begin
   if Pin2.Enabled then
-    Pin2.WriteValue(StrToInt(Valuewrite.Text)); // or Pin2.Value:=StrToInt(Valuewrite.Text);
+    Pin2.WriteValue(StrToInt(Valuewrite.Text));
 end;
 
 procedure TForm1.Pin2PinValue(sender: TObject; Value: integer);  // analogpin
