@@ -229,7 +229,6 @@ uses
       procedure setEnabled(State: Boolean);
       procedure setMode(Mode: TPinModes);
       procedure setPin(pin: Byte);
-      procedure setState(Value: integer);
       procedure setBoard(Board: TBoard);
     public
       // digital ports
@@ -265,7 +264,7 @@ uses
       property Mode: TPinModes read FMode write setMode;
       property Value: integer read FValue;
       Property Reporting: Boolean read FReporting;
-      property State: integer read FState write setState;
+      property State: integer read FState;
       property OnPinValue: TOnPinValue read FOnPinValue write FOnPinValue;
       property OnPinState: TOnPinState read FOnPinState write FOnPinState;
   end;
@@ -2074,14 +2073,6 @@ begin
     end;
     FEnabled:=False;
   end;
-end;
-
-procedure TPin.setState(Value: integer);
-begin
-  if FEnabled then  // try to write value
-    WriteValue(Value)
-  else
-    FState:=Value;
 end;
 
 procedure TPin.setMode(Mode: TPinModes);
