@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="10"/>
+    <BuildModes Active="Default"/>
+    <Units Count="7">
+      <Unit0>
+        <Filename Value="Firmata.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UsageCount Value="29"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="..\Firmata pascal\firmataclient.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="FirmataClient"/>
+        <UsageCount Value="29"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1401"/>
+        <CursorPos X="21" Y="1437"/>
+        <UsageCount Value="11"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="firmataboard.pas"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="278"/>
+        <CursorPos X="19" Y="302"/>
+        <UsageCount Value="14"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="FirmataTasks.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="25"/>
+        <CursorPos Y="84"/>
+        <UsageCount Value="14"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="Firmata.lpi"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="XML"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="firmata.lpk"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="XML"/>
+      </Unit6>
+    </Units>
+    <JumpHistory Count="16" HistoryIndex="15">
+      <Position1>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="232" TopLine="217"/>
+      </Position1>
+      <Position2>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="318" Column="28" TopLine="297"/>
+      </Position2>
+      <Position3>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="320" Column="32" TopLine="296"/>
+      </Position3>
+      <Position4>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="24" Column="27"/>
+      </Position4>
+      <Position5>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="27" Column="43" TopLine="2"/>
+      </Position5>
+      <Position6>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="103" Column="66" TopLine="80"/>
+      </Position6>
+      <Position7>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="237" Column="35" TopLine="208"/>
+      </Position7>
+      <Position8>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="23" Column="4"/>
+      </Position8>
+      <Position9>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="122" Column="40" TopLine="97"/>
+      </Position9>
+      <Position10>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="207" Column="3" TopLine="183"/>
+      </Position10>
+      <Position11>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="22" Column="33"/>
+      </Position11>
+      <Position12>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="237" Column="21" TopLine="216"/>
+      </Position12>
+      <Position13>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="305" Column="3" TopLine="281"/>
+      </Position13>
+      <Position14>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="346" Column="25" TopLine="340"/>
+      </Position14>
+      <Position15>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="934" Column="16" TopLine="894"/>
+      </Position15>
+      <Position16>
+        <Filename Value="firmataboard.pas"/>
+        <Caret Line="910" Column="44" TopLine="890"/>
+      </Position16>
+    </JumpHistory>
+  </ProjectSession>
+  <Debugging>
+    <BreakPoints Count="1">
+      <Item1>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="customfirmata.pas"/>
+        <Line Value="790"/>
+      </Item1>
+    </BreakPoints>
+  </Debugging>
+</CONFIG>
