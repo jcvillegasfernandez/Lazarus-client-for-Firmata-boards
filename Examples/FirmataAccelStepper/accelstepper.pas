@@ -1,0 +1,272 @@
+unit AccelStepper;
+
+//{$mode objfpc}{$H+}
+{$mode delphi}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
+  StdCtrls, ExtCtrls, LazSerial, firmataconstants, FirmataBoard,
+  lazsynautil;
+
+type
+
+  { TForm1 }
+
+  TForm1 = class(TForm)
+    Label7: TLabel;
+    Display: TLabel;
+    Steps: TEdit;
+    Move: TButton;
+    Label3: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    MotorDevice: TEdit;
+    AccelStepper1: TAccelStepper;
+    LazSerial1: TLazSerial;
+    Label4: TLabel;
+    Board1: TBoard;
+    configure: TButton;
+    Label1: TLabel;
+    Label2: TLabel;
+    Memo1: TMemo;
+    Puerto: TEdit;
+    OpenPort: TButton;
+    ClosePort: TButton;
+    ToggleBox1: TToggleBox;
+
+    procedure AccelStepper1StepperMoveCompleted(sender: TObject; Device: byte; Position: integer);
+    procedure AccelStepper1StepperPosition(sender: TObject; Device: byte; Position: integer);
+    procedure Board1AfterClose(sender: TObject);
+    procedure Board1BeforeOpen(sender: TObject);
+    function Board1DeviceDataAvailable(sender: TObject): Boolean;
+    procedure Board1Error(sender: TObject; Error: integer; TextError: string; Afected: integer);
+    procedure Board1FirmataData(sender: TObject; Command: Byte; Data: string);
+    procedure Board1FirmataReady(sender: TObject);
+    function Board1GetDataFromDevice(sender: TObject): integer;
+    procedure Board1SendDataToDevice(sender: TObject; str: string);
+    procedure FormCreate(Sender: TObject);
+    procedure configureClick(Sender: TObject);
+    procedure MoveClick(Sender: TObject);
+    procedure Memo1Click(Sender: TObject);
+    procedure OpenPortClick(Sender: TObject);
+    procedure ClosePortClick(Sender: TObject);
+    procedure StepsEditingDone(Sender: TObject);
+    procedure stopClick(Sender: TObject);
+    procedure ToggleBox1Click(Sender: TObject);
+
+  private
+    { private declarations }
+  public
+    { public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.lfm}
+
+{ TForm1 }
+
+procedure TForm1.OpenPortClick(Sender: TObject);
+begin
+  memo1.Clear;
+
+  Board1.Enabled:=true;
+
+  Puerto.Enabled:=false;
+  closeport.Enabled:=True;
+  configure.Enabled:=false;
+  Openport.Enabled:=False;
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+    memo1.Enabled:=true;
+    Memo1.Clear;
+{$IFDEF LINUX}
+    Puerto.Text:='/dev/ttyUSB0';
+{$ELSE}
+    Puerto.Text:='COM1';
+{$ENDIF}
+  LazSerial1.Device:=Puerto.Text;
+  LazSerial1.BaudRate:=br_57600;
+  LazSerial1.FlowControl:=fcNone;
+  LazSerial1.StopBits:=sbOne;
+  LazSerial1.DataBits:=db8bits;
+  LazSerial1.Parity:=pNone;
+
+end;
+
+procedure TForm1.configureClick(Sender: TObject);
+begin
+  LazSerial1.ShowSetupDialog;
+  Puerto.text:=LazSerial1.Device;
+end;
+
+procedure TForm1.MoveClick(Sender: TObject);
+begin
+  if Copy(Move.Caption, 1, 4) = 'Move' then
+  begin
+    AccelStepper1.Steps:=strtoint(steps.text);
+    if ToggleBox1.Checked then
+      AccelStepper1.MoveTo
+    else
+      AccelStepper1.Move;
+    Move.Caption:='Stop';
+  end
+  else if Move.Caption = 'Stop' then  // Stop
+  begin
+    Move.Caption:='Wait!!!, stopping';
+    AccelStepper1.Stop;
+  end;
+end;
+
+procedure TForm1.AccelStepper1StepperMoveCompleted(sender: TObject; Device: byte; Position: integer);
+begin
+  if Copy(Move.Caption, 1, 4) <> 'Move' then
+  begin
+    if Move.Caption <> 'Stop' then // motor has been stopped
+      Memo1.Lines.Add('Motor has been stopped');
+    if ToggleBox1.Checked then
+      Move.Caption:='Move to'
+    else
+      Move.Caption:='Move';
+  end;
+  Memo1.Lines.Add('New position: '+inttostr(Position));
+end;
+
+procedure TForm1.AccelStepper1StepperPosition(sender: TObject;
+  Device: byte; Position: integer);
+begin
+    Memo1.Lines.Add('Position: '+inttostr(Position))
+end;
+
+procedure TForm1.Memo1Click(Sender: TObject);
+begin
+   If Board1.Enabled then
+   begin
+     Memo1.Clear;
+     Board1.printPinInfo(Memo1);
+   end;
+end;
+
+procedure TForm1.Board1FirmataReady(sender: TObject);
+begin
+  Display.Caption:='Aacceleration: '+floattoStr(AccelStepper1.Acceleration)+LineEnding+'Speed: '+floattoStr(AccelStepper1.Speed);
+  memo1.clear;
+  memo1.lines.add('Firmata started in, '+inttostr(Board1.TimeToStart)+' milisec');
+  memo1.lines.add('Firmata Firmare:' + Board1.FirmataFirmware);
+  AccelStepper1.MotorPin1_or_DriverStep:=8;
+  AccelStepper1.MotorPin2_or_DriverDirection:=10;
+  AccelStepper1.MotorPin3:=9;
+  AccelStepper1.MotorPin4:=11;
+  AccelStepper1.StepSize:=HALF_STEP;
+  Board1.printPinInfo(Memo1);
+  AccelStepper1.Enabled:=True; // enable accelStepper
+end;
+
+procedure TForm1.ClosePortClick(Sender: TObject);
+begin
+    puerto.Enabled:=true;
+    closeport.Enabled:=False;
+    Openport.Enabled:=True;
+    configure.Enabled:=True;
+
+    memo1.Clear;
+
+    AccelStepper1.Enabled:=false;
+
+    Board1.enabled:=false;
+end;
+
+procedure TForm1.StepsEditingDone(Sender: TObject);
+var
+  value: integer;
+  Test: Boolean;
+begin
+  try
+    Test:=False;
+    value:=strtoint(Steps.Text);
+    Test:=True;
+  finally
+    if Test then // error
+      AccelStepper1.Steps:=Value
+    else
+      Steps.Text:='0';
+  end;
+end;
+
+procedure TForm1.stopClick(Sender: TObject);
+begin
+  AccelStepper1.Stop;
+end;
+
+procedure TForm1.ToggleBox1Click(Sender: TObject);
+begin
+  if ToggleBox1.Checked then
+  begin
+    ToggleBox1.Caption:='Absolute';
+    Move.Caption:='Move to';
+  end
+  else
+  begin
+    ToggleBox1.Caption:='Relative';
+    Move.Caption:='Move';
+  end;
+end;
+
+procedure TForm1.Board1SendDataToDevice(sender: TObject; str: string);
+begin
+  LazSerial1.WriteData(str);
+end;
+
+function TForm1.Board1GetDataFromDevice(sender: TObject): integer;
+begin
+  if LazSerial1.DataAvailable then
+    Result:=LazSerial1.SynSer.RecvByte(100)
+  else
+    Result:=-1;
+end;
+
+function TForm1.Board1DeviceDataAvailable(sender: TObject): Boolean;
+begin
+  Result:=LazSerial1.DataAvailable;
+end;
+
+procedure TForm1.Board1BeforeOpen(sender: TObject);
+begin
+  // Open way of comunication
+  LazSerial1.Device:=Puerto.Text;
+  LazSerial1.Open;
+  if LazSerial1.active=false then
+  begin
+     Board1.Enabled:=False;
+  end;
+  Memo1.Clear;
+  memo1.Append('Wait !!!, Firmata starting....');
+end;
+
+procedure TForm1.Board1Error(sender: TObject; Error: integer;
+  TextError: string; Afected: integer);
+begin
+  ShowMessage(TextError);
+end;
+
+procedure TForm1.Board1FirmataData(sender: TObject; Command: Byte;
+  Data: string);
+begin
+  memo1.lines.add('Firmata String:' + Data);
+end;
+
+procedure TForm1.Board1AfterClose(sender: TObject);
+begin
+  if LazSerial1.Active then
+    LazSerial1.Close;
+end;
+
+end.
+

@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <Version Value="11"/>
+    <BuildModes Active="Default"/>
+    <Units Count="34">
+      <Unit0>
+        <Filename Value="FirmataPins.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="49" Y="10"/>
+        <UsageCount Value="91"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="firmatapin.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="Firmatapin"/>
+        <TopLine Value="13"/>
+        <CursorPos X="3" Y="277"/>
+        <UsageCount Value="91"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="../Firmata/customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="724"/>
+        <CursorPos X="10" Y="766"/>
+        <UsageCount Value="76"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="../../../Componentes/TLazSerial-master/lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="270"/>
+        <CursorPos Y="292"/>
+        <UsageCount Value="8"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="../../../Componentes/TLazSerial-master/lazsynaser.pas"/>
+        <UnitName Value="LazSynaSer"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="943"/>
+        <CursorPos Y="966"/>
+        <UsageCount Value="8"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="../../MisComponentes/TLazSerial-master/lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="259"/>
+        <CursorPos X="33" Y="290"/>
+        <UsageCount Value="9"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="../../../Usuarios/ju105182/Downloads/CH341SER/INSTALL/DLL_LIB/CH341PT.PAS"/>
+        <UnitName Value="CH341PTDLL"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="8"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="firmatapin.lfm"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="250"/>
+        <CursorPos X="19" Y="276"/>
+        <ExtraEditorCount Value="1"/>
+        <ExtraEditor1>
+          <EditorIndex Value="-1"/>
+        </ExtraEditor1>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="../FirmataBoard/firmataboard.pas"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="28"/>
+        <CursorPos X="16" Y="52"/>
+        <UsageCount Value="39"/>
+        <Loaded Value="True"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="../FirmataBoard/firmataconstants.pas"/>
+        <UnitName Value="FirmataConstants"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="30"/>
+        <CursorPos X="19" Y="136"/>
+        <UsageCount Value="39"/>
+        <Loaded Value="True"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="../../../../Componentes/TLazSerial-master/lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="282"/>
+        <CursorPos Y="294"/>
+        <UsageCount Value="11"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="/usr/share/lazarus/1.8.4/lcl/include/custommemo.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="9"/>
+        <CursorPos Y="43"/>
+        <UsageCount Value="9"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="../../FirmataBoardold/firmataboard.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="912"/>
+        <CursorPos X="10" Y="648"/>
+        <UsageCount Value="8"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="/usr/share/lazarus/1.8.4/lcl/interfaces/gtk2/gtk2widgetset.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1815"/>
+        <CursorPos Y="1836"/>
+        <UsageCount Value="8"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="../firmataboard.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="10"/>
+        <UsageCount Value="8"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="../../CustomFirmata/Firmata/customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="697"/>
+        <CursorPos X="28" Y="725"/>
+        <UsageCount Value="8"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="../FirmataBoard/firmataboardnew.pas"/>
+        <UnitName Value="firmataboard"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="2863"/>
+        <CursorPos X="105" Y="1693"/>
+        <UsageCount Value="10"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="../FirmataBoard/customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="879"/>
+        <CursorPos X="78" Y="892"/>
+        <UsageCount Value="24"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="../FirmataI2C/i2c.lfm"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="208"/>
+        <CursorPos X="33" Y="235"/>
+        <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="C:/lazarus/lcl/include/control.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="2229"/>
+        <CursorPos Y="2244"/>
+        <UsageCount Value="10"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="C:/lazarus/lcl/include/wincontrol.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="5405"/>
+        <CursorPos Y="5420"/>
+        <UsageCount Value="10"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="../../../MisComponentes/TLazSerial-master/lazsynaser.pas"/>
+        <UnitName Value="LazSynaSer"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="2271"/>
+        <UsageCount Value="15"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="../../../MisComponentes/TLazSerial-master/lazserialsetup.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="67"/>
+        <CursorPos X="13" Y="154"/>
+        <UsageCount Value="15"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="../../../MisComponentes/TLazSerial-master/LazSerialPort.pas"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="9"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="../../../MisComponentes/TLazSerial-master/lazsynautil.pas"/>
+        <UnitName Value="LazSynaUtil"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1705"/>
+        <UsageCount Value="15"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="../../../MisComponentes/TLazSerial-master/lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="68"/>
+        <CursorPos X="10" Y="81"/>
+        <UsageCount Value="15"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="C:/lazarus/lcl/include/custommemo.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="26"/>
+        <CursorPos Y="43"/>
+        <UsageCount Value="10"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="C:/lazarus/lcl/include/customcombobox.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="201"/>
+        <CursorPos Y="207"/>
+        <UsageCount Value="10"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="C:/lazarus/lcl/interfaces/win32/win32listsl.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="137"/>
+        <CursorPos Y="153"/>
+        <UsageCount Value="10"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="/usr/share/lazarus/1.8.4/lcl/include/control.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="561"/>
+        <CursorPos Y="580"/>
+        <UsageCount Value="10"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="/usr/share/lazarus/1.8.4/lcl/include/customedit.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="544"/>
+        <CursorPos Y="566"/>
+        <UsageCount Value="10"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="C:/lazarus/lcl/lclmessageglue.pas"/>
+        <UnitName Value="LCLMessageGlue"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="128"/>
+        <CursorPos Y="144"/>
+        <UsageCount Value="10"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="C:/lazarus/lcl/interfaces/win32/win32callback.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1281"/>
+        <CursorPos Y="1297"/>
+        <UsageCount Value="10"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="../../../../Componentes/TLazSerial-master/lazsynaser.pas"/>
+        <UnitName Value="LazSynaSer"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="885"/>
+        <CursorPos X="31" Y="929"/>
+        <UsageCount Value="10"/>
+      </Unit33>
+    </Units>
+    <JumpHistory HistoryIndex="-1"/>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes Count="0" ActiveMode="default"/>
+    </RunParams>
+  </ProjectSession>
+  <Debugging>
+    <Watches Count="13">
+      <Item1>
+        <Expression Value="Fdevice"/>
+      </Item1>
+      <Item2>
+        <Expression Value="FPins"/>
+      </Item2>
+      <Item3>
+        <Expression Value="Fstarting"/>
+      </Item3>
+      <Item4>
+        <Expression Value="Fpin"/>
+      </Item4>
+      <Item5 RepeatCount="8">
+        <Expression Value="data[0]"/>
+      </Item5>
+      <Item6>
+        <Expression Value="pinmode"/>
+      </Item6>
+      <Item7>
+        <Expression Value="FBoardpins[pin]"/>
+      </Item7>
+      <Item8>
+        <Expression Value="FBoardPins[pin].capabilities[5]"/>
+      </Item8>
+      <Item9>
+        <Expression Value="FBoardpinsNumber"/>
+      </Item9>
+      <Item10>
+        <Expression Value="Pin2.mode"/>
+      </Item10>
+      <Item11>
+        <Expression Value="Pin2.Pin"/>
+      </Item11>
+      <Item12>
+        <Expression Value="self.name"/>
+      </Item12>
+      <Item13 RepeatCount="10">
+        <Expression Value="Result[0]"/>
+      </Item13>
+    </Watches>
+  </Debugging>
+</CONFIG>

@@ -1,0 +1,68 @@
+{ This is an automatically generated lazarus resource file }
+
+LazarusResources.Add('TForm1','FORMDATA',[
+  'TPF0'#6'TForm1'#5'Form1'#4'Left'#3#11#2#6'Height'#3#183#2#3'Top'#3#235#0#5'W'
+  +'idth'#3#208#3#7'Caption'#6#5'Form1'#12'ClientHeight'#3#183#2#11'ClientWidth'
+  +#3#208#3#8'OnCreate'#7#10'FormCreate'#10'LCLVersion'#6#7'2.0.0.4'#0#7'TButto'
+  +'n'#8'OpenPort'#4'Left'#3#175#0#6'Height'#2#27#3'Top'#2#9#5'Width'#2'R'#7'Ca'
+  +'ption'#6#4'open'#7'Default'#9#7'OnClick'#7#13'OpenPortClick'#10'ParentFont'
+  +#8#8'TabOrder'#2#0#0#0#7'TButton'#9'ClosePort'#4'Left'#3#175#0#6'Height'#2#27
+  +#3'Top'#2','#5'Width'#2'R'#7'Caption'#6#5'close'#7'Enabled'#8#7'OnClick'#7#14
+  +'ClosePortClick'#10'ParentFont'#8#8'TabOrder'#2#1#0#0#5'TEdit'#6'Puerto'#4'L'
+  +'eft'#2'F'#6'Height'#2#23#3'Top'#2#9#5'Width'#2'W'#10'ParentFont'#8#8'TabOrd'
+  +'er'#2#2#0#0#6'TLabel'#6'Label1'#4'Left'#2'#'#6'Height'#2#15#3'Top'#2#17#5'W'
+  +'idth'#2#25#7'Caption'#6#5'Port:'#11'ParentColor'#8#10'ParentFont'#8#0#0#5'T'
+  +'Memo'#5'Memo1'#4'Left'#2#26#6'Height'#3#20#2#3'Top'#3#157#0#5'Width'#3#157#3
+  +#7'Enabled'#8#13'Lines.Strings'#1#6#5'Memo1'#0#7'OnClick'#7#10'Memo1Click'#10
+  +'ParentFont'#8#8'ReadOnly'#9#10'ScrollBars'#7#14'ssAutoVertical'#8'TabOrder'
+  +#2#3#0#0#6'TLabel'#6'Label2'#4'Left'#2#26#6'Height'#2#15#3'Top'#3#131#0#5'Wi'
+  +'dth'#3'&'#1#7'Caption'#6'9Pins (click in memo to show pin states and capabi'
+  +'lities):'#11'ParentColor'#8#10'ParentFont'#8#0#0#7'TButton'#9'configure'#4
+  +'Left'#2#9#6'Height'#2#27#3'Top'#2','#5'Width'#3#143#0#7'Caption'#6#21'confi'
+  +'gure serial port'#7'OnClick'#7#14'configureClick'#10'ParentFont'#8#8'TabOrd'
+  +'er'#2#4#0#0#6'TLabel'#6'Label3'#4'Left'#3'/'#2#6'Height'#2#15#3'Top'#2#17#5
+  +'Width'#3#154#0#7'Caption'#6#31'( SDA pin is 18 and SCL is 19 )'#11'ParentCo'
+  +'lor'#8#10'ParentFont'#8#0#0#6'TLabel'#6'Label4'#4'Left'#3'C'#1#6'Height'#2
+  +#15#3'Top'#2'/'#5'Width'#2'Q'#7'Caption'#6#15'Device address:'#11'ParentColo'
+  +'r'#8#10'ParentFont'#8#0#0#7'TButton'#8'ReadData'#4'Left'#3'l'#3#6'Height'#2
+  +#27#3'Top'#2'F'#5'Width'#2'K'#7'Caption'#6#10'Read bytes'#7'Enabled'#8#7'OnC'
+  +'lick'#7#13'ReadDataClick'#10'ParentFont'#8#8'TabOrder'#2#5#0#0#5'TEdit'#13
+  +'StringToWrite'#4'Left'#3#175#2#6'Height'#2#23#3'Top'#2'|'#5'Width'#3#183#0#7
+  +'Enabled'#8#10'ParentFont'#8#8'TabOrder'#2#6#0#0#6'TLabel'#6'Label6'#4'Left'
+  +#3#189#1#6'Height'#2#15#3'Top'#2'`'#5'Width'#3#134#0#7'Caption'#6#25'Address'
+  +' reading/writting:'#11'ParentColor'#8#10'ParentFont'#8#0#0#5'TEdit'#7'Addre'
+  +'ss'#4'Left'#3'U'#2#6'Height'#2#23#3'Top'#2'Y'#5'Width'#2'R'#7'Enabled'#8#13
+  +'OnEditingDone'#7#18'AddressEditingDone'#10'ParentFont'#8#8'TabOrder'#2#7#4
+  +'Text'#6#1'0'#0#0#9'TComboBox'#9'ComboBox1'#4'Left'#3#163#1#6'Height'#2#23#3
+  +'Top'#2''''#5'Width'#2'm'#10'ItemHeight'#2#15#13'Items.Strings'#1#6#4'2401'#6
+  +#4'2402'#6#4'2404'#6#4'2408'#6#4'2416'#6#4'2432'#6#4'2464'#6#5'24128'#6#5'24'
+  +'256'#0#9'OnCloseUp'#7#16'ComboBox1CloseUp'#10'ParentFont'#8#8'TabOrder'#2#8
+  +#0#0#6'TLabel'#12'Label_A2A1A0'#4'Left'#3#20#2#6'Height'#2#17#3'Top'#2'/'#5
+  +'Width'#2'F'#9'Alignment'#7#14'taRightJustify'#8'AutoSize'#8#7'Caption'#6#9
+  +'A2 A1 A0:'#11'Font.Height'#2#242#11'ParentColor'#8#10'ParentFont'#8#0#0#5'T'
+  +'Edit'#10'EditA2A1A0'#4'Left'#3'c'#2#6'Height'#2#27#4'Hint'#6#20'Device ID i'
+  +'n decimal'#3'Top'#2''''#5'Width'#2'#'#11'Font.Height'#2#242#9'MaxLength'#2#3
+  +#13'OnEditingDone'#7#21'EditA2A1A0EditingDone'#10'ParentFont'#8#14'ParentSho'
+  +'wHint'#8#8'ShowHint'#9#8'TabOrder'#2#9#4'Text'#6#3'000'#0#0#5'TEdit'#8'NumB'
+  +'ytes'#4'Left'#3#21#3#6'Height'#2#23#3'Top'#2'F'#5'Width'#2'R'#7'Enabled'#8
+  +#13'OnEditingDone'#7#19'NumBytesEditingDone'#10'ParentFont'#8#8'TabOrder'#2
+  +#10#4'Text'#6#1'0'#0#0#6'TLabel'#6'Label7'#4'Left'#3#198#2#6'Height'#2#15#3
+  +'Top'#2'Q'#5'Width'#2'G'#7'Caption'#6#14'Bytes to read:'#11'ParentColor'#8#10
+  +'ParentFont'#8#0#0#7'TButton'#11'WriteString'#4'Left'#3'l'#3#6'Height'#2#27#3
+  +'Top'#2'|'#5'Width'#2'K'#7'Caption'#6#12'Write string'#7'Enabled'#8#7'OnClic'
+  +'k'#7#16'WriteStringClick'#10'ParentFont'#8#8'TabOrder'#2#11#0#0#6'TLabel'#6
+  +'Label8'#4'Left'#3#175#2#6'Height'#2#15#3'Top'#2'k'#5'Width'#2'M'#7'Caption'
+  +#6#16'String to write:'#11'ParentColor'#8#10'ParentFont'#8#0#0#6'TLabel'#6'L'
+  +'abel5'#4'Left'#3#172#1#6'Height'#2#15#3'Top'#2#17#5'Width'#2'e'#7'Caption'#6
+  +#16'DEVICE SELECTION'#11'ParentColor'#8#10'ParentFont'#8#0#0#6'TBoard'#6'Boa'
+  +'rd1'#16'SamplingInterval'#2#19#9'LastError'#2#0#12'TimeStarting'#3'p'#23#12
+  +'OnBeforeOpen'#7#16'Board1BeforeOpen'#12'OnAfterClose'#7#16'Board1AfterClose'
+  +#18'OnSendDataToDevice'#7#22'Board1SendDataToDevice'#19'OnGetDataFromDevice'
+  +#7#23'Board1GetDataFromDevice'#21'OnDeviceDataAvailable'#7#25'Board1DeviceDa'
+  +'taAvailable'#7'OnError'#7#11'Board1Error'#4'left'#2'W'#3'top'#2'F'#0#0#10'T'
+  +'LazSerial'#10'LazSerial1'#6'Active'#8#8'BaudRate'#7#8'br_57600'#8'DataBits'
+  +#7#7'db8bits'#6'Parity'#7#5'pNone'#11'FlowControl'#7#6'fcNone'#8'StopBits'#7
+  +#5'sbOne'#6'Device'#6#4'COM1'#11'RcvLineCRLF'#8#4'left'#2'#'#3'top'#2'F'#0#0
+  +#4'TI2C'#4'I2C1'#5'Delay'#2#0#9'OnI2CData'#7#11'I2C1I2CData'#4'left'#3#192#0
+  +#3'top'#2'O'#0#0#0
+]);

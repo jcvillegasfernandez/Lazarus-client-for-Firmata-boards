@@ -1,0 +1,275 @@
+object Form1: TForm1
+  Left = 348
+  Height = 758
+  Top = 105
+  Width = 1065
+  Caption = 'Form1'
+  ClientHeight = 758
+  ClientWidth = 1065
+  DesignTimePPI = 88
+  Font.Height = -13
+  OnCreate = FormCreate
+  LCLVersion = '1.8.4.0'
+  object OpenPort: TButton
+    Left = 191
+    Height = 29
+    Top = 10
+    Width = 89
+    Caption = 'open'
+    Default = True
+    OnClick = OpenPortClick
+    ParentFont = False
+    TabOrder = 0
+  end
+  object ClosePort: TButton
+    Left = 191
+    Height = 29
+    Top = 48
+    Width = 89
+    Caption = 'close'
+    Enabled = False
+    OnClick = ClosePortClick
+    ParentFont = False
+    TabOrder = 1
+  end
+  object Puerto: TEdit
+    Left = 76
+    Height = 27
+    Top = 10
+    Width = 95
+    ParentFont = False
+    TabOrder = 2
+  end
+  object Label1: TLabel
+    Left = 38
+    Height = 17
+    Top = 19
+    Width = 23
+    Caption = 'Port:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Memo1: TMemo
+    Left = 28
+    Height = 580
+    Top = 171
+    Width = 1009
+    Enabled = False
+    Lines.Strings = (
+      'Memo1'
+    )
+    OnClick = Memo1Click
+    ParentFont = False
+    ReadOnly = True
+    ScrollBars = ssAutoVertical
+    TabOrder = 3
+  end
+  object Label2: TLabel
+    Left = 28
+    Height = 17
+    Top = 143
+    Width = 261
+    Caption = 'Pins (click in memo to show pin states and capabilities):'
+    ParentColor = False
+    ParentFont = False
+  end
+  object configure: TButton
+    Left = 15
+    Height = 29
+    Top = 48
+    Width = 156
+    Caption = 'configure serial port'
+    OnClick = configureClick
+    ParentFont = False
+    TabOrder = 4
+  end
+  object Label3: TLabel
+    Left = 610
+    Height = 17
+    Top = 19
+    Width = 162
+    Caption = '( SDA pin is 18 and SCL pin is 19 )'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Label4: TLabel
+    Left = 352
+    Height = 17
+    Top = 51
+    Width = 71
+    Caption = 'Device address:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object ReadData: TButton
+    Left = 956
+    Height = 29
+    Top = 78
+    Width = 82
+    Caption = 'Read bytes'
+    Enabled = False
+    OnClick = ReadDataClick
+    ParentFont = False
+    TabOrder = 5
+  end
+  object StringToWrite: TEdit
+    Left = 749
+    Height = 27
+    Top = 135
+    Width = 200
+    Enabled = False
+    ParentFont = False
+    TabOrder = 6
+  end
+  object Label6: TLabel
+    Left = 512
+    Height = 17
+    Top = 104
+    Width = 117
+    Caption = 'Address reading/writting:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Address: TEdit
+    Left = 640
+    Height = 27
+    Top = 97
+    Width = 89
+    Enabled = False
+    OnEditingDone = AddressEditingDone
+    ParentFont = False
+    TabOrder = 7
+    Text = '0'
+  end
+  object ComboBox1: TComboBox
+    Left = 457
+    Height = 29
+    Top = 43
+    Width = 119
+    ItemHeight = 0
+    Items.Strings = (
+      '2401'
+      '2402'
+      '2404'
+      '2408'
+      '2416'
+      '2432'
+      '2464'
+      '24128'
+      '24256'
+    )
+    OnCloseUp = ComboBox1CloseUp
+    ParentFont = False
+    TabOrder = 8
+  end
+  object Label_A2A1A0: TLabel
+    Left = 580
+    Height = 19
+    Top = 51
+    Width = 76
+    Alignment = taRightJustify
+    AutoSize = False
+    Caption = 'A2 A1 A0:'
+    Font.Height = -15
+    ParentColor = False
+    ParentFont = False
+  end
+  object EditA2A1A0: TEdit
+    Left = 667
+    Height = 28
+    Hint = 'Device ID in decimal'
+    Top = 43
+    Width = 38
+    Font.Height = -15
+    MaxLength = 3
+    OnEditingDone = EditA2A1A0EditingDone
+    ParentFont = False
+    ParentShowHint = False
+    ShowHint = True
+    TabOrder = 9
+    Text = '000'
+  end
+  object NumBytes: TEdit
+    Left = 861
+    Height = 27
+    Top = 80
+    Width = 89
+    Enabled = False
+    OnEditingDone = NumBytesEditingDone
+    ParentFont = False
+    TabOrder = 10
+    Text = '0'
+  end
+  object Label7: TLabel
+    Left = 792
+    Height = 17
+    Top = 90
+    Width = 64
+    Caption = 'Bytes to read:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object WriteString: TButton
+    Left = 956
+    Height = 29
+    Top = 131
+    Width = 82
+    Caption = 'Write string'
+    Enabled = False
+    OnClick = WriteStringClick
+    ParentFont = False
+    TabOrder = 11
+  end
+  object Label8: TLabel
+    Left = 749
+    Height = 17
+    Top = 117
+    Width = 72
+    Caption = 'String to write:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Label5: TLabel
+    Left = 467
+    Height = 17
+    Top = 19
+    Width = 97
+    Caption = 'DEVICE SELECTION'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Board1: TBoard
+    SamplingInterval = 19
+    LastError = 0
+    TimeStarting = 6000
+    OnBeforeOpen = Board1BeforeOpen
+    OnAfterClose = Board1AfterClose
+    OnBoardReady = Board1FirmataReady
+    OnSendDataToDevice = Board1SendDataToDevice
+    OnGetDataFromDevice = Board1GetDataFromDevice
+    OnDeviceDataAvailable = Board1DeviceDataAvailable
+    OnError = Board1Error
+    OnBoardData = Board1FirmataData
+    left = 95
+    top = 76
+  end
+  object LazSerial1: TLazSerial
+    Active = False
+    BaudRate = br_57600
+    DataBits = db8bits
+    Parity = pNone
+    FlowControl = fcNone
+    StopBits = sbOne
+    Device = 'COM1'
+    RcvLineCRLF = False
+    left = 38
+    top = 76
+  end
+  object I2C1: TI2C
+    Delay = 0
+    Board = Board1
+    OnI2CData = I2C1I2CData
+    left = 209
+    top = 86
+  end
+end

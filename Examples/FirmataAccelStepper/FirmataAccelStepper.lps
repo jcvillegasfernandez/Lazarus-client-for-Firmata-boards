@@ -1,0 +1,703 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="10"/>
+    <BuildModes Active="Default"/>
+    <Units Count="70">
+      <Unit0>
+        <Filename Value="FirmataAccelStepper.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos Y="19"/>
+        <UsageCount Value="200"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="accelstepper.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="AccelStepper"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="201"/>
+        <CursorPos X="8" Y="216"/>
+        <UsageCount Value="203"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\onewire.pas"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UsageCount Value="16"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\firmataclient.pas"/>
+        <UnitName Value="FirmataClient"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="971"/>
+        <CursorPos X="43" Y="988"/>
+        <UsageCount Value="18"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="D:\Disco externo\CD_Trabajo\Programas\Lazarus\Componentes\TLazSerial-master\TLazSerial-master\lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="52"/>
+        <CursorPos X="32" Y="60"/>
+        <UsageCount Value="9"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="D:\Disco externo\CD_Trabajo\Programas\Lazarus\Componentes\TLazSerial-master\TLazSerial-master\lazserialsetup.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="214"/>
+        <CursorPos X="48" Y="221"/>
+        <UsageCount Value="1"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="C:\lazarus\lcl\menus.pp"/>
+        <UnitName Value="Menus"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="463"/>
+        <CursorPos X="6" Y="30"/>
+        <UsageCount Value="6"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\firmataconstants.pas"/>
+        <UnitName Value="FirmataConstants"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="60"/>
+        <CursorPos X="19" Y="70"/>
+        <UsageCount Value="57"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\..\MisComponentes\TLazSerial-master\TLazSerial-master\lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="280"/>
+        <CursorPos X="29" Y="289"/>
+        <UsageCount Value="30"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\..\MisComponentes\TLazSerial-master\TLazSerial-master\lazsynaser.pas"/>
+        <UnitName Value="LazSynaSer"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="862"/>
+        <CursorPos Y="1304"/>
+        <UsageCount Value="35"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="D:\Disco externo\CD_Trabajo\Programas\Lazarus\Componentes\FirmataPascal-master\firmataclient.pas"/>
+        <UnitName Value="FirmataClient"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="271"/>
+        <CursorPos X="104" Y="279"/>
+        <UsageCount Value="8"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="C:\lazarus\lcl\include\control.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="2229"/>
+        <CursorPos Y="2244"/>
+        <UsageCount Value="20"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="C:\lazarus\lcl\include\buttoncontrol.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="40"/>
+        <CursorPos Y="56"/>
+        <UsageCount Value="9"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="C:\lazarus\lcl\include\buttons.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="158"/>
+        <CursorPos Y="170"/>
+        <UsageCount Value="6"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="C:\lazarus\lcl\include\wincontrol.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="5405"/>
+        <CursorPos Y="5420"/>
+        <UsageCount Value="9"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="..\customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1573"/>
+        <CursorPos X="5" Y="1577"/>
+        <UsageCount Value="67"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="..\..\buspirate\Paquete buspirate\buspiratebb.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="2985"/>
+        <CursorPos X="33" Y="2995"/>
+        <UsageCount Value="12"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="..\firmatapascal.pas"/>
+        <UnitName Value="FirmataPascal"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="28" Y="12"/>
+        <UsageCount Value="1"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="..\unit1.lfm"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="60"/>
+        <CursorPos X="24" Y="85"/>
+        <ExtraEditorCount Value="1"/>
+        <ExtraEditor1>
+          <EditorIndex Value="1"/>
+          <TopLine Value="63"/>
+        </ExtraEditor1>
+        <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="..\Firmatapascal\firmataclient.pas"/>
+        <UnitName Value="FirmataClient"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="346"/>
+        <CursorPos X="15" Y="382"/>
+        <UsageCount Value="8"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="D:\usr\share\lazarus\1.8.2\lcl\customtimer.pas"/>
+        <UnitName Value="CustomTimer"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="172"/>
+        <CursorPos Y="192"/>
+        <UsageCount Value="8"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="D:\TLazSerial-master\lazsynaser.pas"/>
+        <UnitName Value="LazSynaSer"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1280"/>
+        <CursorPos Y="1304"/>
+        <UsageCount Value="3"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="D:\TLazSerial-master\lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="147"/>
+        <CursorPos Y="294"/>
+        <UsageCount Value="3"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="D:\usr\share\lazarus\1.8.2\lcl\include\controlbar.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="337"/>
+        <CursorPos Y="351"/>
+        <UsageCount Value="8"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="..\..\customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="443"/>
+        <CursorPos X="3" Y="450"/>
+        <UsageCount Value="8"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="C:\lazarus\lcl\customtimer.pas"/>
+        <UnitName Value="CustomTimer"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="137"/>
+        <CursorPos Y="151"/>
+        <UsageCount Value="2"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="C:\lazarus\lcl\interfaces\win32\win32callback.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="2651"/>
+        <CursorPos Y="2677"/>
+        <UsageCount Value="9"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="C:\lazarus\lcl\interfaces\win32\win32object.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="386"/>
+        <CursorPos Y="399"/>
+        <UsageCount Value="8"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="..\Firmata pascal\firmataclient.pas"/>
+        <UnitName Value="FirmataClient"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="567"/>
+        <CursorPos X="21" Y="380"/>
+        <UsageCount Value="8"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="..\Firmata pascal\Firmatapascal\firmataclient.pas"/>
+        <UnitName Value="FirmataClient"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="664"/>
+        <UsageCount Value="8"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="C:\Users\ju105182\AppData\Local\Temp\B1FreeArchiver-{934ab0ea-c13c-4326-92cd-a0167e1700e0}\firmataclient.pas"/>
+        <UnitName Value="FirmataClient"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="136"/>
+        <UsageCount Value="8"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="C:\Users\ju105182\AppData\Local\Temp\B1FreeArchiver-{c651ef8e-6e9c-4ee8-99b5-c8706cf69393}\customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="416"/>
+        <CursorPos X="15" Y="161"/>
+        <UsageCount Value="8"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="D:\Temp\Firmata pascal\firmataclient.pas"/>
+        <UnitName Value="FirmataClient"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="555"/>
+        <UsageCount Value="8"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="D:\Temp\Firmata\customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="790"/>
+        <CursorPos X="109" Y="807"/>
+        <UsageCount Value="8"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="C:\Users\ju105182\AppData\Local\Temp\B1FreeArchiver-{0892bd80-598f-4f61-98dd-04b0e6c06d1e}\customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="8"/>
+      </Unit34>
+      <Unit35>
+        <Filename Value="..\CustomFirmataMessage\customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1167"/>
+        <CursorPos X="36" Y="938"/>
+        <UsageCount Value="8"/>
+      </Unit35>
+      <Unit36>
+        <Filename Value="D:\usr\share\lazarus\1.8.2\lcl\include\messagedialogs.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="192"/>
+        <CursorPos Y="209"/>
+        <UsageCount Value="8"/>
+      </Unit36>
+      <Unit37>
+        <Filename Value="D:\usr\share\lazarus\1.8.2\lcl\include\control.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1020"/>
+        <CursorPos Y="2868"/>
+        <UsageCount Value="1"/>
+      </Unit37>
+      <Unit38>
+        <Filename Value="D:\usr\share\lazarus\1.8.2\lcl\include\buttoncontrol.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="41"/>
+        <CursorPos Y="56"/>
+        <UsageCount Value="8"/>
+      </Unit38>
+      <Unit39>
+        <Filename Value="D:\usr\share\lazarus\1.8.2\lcl\include\buttons.inc"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="16" Y="181"/>
+        <UsageCount Value="8"/>
+      </Unit39>
+      <Unit40>
+        <Filename Value="C:\lazarus\lcl\interfaces\win32\win32memostrings.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="54"/>
+        <CursorPos Y="69"/>
+        <UsageCount Value="1"/>
+      </Unit40>
+      <Unit41>
+        <Filename Value="..\..\buspirate\Ejemplos\onewire_ds18b20\onewire_ds18b20.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="255"/>
+        <CursorPos X="14" Y="170"/>
+        <UsageCount Value="24"/>
+      </Unit41>
+      <Unit42>
+        <Filename Value="..\..\MisComponentes\ControlTimer\simpletimer.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="3"/>
+        <UsageCount Value="4"/>
+      </Unit42>
+      <Unit43>
+        <Filename Value="..\..\MisComponentes\ControlTimer\CTimer.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="313"/>
+        <UsageCount Value="4"/>
+      </Unit43>
+      <Unit44>
+        <Filename Value="C:\lazarus\lcl\include\messagedialogs.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="184"/>
+        <CursorPos X="24" Y="203"/>
+        <UsageCount Value="3"/>
+      </Unit44>
+      <Unit45>
+        <Filename Value="..\..\MisComponentes\TLazSerial-master\TLazSerial-master\lazserialsetup.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="13"/>
+        <UsageCount Value="5"/>
+      </Unit45>
+      <Unit46>
+        <Filename Value="..\FirmataPins\firmatapin.pas"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="Firmatapin"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="248"/>
+        <CursorPos X="5" Y="273"/>
+        <UsageCount Value="8"/>
+      </Unit46>
+      <Unit47>
+        <Filename Value="..\Firmata\customfirmata.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1549"/>
+        <CursorPos X="7" Y="1598"/>
+        <UsageCount Value="45"/>
+      </Unit47>
+      <Unit48>
+        <Filename Value="C:\lazarus\lcl\include\customedit.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="91"/>
+        <CursorPos Y="100"/>
+        <UsageCount Value="8"/>
+      </Unit48>
+      <Unit49>
+        <Filename Value="D:\Componentes\TLazSerial-master\lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="394"/>
+        <CursorPos Y="414"/>
+        <UsageCount Value="8"/>
+      </Unit49>
+      <Unit50>
+        <Filename Value="D:\Componentes\TLazSerial-master\lazsynaser.pas"/>
+        <UnitName Value="LazSynaSer"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1693"/>
+        <UsageCount Value="3"/>
+      </Unit50>
+      <Unit51>
+        <Filename Value="D:\Componentes\TLazSerial-master\lazserialsetup.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="103"/>
+        <UsageCount Value="3"/>
+      </Unit51>
+      <Unit52>
+        <Filename Value="..\..\MisComponentes\TLazSerial-master\lazsynautil.pas"/>
+        <UnitName Value="LazSynaUtil"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1188"/>
+        <CursorPos X="15" Y="1207"/>
+        <UsageCount Value="3"/>
+      </Unit52>
+      <Unit53>
+        <Filename Value="..\..\MisComponentes\TLazSerial-master\lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="277"/>
+        <CursorPos Y="294"/>
+        <UsageCount Value="8"/>
+      </Unit53>
+      <Unit54>
+        <Filename Value="..\Firmata\firmataconstants.pas"/>
+        <UnitName Value="FirmataConstants"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="101"/>
+        <CursorPos X="20" Y="116"/>
+        <UsageCount Value="38"/>
+      </Unit54>
+      <Unit55>
+        <Filename Value="..\..\buspirate\Ejemplos\bitbang_mode\bb__mode.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="263"/>
+        <UsageCount Value="4"/>
+      </Unit55>
+      <Unit56>
+        <Filename Value="..\..\buspirate\Ejemplos\i2c_24xx_24xxx\i2c_24xx_24xxx.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="537"/>
+        <UsageCount Value="4"/>
+      </Unit56>
+      <Unit57>
+        <Filename Value="D:\usr\share\lazarus\1.8.4\lcl\include\control.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="3499"/>
+        <CursorPos Y="3519"/>
+        <UsageCount Value="8"/>
+      </Unit57>
+      <Unit58>
+        <Filename Value="onewire.lfm"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="148"/>
+        <CursorPos X="33" Y="173"/>
+        <UsageCount Value="12"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit58>
+      <Unit59>
+        <Filename Value="C:\Users\ju105182\AppData\Local\Temp\B1FreeArchiver-{6818150b-926c-49ce-ad25-9ccb253a9b41}\onewire.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="112"/>
+        <CursorPos Y="123"/>
+        <UsageCount Value="8"/>
+      </Unit59>
+      <Unit60>
+        <Filename Value="..\FirmataPinsThread\firmatapin.pas"/>
+        <UnitName Value="Firmatapin"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="438"/>
+        <CursorPos Y="462"/>
+        <UsageCount Value="8"/>
+      </Unit60>
+      <Unit61>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="5040"/>
+        <CursorPos X="93" Y="5075"/>
+        <UsageCount Value="37"/>
+        <Loaded Value="True"/>
+      </Unit61>
+      <Unit62>
+        <Filename Value="..\FirmataBoard\firmataconstants.pas"/>
+        <UnitName Value="FirmataConstants"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="226"/>
+        <CursorPos X="9" Y="265"/>
+        <UsageCount Value="36"/>
+        <Loaded Value="True"/>
+      </Unit62>
+      <Unit63>
+        <Filename Value="..\..\CustomFirmata\FirmataOneWire\onewire.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="175"/>
+        <UsageCount Value="8"/>
+      </Unit63>
+      <Unit64>
+        <Filename Value="accelstepper.lfm"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="14" Y="169"/>
+        <UsageCount Value="8"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit64>
+      <Unit65>
+        <Filename Value="..\FirmataBoard\firmataboard_corr.pas"/>
+        <UnitName Value="firmataboard"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="83"/>
+        <CursorPos X="11" Y="49"/>
+        <UsageCount Value="14"/>
+      </Unit65>
+      <Unit66>
+        <Filename Value="..\..\..\MisComponentes\TLazSerial-master\lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="256"/>
+        <CursorPos Y="294"/>
+        <UsageCount Value="13"/>
+      </Unit66>
+      <Unit67>
+        <Filename Value="accelstepper1.pas"/>
+        <UnitName Value="AccelStepper"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="160"/>
+        <CursorPos Y="166"/>
+        <UsageCount Value="9"/>
+      </Unit67>
+      <Unit68>
+        <Filename Value="C:\lazarus\lcl\include\customcheckbox.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="63"/>
+        <CursorPos Y="79"/>
+        <UsageCount Value="9"/>
+      </Unit68>
+      <Unit69>
+        <Filename Value="C:\lazarus\lcl\lclmessageglue.pas"/>
+        <UnitName Value="LCLMessageGlue"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="107"/>
+        <CursorPos Y="123"/>
+        <UsageCount Value="9"/>
+      </Unit69>
+    </Units>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="2216" Column="26" TopLine="2194"/>
+      </Position1>
+      <Position2>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="2218" Column="26" TopLine="2194"/>
+      </Position2>
+      <Position3>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="2254" Column="26" TopLine="2239"/>
+      </Position3>
+      <Position4>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="2262" Column="39" TopLine="2239"/>
+      </Position4>
+      <Position5>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="2280" Column="26" TopLine="2247"/>
+      </Position5>
+      <Position6>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="4763" Column="28" TopLine="4741"/>
+      </Position6>
+      <Position7>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="696" Column="26" TopLine="680"/>
+      </Position7>
+      <Position8>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="160" Column="31" TopLine="139"/>
+      </Position8>
+      <Position9>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="299" Column="31" TopLine="263"/>
+      </Position9>
+      <Position10>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="346" Column="31" TopLine="310"/>
+      </Position10>
+      <Position11>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="410" Column="31" TopLine="374"/>
+      </Position11>
+      <Position12>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="492" Column="32" TopLine="457"/>
+      </Position12>
+      <Position13>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="558" Column="31" TopLine="522"/>
+      </Position13>
+      <Position14>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="694" Column="31" TopLine="658"/>
+      </Position14>
+      <Position15>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="1103" Column="28" TopLine="1067"/>
+      </Position15>
+      <Position16>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="1392" Column="32" TopLine="1356"/>
+      </Position16>
+      <Position17>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="1720" Column="36" TopLine="1685"/>
+      </Position17>
+      <Position18>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="1732" Column="34" TopLine="1697"/>
+      </Position18>
+      <Position19>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="1746" Column="44" TopLine="1711"/>
+      </Position19>
+      <Position20>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="1773" Column="58" TopLine="1738"/>
+      </Position20>
+      <Position21>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="1784" Column="53" TopLine="1749"/>
+      </Position21>
+      <Position22>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="1820" Column="49" TopLine="1785"/>
+      </Position22>
+      <Position23>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="758" Column="80" TopLine="727"/>
+      </Position23>
+      <Position24>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="4956" TopLine="4935"/>
+      </Position24>
+      <Position25>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="707" Column="16" TopLine="677"/>
+      </Position25>
+      <Position26>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="5085" Column="41" TopLine="5050"/>
+      </Position26>
+      <Position27>
+        <Filename Value="..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="5088" Column="54" TopLine="5050"/>
+      </Position27>
+      <Position28>
+        <Filename Value="accelstepper.pas"/>
+        <Caret Line="156" Column="22" TopLine="156"/>
+      </Position28>
+      <Position29>
+        <Filename Value="accelstepper.pas"/>
+        <Caret Line="130" Column="20" TopLine="137"/>
+      </Position29>
+      <Position30>
+        <Filename Value="accelstepper.pas"/>
+        <Caret Line="137" Column="27" TopLine="116"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectSession>
+  <Debugging>
+    <Watches Count="14">
+      <Item1 RepeatCount="10">
+        <Expression Value="data7bit[0]"/>
+      </Item1>
+      <Item2>
+        <Expression Value="Fspeed"/>
+      </Item2>
+      <Item3>
+        <Expression Value="Epos"/>
+        <DisplayStyle Value="wdfMemDump"/>
+      </Item3>
+      <Item4>
+        <Expression Value="mantissa"/>
+        <DisplayStyle Value="wdfMemDump"/>
+      </Item4>
+      <Item5 RepeatCount="13">
+        <Expression Value="Result[-8]"/>
+      </Item5>
+      <Item6 RepeatCount="4">
+        <Expression Value="Result[0]"/>
+      </Item6>
+      <Item7>
+        <Expression Value="Result[1]"/>
+      </Item7>
+      <Item8>
+        <Expression Value="Result[2]"/>
+      </Item8>
+      <Item9>
+        <Expression Value="Result[3]"/>
+      </Item9>
+      <Item10 RepeatCount="15">
+        <Expression Value="Acceleration"/>
+      </Item10>
+      <Item11 RepeatCount="13">
+        <Expression Value="taskstring[45]"/>
+      </Item11>
+      <Item12 RepeatCount="10">
+        <Expression Value="taskstring[57]"/>
+      </Item12>
+      <Item13>
+        <Expression Value="Accelstepper1.Facceleration"/>
+      </Item13>
+      <Item14>
+        <Expression Value="Accelstepper1.Fspeed"/>
+      </Item14>
+    </Watches>
+  </Debugging>
+</CONFIG>

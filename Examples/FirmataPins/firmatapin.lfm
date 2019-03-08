@@ -1,0 +1,425 @@
+object Form1: TForm1
+  Left = 220
+  Height = 754
+  Top = 118
+  Width = 1212
+  Caption = 'Form1'
+  ClientHeight = 754
+  ClientWidth = 1212
+  DesignTimePPI = 88
+  Font.CharSet = ANSI_CHARSET
+  Font.Height = -16
+  Font.Name = 'Arial'
+  Font.Pitch = fpVariable
+  Font.Quality = fqDraft
+  OnCreate = FormCreate
+  LCLVersion = '1.8.4.0'
+  object LedOn: TButton
+    Left = 445
+    Height = 32
+    Top = 227
+    Width = 94
+    Caption = 'Led on'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = LedOnClick
+    ParentFont = False
+    TabOrder = 0
+  end
+  object LedOff: TButton
+    Left = 576
+    Height = 32
+    Top = 227
+    Width = 87
+    Caption = 'Led off'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = LedOffClick
+    ParentFont = False
+    TabOrder = 1
+  end
+  object OpenPort: TButton
+    Left = 208
+    Height = 32
+    Top = 11
+    Width = 97
+    Caption = 'open'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = OpenPortClick
+    ParentFont = False
+    TabOrder = 2
+  end
+  object ClosePort: TButton
+    Left = 208
+    Height = 32
+    Top = 52
+    Width = 97
+    Caption = 'close'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = ClosePortClick
+    ParentFont = False
+    TabOrder = 3
+  end
+  object Puerto: TEdit
+    Left = 83
+    Height = 29
+    Top = 11
+    Width = 104
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+    TabOrder = 4
+    Text = 'COM1'
+  end
+  object Label1: TLabel
+    Left = 41
+    Height = 19
+    Top = 21
+    Width = 33
+    Caption = 'Port:'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object Memo1: TMemo
+    Left = 31
+    Height = 457
+    Top = 271
+    Width = 1150
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Lines.Strings = (
+      'Memo1'
+    )
+    OnClick = Memo1Click
+    ParentFont = False
+    ScrollBars = ssAutoVertical
+    TabOrder = 5
+  end
+  object Label2: TLabel
+    Left = 26
+    Height = 19
+    Top = 248
+    Width = 394
+    Caption = 'Pins (click in memo to show pin states and capabilities):'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object configure: TButton
+    Left = 11
+    Height = 32
+    Top = 52
+    Width = 170
+    Caption = 'configure serial port'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = configureClick
+    ParentFont = False
+    TabOrder = 6
+  end
+  object Label3: TLabel
+    Left = 840
+    Height = 19
+    Top = 19
+    Width = 28
+    Caption = 'Pin:'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object Pins: TComboBox
+    Left = 889
+    Height = 31
+    Top = 11
+    Width = 130
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ItemHeight = 0
+    OnChange = PinsChange
+    ParentFont = False
+    TabOrder = 7
+    Text = 'Pins'
+  end
+  object Modes: TComboBox
+    Left = 889
+    Height = 31
+    Top = 56
+    Width = 130
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ItemHeight = 0
+    OnChange = ModesChange
+    ParentFont = False
+    TabOrder = 8
+    Text = 'Modes'
+  end
+  object Label4: TLabel
+    Left = 840
+    Height = 19
+    Top = 65
+    Width = 44
+    Caption = 'Mode:'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object SetValue: TButton
+    Left = 1021
+    Height = 35
+    Top = 95
+    Width = 145
+    Caption = 'Write Value'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = SetValueClick
+    ParentFont = False
+    TabOrder = 9
+  end
+  object Valuewrite: TEdit
+    Left = 890
+    Height = 37
+    Top = 95
+    Width = 120
+    Alignment = taRightJustify
+    AutoSize = False
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnEditingDone = ValuewriteEditingDone
+    ParentFont = False
+    TabOrder = 10
+    Text = '0'
+  end
+  object TaskExe: TButton
+    Left = 83
+    Height = 32
+    Top = 167
+    Width = 125
+    Caption = 'Execute task'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = TaskExeClick
+    ParentFont = False
+    TabOrder = 11
+  end
+  object DeleteTask: TButton
+    Left = 228
+    Height = 32
+    Top = 167
+    Width = 118
+    Caption = 'Delete task'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = DeleteTaskClick
+    ParentFont = False
+    TabOrder = 12
+  end
+  object CreateTask: TButton
+    Left = 94
+    Height = 32
+    Top = 125
+    Width = 243
+    Caption = 'Create  led 13 ON/OFF task'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = CreateTaskClick
+    ParentFont = False
+    TabOrder = 13
+  end
+  object Label5: TLabel
+    Left = 445
+    Height = 19
+    Top = 201
+    Width = 220
+    Caption = 'Manual operation on led pin 13'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object Label6: TLabel
+    Left = 785
+    Height = 19
+    Top = 101
+    Width = 100
+    Caption = 'Value to write:'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object Label7: TLabel
+    Left = 800
+    Height = 19
+    Top = 152
+    Width = 81
+    Caption = 'Value read:'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object ValueRead: TEdit
+    Left = 890
+    Height = 37
+    Top = 139
+    Width = 120
+    Alignment = taRightJustify
+    AutoSize = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+    ReadOnly = True
+    TabOrder = 14
+  end
+  object ToggleReport: TToggleBox
+    Left = 1021
+    Height = 37
+    Top = 139
+    Width = 145
+    Caption = 'Report disabled'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -16
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnChange = ToggleReportChange
+    OnClick = TogglereportClick
+    ParentFont = False
+    TabOrder = 15
+  end
+  object LazSerial1: TLazSerial
+    Active = False
+    BaudRate = br_57600
+    DataBits = db8bits
+    Parity = pNone
+    FlowControl = fcNone
+    StopBits = sbOne
+    Device = 'COM1'
+    RcvLineCRLF = False
+    left = 21
+    top = 104
+  end
+  object Board1: TBoard
+    SamplingInterval = 19
+    LastError = 7
+    TimeStarting = 6000
+    OnBeforeOpen = Board1BeforeOpen
+    OnAfterClose = Board1AfterClose
+    OnBoardReady = Board1FirmataReady
+    OnSendDataToDevice = Board1SendDataToDevice
+    OnGetDataFromDevice = Board1GetDataFromDevice
+    OnDeviceDataAvailable = Board1DeviceDataAvailable
+    OnError = Board1Error
+    OnBoardData = Board1FirmataData
+    left = 21
+    top = 167
+  end
+  object Tasks1: TTasks
+    Board = Board1
+    OnTaskError = Tasks1TaskError
+    OnQueryTask = Tasks1QueryTask
+    left = 363
+    top = 104
+  end
+  object Pin13: TPin
+    Board = Board1
+    Pin = 13
+    Mode = PIN_MODE_OUTPUT
+    Value = 0
+    left = 500
+    top = 31
+  end
+  object Pin2: TPin
+    Board = Board1
+    Pin = 2
+    Mode = PIN_MODE_OUTPUT
+    Value = 0
+    OnPinValue = Pin2PinValue
+    left = 419
+    top = 65
+  end
+end
