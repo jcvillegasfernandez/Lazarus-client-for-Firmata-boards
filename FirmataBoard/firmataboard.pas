@@ -229,7 +229,7 @@ uses
       procedure setEnabled(State: Boolean);
       procedure setMode(Mode: TPinModes);
       procedure setPin(pin: Byte);
-      procedure setValue(Value: integer);
+      procedure setState(Value: integer);
       procedure setBoard(Board: TBoard);
     public
       // digital ports
@@ -263,9 +263,9 @@ uses
       property Board: TBoard read FBoard write setBoard;
       property Pin: byte read FPin write setPin;
       property Mode: TPinModes read FMode write setMode;
-      property Value: integer read FValue write setValue;
+      property Value: integer read FValue;
       Property Reporting: Boolean read FReporting;
-      property State: integer read FState;
+      property State: integer read FState write setState;
       property OnPinValue: TOnPinValue read FOnPinValue write FOnPinValue;
       property OnPinState: TOnPinState read FOnPinState write FOnPinState;
   end;
@@ -1423,7 +1423,7 @@ begin
           if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].Enabled then
           begin
             BitValue:=ord((Value and mask) > 0);
-            FPins[Pin].Value:=BitValue;
+            FPins[Pin].FValue:=BitValue;
             if Assigned(FPins[Pin].FOnPinValue) then  // Report has to be true
               FPins[Pin].FOnPinValue(self, BitValue);
           end;
@@ -2076,7 +2076,7 @@ begin
   end;
 end;
 
-procedure TPin.setValue(Value: integer);
+procedure TPin.setState(Value: integer);
 begin
   if FEnabled then  // try to write value
     WriteValue(Value)
