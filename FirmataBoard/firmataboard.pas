@@ -2186,8 +2186,13 @@ begin
     Port:=FPin div 8;
     FReporting:=Enabled;
   end;
-  if not enabled and not FBoard.CheckReportPort(FPin) then // disable report pin, there is not a digital pin in the same port reporting
-     Result:=SendCommand(chr(REPORT_DIGITAL or port)+chr(0), write)
+  if not enabled then
+  begin
+    if FBoard.CheckReportPort(FPin) then // no disable report pin, there is a digital pin in the same port reporting
+      Result:=SendCommand(chr(REPORT_DIGITAL or port)+chr(0), false) // do not need to disable, this is for tasks
+    else
+      Result:=SendCommand(chr(REPORT_DIGITAL or port)+chr(0), true) // need to disable
+  end
   else  // enable report on pin
     Result:=SendCommand(chr(REPORT_DIGITAL or port)+chr(1), write);
 end;
