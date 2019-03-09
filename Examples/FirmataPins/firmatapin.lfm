@@ -1,11 +1,13 @@
 object Form1: TForm1
-  Left = 669
-  Height = 754
-  Top = 108
+  Left = 220
+  Height = 746
+  Top = 208
   Width = 1212
   ActiveControl = Puerto
+  Anchors = [akTop]
+  BorderStyle = bsDialog
   Caption = 'Form1'
-  ClientHeight = 754
+  ClientHeight = 746
   ClientWidth = 1212
   DesignTimePPI = 88
   Font.CharSet = ANSI_CHARSET
