@@ -186,6 +186,7 @@ uses
 
       function GetPinFromAnalogPin(AnalogPin: byte): Byte;
       function CheckCapability(Pin: byte; Mode: TPinModes): Boolean;
+      function CheckReportPort(Pin: Byte): Boolean; // return true if there is another digital pin in the port reporting
       function GetPinResolution(Pin: Byte; Mode: TPinModes): Integer;  // get pin resolution in a mode
       procedure printPinInfo(Memo: TMemo);
       property BoardPins[Index:Integer]: TBoardPin read GetBoardPin write SetBoardPin;
@@ -1419,7 +1420,7 @@ begin
 
         for Pin:=Port * 8 to Port * 8 + 7 do
         begin
-          if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].Enabled then
+          if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].Enabled and FPins[Pin].FReporting then  // report on pin is enabled
           begin
             BitValue:=ord((Value and mask) > 0);
             FPins[Pin].FValue:=BitValue;
@@ -1870,6 +1871,23 @@ begin
       end;
     end;
 end;
+// return true if there is another digital pin in the port reporting
+function TBoard.CheckReportPort(Pin: Byte): Boolean;
+var
+  i: integer;
+  Port: Byte;
+begin
+  Result:=False;
+
+  Port:=Pin div 8;
+
+  for i:=Port * 8 to Port * 8 + 7 do // 8 pins in port
+    if (i <> Pin) and Assigned(FPins[i]) and FPins[i].FEnabled and FPins[i].FReporting then
+    begin
+      Result:=True;
+      break;
+    end;
+end;
 // get resolution of pin
 function TBoard.GetPinResolution(Pin: Byte; Mode: TPinModes): Integer;
 var
@@ -2148,7 +2166,7 @@ begin
   end;
   Result:=SendCommand(chr(SET_PIN_MODE)+chr(FPin)+chr(ModeValue), write); // $F4   );
 end;
-// enable report for digital pin or analog pin
+// enable/disable report for digital pin or analog pin
 function TPin.ReportPin(Enabled: boolean; write: Boolean=true): string;
 begin
   if FMode in [PIN_MODE_INPUT, PIN_MODE_PULLUP] then // digital pin
@@ -2168,8 +2186,10 @@ begin
     Port:=FPin div 8;
     FReporting:=Enabled;
   end;
-
-  Result:=SendCommand(chr(REPORT_DIGITAL or port)+chr(ord(enabled)), write);
+  if not enabled and not FBoard.CheckReportPort(FPin) then // disable report pin, there is not a digital pin in the same port reporting
+     Result:=SendCommand(chr(REPORT_DIGITAL or port)+chr(0), write)
+  else  // enable report on pin
+    Result:=SendCommand(chr(REPORT_DIGITAL or port)+chr(1), write);
 end;
 {report analog pin 	0xC0 	pin # 	disable/enable(0/1) 	- n/a - }
 function TPin.AnalogReport(enabled: boolean; write: Boolean=true): string;
