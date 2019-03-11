@@ -58,9 +58,9 @@ uses
   TOnEnabled = procedure(sender: TObject) of Object;
   TOnDisabled = procedure(sender: TObject) of Object;
 
-  TOnTaskError = procedure(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String) of object;
+  TOnTaskError = procedure(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String) of object;
   TOnQueryAllTask = procedure(sender: TObject; TaskIDs: array of byte) of object;
-  TOnQueryTask = procedure(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String) of object;
+  TOnQueryTask = procedure(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String) of object;
   TOnSearch = procedure(sender: TObject; Pin: Byte; DeviceIDs: array of string) of Object;
   TOnOneWireAlarm = procedure(sender: TObject; Pin: Byte; AlarmIDs: array of string) of Object;
   TOnOneWireData = procedure(sender: TObject; Pin: Byte; Data: string) of Object;
@@ -84,7 +84,7 @@ uses
    end;
 
   TPin = class;
-  TTasks = class;
+  TTask = class;
   TOneWire = class;
   TI2C = class;
   TAccelStepper = class;
@@ -94,6 +94,7 @@ uses
   TEncoder = class;
 
   TPins = array of TPin;
+  TTasks = array [0..128] of TTask;
   TAccelSteppers = array [0..MAX_ACCELSTEPPER_DEVICES - 1] of TAccelStepper;
   TOneWires = array of TOneWire;
   TSerials = array [TSerialPorts] of TSerial; // max 8 serial ports
@@ -129,6 +130,8 @@ uses
       FBoardVersion: array [0..1] of byte;
       FBoardStringFirmware: string;
       FBoardFirmware: array [0..1] of byte;
+
+      FOnQueryAllTask: TOnQueryAllTask;
 
       FEndCommand: Boolean;
       FOnBoardReady: TOnBoardReady;
@@ -172,7 +175,8 @@ uses
       function askFirmware(write: Boolean=true): string;
       function askBoardCapabilities(write: Boolean=true): string;
       function SendSamplingInterval(Interval: integer; write: Boolean=true): string;
-
+      function QueryAllTasks(write: Boolean=true): string;
+      function SchedulerReset(write: Boolean=true): string;
       // send commands
       function SendCommand(Data: string; write: Boolean=True): string;
       function SendSysEx(data7bit: string; write: Boolean=true): string;
@@ -207,6 +211,7 @@ uses
       property OnDeviceDataAvailable: TOnDeviceDataAvailable read FOnDeviceDataAvailable write FOnDeviceDataAvailable;
       property OnError: TOnError read FOnError write FOnError;
       property OnBoardData: TOnBoardData read FOnBoardData write FOnBoardData;
+      property OnQueryAllTask: TOnQueryAllTask read FOnQueryAllTask write FOnQueryAllTask;
   end;
 
   TPin = class (TComponent)
@@ -270,56 +275,53 @@ uses
       property OnPinState: TOnPinState read FOnPinState write FOnPinState;
   end;
 
-  TF_Task= record
-    ID: byte;    // Task number
-    Data: string;    // Task Data to execute
-    Size: uint16;    // Data Size
-  end;
-
-  TF_Tasks = array of TF_Task;
-
-  TTasks = class (TComponent)
+  TTask = class (TComponent)
     private
       FBoard: TBoard;
       FEnabled: Boolean;
-      F_Tasks: TF_Tasks;
+      FTaskID: Byte;  // Task ID
+
+      FDataTask: String;
+      FRunOnce: Boolean;
+      FTimeDelay: Integer;
+      FRunDelay: Integer;
 
       FOnEnabled: TOnEnabled;
       FOnDisabled: TOnDisabled;
 
       FOnTaskError: TOnTaskError;
-      FOnQueryAllTask: TOnQueryAllTask;
       FOnQueryTask : TOnQueryTask;
 
       procedure setBoard(Board: TBoard);
       procedure setEnabled(State: Boolean);
+      procedure setTask(Task: Byte);
+      procedure setTimeDelay(Delay: integer);
+      procedure setRunDelay(Delay: integer);
 
       function SendSysEx(data7bit: string; write: Boolean=true): string;
+
+      function ScheduleTask(write: Boolean=true): string;
     public
       procedure GetFirmataCommand(Sender: TObject; CommandData: String);
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
-
-      // Firmata comands
-      // All firmata functions for commands return the string command sent, they have a write parameter, if write is True the data is sent to the external device
-      // if write is false then is not sent to device
-      // Scheduler commands
-      function CreateTask(TaskID: Byte; Length: integer; write: Boolean=true): string;
-      function DeleteTask(TaskID: Byte; write: Boolean=true): string;
-      function AddToTask(TaskID: Byte; Data7Bit: String; write: Boolean=true): string;
-      function DelayTask(Delay: integer; write: Boolean=true): string;
-      function ScheduleTask(TaskID: Byte; Time: integer; write: Boolean=true): string;
-      function QueryAllTasks(write: Boolean=true): string;
-      function QueryTask(TaskID: Byte; write: Boolean=true): string;
-      function SchedulerReset(write: Boolean=true): string;
+      function CreateTask(write: Boolean=true): string;
+      function DeleteTask(write: Boolean=true): string;
+      function AddToTask(Data7Bit: String; write: Boolean=true): string;
+      function QueryTask(write: Boolean=true): string;
+      function DelayTask(write: Boolean=true): string;
 
       property Enabled: Boolean read FEnabled write SetEnabled;
     published
+      property TaskID: Byte read FTaskID write setTask;
+      property DataTask: string read FDataTask write FDataTask;
+      property RunOnce: Boolean read FRunOnce write FRunOnce;  // task is only run once
+      property TimeDelay: integer read FTimeDelay write setTimeDelay;  // delay for task
+      property RunDelay: integer read FRunDelay write setRunDelay;  // delay for firts run
       property Board: TBoard read FBoard write setBoard;
       property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
       property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
       property OnTaskError: TOnTaskError read FOnTaskError write FOnTaskError;
-      property OnQueryAllTask: TOnQueryAllTask read FOnQueryAllTask write FOnQueryAllTask;
       property OnQueryTask: TOnQueryTask read FOnQueryTask write FOnQueryTask;
   end;
 
@@ -754,7 +756,7 @@ uses
 procedure Register;
 begin
   {$I firmataboard.lrs}
-  RegisterComponents('Firmata', [TBoard, TPin, TTasks, TOneWire, TI2C,
+  RegisterComponents('Firmata', [TBoard, TPin, TTask, TOneWire, TI2C,
                    TAccelStepper, TAccelStepperGroup, TSerial, TServo, TEncoder]);
 end;
 
@@ -1083,7 +1085,6 @@ var
   Mantissa: integer;
   Exponent: integer;
   sign: Boolean;
-  NumberS: string;
 begin
   Mantissa:=ord(Data7Bit[1]) or (ord(Data7Bit[2]) << 7) or (ord(Data7Bit[3]) << 14) or ((ord(Data7Bit[4]) and $03) << 21);
   Exponent:=((ord(Data7Bit[4]) >> 2) and $0F) - 11;
@@ -1139,6 +1140,7 @@ begin
   FOnSendDataToDevice:=nil;
   FOnGetDataFromDevice:=nil;
   FOnDeviceDataAvailable:=nil;
+  FOnQueryAllTask:=nil;
   FOnError:=nil;
   FOnBoardData:=nil;
   FOnPinValue:=nil;
@@ -1253,7 +1255,10 @@ var
 begin
  // initialize module variables
   SetLength(FPins, FBoardPinsNumber);
-  FTasks:=nil;   // only one module
+
+  for i:=0 to 127 do  // Max tasks 127
+   FTasks[i]:=nil;
+
   FI2C:=nil;     // in this moment only one module
   SetLength(FOneWires, FBoardPinsNumber);  // all pins can be used by a onewire module
 
@@ -1466,6 +1471,8 @@ var
   ID1: byte;
   Port: Byte;
   i: integer;
+  TaskID: Byte;
+  TaskIDs: array of Byte;
   EncoderData: string;
 begin
      DataString:='';
@@ -1710,17 +1717,72 @@ begin
               RaiseError(32,'Serial Message response');
 
           end;
+          {0  START_SYSEX              (0xF0)
+           1  Scheduler Command        (0x7B)
+           2  error_task Reply Command (0x08) or query_task Reply Command (0x0A)
+           3  task id                  (0-127)
+           4  time_ms bit 0-6
+           5  time_ms bit 7-13
+           6  time_ms bit 14-20
+           7  time_ms bit 21-27
+           8  time_ms bit 28-31 | (length bit 0-2) << 4
+           9  length bit 3-9
+           10 length bit 10-15 | (position bit 0) << 7
+           11 position bit 1-7
+           12 position bit 8-14
+           13 position bit 15 | taskdata bit 0-5 << 1 [taskdata is optional]
+           14 taskdata bit 6-12  [optional]
+           15 taskdata bit 13-19 [optional]
+           n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
+           n+1  END_SYSEX              (0xF7) }
           SCHEDULER_DATA: begin // scheduler $7B
             ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
+            case ord(ReadByte) of  // first byte is Error_task or query_task
+              ERROR_FIRMATA_TASK, QUERY_TASK_REPLY: begin
+                DataString:=chr(ReadByte); // save command
+                ReadByte:=GetNextByte;
+                while ReadByte <> END_SYSEX do
+                begin
+                  DataString:=DataString+chr(ReadByte);
+                  ReadByte:=GetNextByte;
+                end;
+                // get TaskID
+                TaskID:=ord(DataString[2]);
+                if Assigned(FTasks[TaskID]) and FTasks[TaskID].Enabled then
+                  FTasks[TaskID].GetFirmataCommand(Self, DataString)
+                else   // Module is not asigned or enabled
+                  RaiseError(32,'Scheduler Data Response');
+              end;
+              {0  START_SYSEX          (0xF0)
+               1  Scheduler Command    (0x7B)
+               2  query_all_tasks Reply Command (0x09)
+               3  taskid_1             (0-127) [optional]
+               4  taskid_2             (0-127) [optional]
+               n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
+               n+1  END_SYSEX (0xF7)}
+              QUERY_ALL_TASKS_REPLY: begin // query_all_tasks Reply Command (0x09)
+                SetLength(TaskIDs,0);
+                ReadByte:=GetNextByte;
+                while ReadByte <> END_SYSEX do
+                begin
+                  Setlength(TaskIDs,system.length(TaskIDs)+1);
+                  TaskIDs[system.length(TaskIDs)-1]:=ReadByte;
+                  ReadByte:=GetNextByte;
+                end;
+                if Assigned(FOnQueryAllTask) then
+                  FOnQueryAllTask(self, TaskIDs);
+              end;
+              else
+              begin  // unknown Scheduler command, now read until end command
+                ReadByte:=GetNextByte;
+                while ReadByte <> END_SYSEX do
+                begin
+                  DataString:=DataString+chr(ReadByte);
+                  ReadByte:=GetNextByte;
+                end;
+                RaiseError(4, 'GetSchedulerCommands');
+              end;
             end;
-            if Assigned(FTasks) and FTasks.Enabled then
-              FTasks.GetFirmataCommand(Self, DataString)
-            else   // Module is not asigned or enabled
-              RaiseError(32,'Scheduler Data Response');
           end;
           I2C_REPLY: begin // $77
             ReadByte:=GetNextByte;
@@ -1919,6 +1981,29 @@ begin
      //FLazSerial.SynSer.Purge; // clear all data in serial port
      Result:=SendCommand(chr(SYSTEM_RESET), write);
 end;
+{0  START_SYSEX              (0xF0)
+1  Scheduler Command        (0x7B)
+2  query_all_tasks command  (0x05)
+3  END_SYSEX                (0xF7) }
+function TBoard.QueryAllTasks(write: Boolean=true): string;
+begin
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(QUERY_ALL_TASKS), write);
+end;
+{0  START_SYSEX              (0xF0)
+ 1  Scheduler Command        (0x7B)
+ 2  scheduler reset command  (0x07)
+ 3  END_SYSEX                (0xF7)}
+function TBoard.SchedulerReset(write: Boolean=true): string;
+var
+  i: integer;
+begin
+  if write then
+    for i:=0 to 127 do
+      if Assigned(FTasks[i]) then
+        FTasks[i].setEnabled(False); // disable FTasks[i]
+
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(SCHEDULER_RESET), write);
+end;
 
 { Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
 function TBoard.SendSysEx(data7bit: string; write: Boolean=true): string;
@@ -2028,7 +2113,9 @@ end;
 
 procedure TPin.setBoard(Board: TBoard);
 begin
-  if Assigned(Board) then
+  if FEnabled then
+    FBoard.RaiseError(33, 'setBoard')
+  else if Assigned(Board) then
     FBoard:=Board;
 end;
 
@@ -2354,39 +2441,71 @@ end;
 //
 //
 //
-{ TTasks }
+{ TTask }
 //
 //
 //
-constructor TTasks.Create(AOwner: TComponent);
+constructor TTask.Create(AOwner: TComponent);
 begin
   inherited;
 
   FBoard:= nil;
   FEnabled:=false;
+  FTaskID:=0;  // Task ID
+  FDataTask:='';
+  FRunOnce:=True;
 
   FOnEnabled:=nil;
   FOnDisabled:=nil;
 
   FOnTaskError:=nil;
-  FOnQueryAllTask:=nil;
   FOnQueryTask:=nil;
-
-  F_Tasks:=nil;
 end;
 
-destructor TTasks.Destroy();
+destructor TTask.Destroy();
 begin
   inherited Destroy;
 end;
 
-procedure TTasks.setBoard(Board: TBoard);
+procedure TTask.setTask(Task: Byte);
 begin
-  if Assigned(Board) then
+  if FEnabled then
+    FBoard.RaiseError(33, 'setTask')
+  else if (Task < 0) or (Task > 127) then
+    FTaskID:=0
+  else
+    FTaskID:=Task;
+end;
+
+procedure TTask.setTimeDelay(Delay: integer);
+begin
+  if FEnabled then
+    FBoard.RaiseError(33, 'setTimeDelay')
+  else if Delay < 1 then
+    FTimeDelay:=1
+  else
+    FTimeDelay:=Delay;
+end;
+
+procedure TTask.setRunDelay(Delay: integer);
+begin
+  if FEnabled then
+    FBoard.RaiseError(33, 'setRunDelay')
+  else if Delay < 1 then
+    FRunDelay:=1
+  else
+    FRunDelay:=Delay;
+end;
+
+procedure TTask.setBoard(Board: TBoard);
+begin
+  if FEnabled then
+    FBoard.RaiseError(33, 'setBoard')
+  else if Assigned(Board) then
     FBoard:=Board;
 end;
 
-procedure TTasks.setEnabled(State: Boolean);
+procedure TTask.setEnabled(State: Boolean);
 var
   i: integer;
 begin
@@ -2398,56 +2517,67 @@ begin
 
   if State then
   begin
-    FEnabled:=True;
     if Assigned(FBoard) and FBoard.Enabled then
-      FBoard.FTasks:=self
-    else
+    begin
+      if length(FDataTask) < 3 then // min command length
+      begin
+        FBoard.RaiseError(25, 'setEnabled');
+        exit;
+      end;
+      if Assigned(FBoard.FTasks[FTaskID]) then // TaskID already exists
+      begin
+        FBoard.RaiseError(45, 'setEnabled');
+        exit;
+      end;
+      // task does not exist
+      if not FRunOnce then  // task run again after finished, so needs a end delay
+        FDataTask:=FDataTask+DelayTask(false);  // only get command, for continuous running
+      FBoard.FLastError:=0;
+      FBoard.FTasks[FTaskID]:=self;
+      FEnabled:=True;
+      CreateTask; // length of task is Length of FDataTask
+      if FBoard.FLastError > 0 then
+      begin
+        FEnabled:=False;
+        FBoard.FTasks[FTaskID]:=nil;
+        exit;
+      end;
+      AddToTask(Encode8To7Bit(FDataTask));  // Data Task has to be sent encoded
+      ScheduleTask;  // Run task
+      if Assigned(FOnEnabled) then
+        FOnEnabled(self);
+    end
+    else // FBoard is not enabled
+    begin
       FEnabled:=false;
-    if Assigned(FOnEnabled) then
-      FOnEnabled(self);
+      FBoard.RaiseError(2, 'setEnabled');
+    end;
   end
-  else  // disable
+  else  // disabled
   begin
     if Assigned(FOnDisabled) then
       FOnDisabled(self);
-    for i:=0 to Length(F_Tasks) -1 do // Stop all tasks, maybe they are still running
-        DeleteTask(F_Tasks[i].ID);
-    if Assigned(FBoard) then
-      FBoard.FTasks:=nil;
+    DeleteTask;
+    FBoard.FTasks[TaskID]:=nil;
     FEnabled:=False;
   end;
 end;
 
-procedure TTasks.GetFirmataCommand(Sender: TObject; CommandData: String);
+procedure TTask.GetFirmataCommand(Sender: TObject; CommandData: String);
 var
-  ReadByte: byte;
   TaskID: byte;
   DataString: string;
   Time_ms: integer;
   Length: integer;
   Position: integer;
-  TaskIDs: array of Byte;
   Command: Byte;
-  Index: integer;
-
-  function GetNextByte: Byte;
-  begin
-    if Index > system.Length(CommandData) then
-      Result:=END_SYSEX
-    else
-     Result:=ord(CommandData[Index]);
-    Inc(Index);
-  end;
 begin
-  Index:=1;
-  TaskIDs:=nil;
   DataString:='';
   TaskID:=0;
   Time_ms:=0;
   Length:=0;
   Position:=0;
-  Command:=GetNextByte;   // subcommand is first byte
-  case Command of
+  Command:=ord(CommandData[1]);   // subcommand is first byte
     {0  START_SYSEX              (0xF0)
     1  Scheduler Command        (0x7B)
     2  error_task Reply Command (0x08) or query_task Reply Command (0x0A)
@@ -2466,59 +2596,27 @@ begin
     15 taskdata bit 13-19 [optional]
     n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
     n+1  END_SYSEX              (0xF7) }
-    ERROR_FIRMATA_TASK, QUERY_TASK_REPLY: begin // error_task Reply Command (0x08)
-      TaskID:=GetNextByte;  // get task ID
-      DataString:=Copy(CommandData, Index, system.Length(CommandData));
-      if DataString <> '' then
-      begin
-        DataString:=Decode7To8bit(DataString);  // decode 7 bits string
-        Time_ms:=decodeNbytestoInt(Copy(DataString,1,4)); // first 32 bits, 4 bytes
-        Length:=decodeNbytestoInt(Copy(DataString,5,2));  // next 16 bits, 2 bytes
-        Position:=decodeNbytestoInt(Copy(DataString,7,2));  // next 16 bits, 2 bytes
-        DataString:=Copy(DataString,9,system.Length(DataString)-8);  // Task Data
-      end;
-
-      if Command = QUERY_TASK_REPLY then
-      begin
-        if Assigned(FOnQueryTask) then
-          FOnQueryTask(self, TaskID, Time_ms, Length, Position, DataString);
-      end
-      else if Assigned(FOnTaskError) then    // ERROR_TASK_REPLY
-           FOnTaskError(self, TaskID, Time_ms, Length, Position, DataString);
-    end;
-    {0  START_SYSEX          (0xF0)
-    1  Scheduler Command    (0x7B)
-    2  query_all_tasks Reply Command (0x09)
-    3  taskid_1             (0-127) [optional]
-    4  taskid_2             (0-127) [optional]
-    n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
-    n+1  END_SYSEX (0xF7)}
-    QUERY_ALL_TASKS_REPLY: begin // query_all_tasks Reply Command (0x09)
-      SetLength(TaskIDs,0);
-      ReadByte:=GetNextByte;
-      while ReadByte <> END_SYSEX do
-      begin
-        Setlength(TaskIDs,system.length(TaskIDs)+1);
-        TaskIDs[system.length(TaskIDs)-1]:=ReadByte;
-        ReadByte:=GetNextByte;
-      end;
-      if Assigned(FOnQueryAllTask) then
-        FOnQueryAllTask(self, TaskIDs);
-    end;
-    else
-    begin  // unknown Scheduler command, now read until end command
-      ReadByte:=GetNextByte;
-      while ReadByte <> END_SYSEX do
-      begin
-        DataString:=DataString+chr(ReadByte);
-        ReadByte:=GetNextByte;
-      end;
-      FBoard.RaiseError(4, 'GetSchedulerCommands');
-    end;
+  TaskID:=ord(Commanddata[2]);  // get task ID
+  DataString:=Copy(CommandData, 3, system.Length(CommandData) - 2);
+  if DataString <> '' then
+  begin
+    DataString:=Decode7To8bit(DataString);  // decode 7 bits string
+    Time_ms:=decodeNbytestoInt(Copy(DataString,1,4)); // first 32 bits, 4 bytes
+    Length:=decodeNbytestoInt(Copy(DataString,5,2));  // next 16 bits, 2 bytes
+    Position:=decodeNbytestoInt(Copy(DataString,7,2));  // next 16 bits, 2 bytes
+    DataString:=Copy(DataString,9,system.Length(DataString)-8);  // Task Data
   end;
+
+  if Command = QUERY_TASK_REPLY then
+  begin
+    if Assigned(FOnQueryTask) then
+      FOnQueryTask(self, Time_ms, Length, Position, DataString);
+  end
+  else if Assigned(FOnTaskError) then    // ERROR_TASK_REPLY
+    FOnTaskError(self, Time_ms, Length, Position, DataString);
 end;
 { Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
-function TTasks.SendSysEx(data7bit: string; write: Boolean=true): string;
+function TTask.SendSysEx(data7bit: string; write: Boolean=true): string;
 begin
   Result:='';
   if not FEnabled and write then
@@ -2536,81 +2634,30 @@ end;
  4  length LSB           (bit 0-6)
  5  length MSB           (bit 7-13)
  6  END_SYSEX            (0xF7) }
-function TTasks.CreateTask(TaskID: Byte; Length: integer; write: Boolean=true): string;
+function TTask.CreateTask(write: Boolean=true): string;
 var
-  Exists: Boolean;
-  i: integer;
+  Flength: integer;
 begin
   Result:='';
 
-  if TaskID > 127 then
-  begin
-    FBoard.RaiseError(5,'CreateTask');
-    exit;
-  end;
-  if Length > $3FFF then // 14 bits
+  Flength:=Length(FDataTask); // Task stores data as 7 bit
+
+  if FLength > $3FFF then // 14 bits
   begin
     FBoard.RaiseError(6, 'CreateTask');
     exit;
   end;
 
-  if write then
-  begin
-    Exists:=false;
-    for i:=0 to system.Length(F_Tasks)-1 do
-      if F_Tasks[i].ID = TaskID then // task exists, clear data
-      begin
-        F_Tasks[i].Size:=Length;
-        Exists:=true;
-        break;
-      end;
-    if Not Exists then  // store new task
-    begin
-      i:=system.Length(F_Tasks);
-      SetLength(F_Tasks, i+1);
-      F_Tasks[i].ID:=TaskID;
-      F_Tasks[i].Data:='';
-      F_Tasks[i].size:=Length;
-    end;
-  end;
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(CREATE_TASK)+chr(TaskID and $7F)+chr(Length and $7F)+chr((Length >> 7) and $7F), write);
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(CREATE_TASK)+chr(FTaskID and $7F)+chr(FLength and $7F)+chr((FLength >> 7) and $7F), write);
 end;
 {0  START_SYSEX          (0xF0)
  1  Scheduler Command    (0x7B)
  2  delete_task command  (0x01)
  3  task id              (0-127)
  4  END_SYSEX            (0xF7)}
-function TTasks.DeleteTask(TaskID: Byte; write: Boolean=true): string;
-var
-  i,j: integer;
-  Exists: Boolean;
+function TTask.DeleteTask(write: Boolean=true): string;
 begin
-  Result:='';
-
-  if write then
-  begin
-    Exists:=false;
-    j:=Length(F_Tasks)-1; // last element
-    for i:=0 to j do
-      if F_Tasks[i].ID = TaskID then // exists
-      begin
-        if i < j then
-        begin
-          F_Tasks[i].ID:=F_Tasks[j].ID;  // copy last element in this position
-          F_Tasks[i].Data:=F_Tasks[j].Data;
-          F_Tasks[i].size:=F_Tasks[j].size;
-        end;
-        SetLength(F_Tasks, j); // new size of array
-        Exists:=True;
-        break;
-      end;
-    if not Exists then
-    begin
-      FBoard.RaiseError(22,'DeleteTask');
-      exit;
-    end;
-  end;
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(DELETE_TASK)+chr(TaskID), write);
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(DELETE_TASK)+chr(FTaskID), write);
 end;
 {0  START_SYSEX          (0xF0)
 1  Scheduler Command    (0x7B)
@@ -2622,41 +2669,9 @@ end;
 6  taskdata bit 14-20   [optional]
 n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
 n+1  END_SYSEX          (0xF7)}
-function TTasks.AddToTask(TaskID: Byte; Data7Bit: String; write: Boolean=true): string;
-var
-  i: integer;
-  Exists: Boolean;
+function TTask.AddToTask(Data7Bit: String; write: Boolean=true): string;
 begin
-  Result:='';
-
-  if TaskID > 127 then
-  begin
-    FBoard.RaiseError(5,'AddToTask');
-    exit;
-  end;
-
-  if write then
-  begin
-    Exists:=false;
-    for i:=0 to Length(F_Tasks)-1 do
-      if F_Tasks[i].ID = TaskID then // exists
-      begin
-        Exists:=True;
-        if Length(Data7bit) > (MAX_DATA_BYTES - 5) then
-        begin
-          FBoard.RaiseError(21,'AddToTask');
-          exit;
-        end;
-        F_Tasks[i].Data:=F_Tasks[i].Data+Data7Bit;
-        break;
-      end;
-    if not exists then
-    begin
-      FBoard.RaiseError(22,'AddToTask');
-      exit;
-    end;
-  end;
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(ADD_TO_TASK)+chr(TaskID)+Data7Bit, write);
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(ADD_TO_TASK)+chr(FTaskID)+Data7Bit, write);
 end;
 {0  START_SYSEX          (0xF0)
  1  Scheduler Command    (0x7B)
@@ -2667,9 +2682,9 @@ end;
  6  time_ms bit 21-27
  7  time_ms bit 28-31
  8  END_SYSEX            (0xF7)}
-function TTasks.DelayTask(Delay: integer; write: Boolean=true): string;    // use for internal task
+function TTask.DelayTask(write: Boolean=true): string;    // use for internal task
 begin
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(DELAY_TASK)+Encode32BitSignedInt(Delay), write);
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(DELAY_TASK)+Encode32BitSignedInt(FTimeDelay), write);
 end;
 {0  START_SYSEX              (0xF0)
  1  Scheduler Command        (0x7B)
@@ -2681,94 +2696,19 @@ end;
  7  time_ms bit 21-27
  8  time_ms bit 28-31
  9  END_SYSEX                (0xF7)}
-function TTasks.ScheduleTask(TaskID: Byte; Time: integer; write: Boolean=true): string;
-var
-   i: integer;
-   Exists: Boolean;
+function TTask.ScheduleTask(write: Boolean=true): string;
 begin
-  Result:='';
-
-  if TaskID > 127 then
-  begin
-    FBoard.RaiseError(5,'ScheduleTask');
-    exit;
-  end;
-  if write then
-  begin
-    Exists:=false;
-    for i:=0 to Length(F_Tasks)-1 do
-      if F_Tasks[i].ID = TaskID then // exists
-      begin
-        Exists:=True;
-        break;
-      end;
-    if not exists then
-    begin
-      FBoard.RaiseError(22,'ScheduleTask');
-      exit;
-    end;
-  end;
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(SCHEDULE_TASK)+chr(TaskID)+Encode32BitSignedInt(Time), write);
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(SCHEDULE_TASK)+chr(FTaskID)+Encode32BitSignedInt(FRunDelay), write);
 end;
-{0  START_SYSEX              (0xF0)
-1  Scheduler Command        (0x7B)
-2  query_all_tasks command  (0x05)
-3  END_SYSEX                (0xF7) }
-function TTasks.QueryAllTasks(write: Boolean=true): string;
-begin
-  Result:='';
 
-  if Length(F_Tasks) = 0 then
-  begin
-    FBoard.RaiseError(23,'QueryAllTasks');
-    exit;
-  end;
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(QUERY_ALL_TASKS), write);
-end;
 {0  START_SYSEX              (0xF0)
  1  Scheduler Command        (0x7B)
  2  query_task command       (0x06)
  3  task id                  (0-127)
  4  END_SYSEX                (0xF7) }
-function TTasks.QueryTask(TaskID: Byte; write: Boolean=true): string;
-var
-  i: integer;
-  Exists: Boolean;
+function TTask.QueryTask(write: Boolean=true): string;
 begin
-  Result:='';
-
-  if TaskID > 127 then
-  begin
-    FBoard.RaiseError(5,'QueryTask');
-    exit;
-  end;
-
-  if write then
-  begin
-    Exists:=false;
-    for i:=0 to Length(F_Tasks)-1 do
-      if F_Tasks[i].ID = TaskID then // exists
-      begin
-        Exists:=True;
-        break;
-      end;
-    if not exists then
-    begin
-      FBoard.RaiseError(22,'QueryTask');
-      exit;
-    end;
-  end;
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(QUERY_TASK)+chr(TaskID), write);
-end;
-{0  START_SYSEX              (0xF0)
- 1  Scheduler Command        (0x7B)
- 2  scheduler reset command  (0x07)
- 3  END_SYSEX                (0xF7)}
-function TTasks.SchedulerReset(write: Boolean=true): string;
-begin
-  if write then
-    F_Tasks:=nil;
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(SCHEDULER_RESET), write);
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(QUERY_TASK)+chr(FTaskID), write);
 end;
 
 //
@@ -2802,18 +2742,18 @@ end;
 
 procedure TOneWire.setBoard(Board: TBoard);
 begin
-  if Assigned(Board) then
+  if FEnabled then
+    FBoard.RaiseError(33, 'setBoard')
+  else if Assigned(Board) then
     FBoard:=Board;
 end;
 
 procedure TOneWire.setOneWirePin(Pin: Byte);
 begin
   if FEnabled then
-  begin
-    FBoard.RaiseError(33, 'setOneWirePin');
-    exit;
-  end;
-  FOneWirePin:=Pin;
+    FBoard.RaiseError(33, 'setOneWirePin')
+  else
+    FOneWirePin:=Pin;
 end;
 
 procedure TOneWire.setEnabled(State: Boolean);
@@ -3174,7 +3114,9 @@ end;
 
 procedure TI2C.setBoard(Board: TBoard);
 begin
-  if Assigned(Board) then
+  if FEnabled then
+    FBoard.RaiseError(33, 'setBoard')
+  else if Assigned(Board) then
     FBoard:=Board;
 end;
 
@@ -3643,7 +3585,9 @@ end;
 
 procedure TAccelStepper.setBoard(Board: TBoard);
 begin
-  if Assigned(Board) then
+  if FEnabled then
+    FBoard.RaiseError(33, 'setBoard')
+  else if Assigned(Board) then
     FBoard:=Board;
 end;
 
@@ -4170,7 +4114,9 @@ end;
 
 procedure TAccelStepperGroup.setBoard(Board: TBoard);
 begin
-  if Assigned(Board) then
+  if FEnabled then
+    FBoard.RaiseError(33, 'setBoard')
+  else if Assigned(Board) then
     FBoard:=Board;
 end;
 
@@ -4361,7 +4307,9 @@ end;
 
 procedure TSerial.setBoard(Board: TBoard);
 begin
-  if Assigned(Board) then
+  if FEnabled then
+    FBoard.RaiseError(33, 'setBoard')
+  else if Assigned(Board) then
     FBoard:=Board;
 end;
 
@@ -4630,7 +4578,9 @@ end;
 
 procedure TServo.setBoard(Board: TBoard);
 begin
-  if Assigned(Board) then
+  if FEnabled then
+    FBoard.RaiseError(33, 'setBoard')
+  else if Assigned(Board) then
     FBoard:=Board;
 end;
 
@@ -4851,7 +4801,9 @@ end;
 
 procedure TEncoder.setBoard(Board: TBoard);
 begin
-  if Assigned(Board) then
+  if FEnabled then
+    FBoard.RaiseError(33, 'setBoard')
+  else if Assigned(Board) then
     FBoard:=Board;
 end;
 
