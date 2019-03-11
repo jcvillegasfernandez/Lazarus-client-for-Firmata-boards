@@ -18,7 +18,7 @@ type
     DeleteTask: TButton;
     Label5: TLabel;
     OneWire1: TOneWire;
-    Tasks1: TTasks;
+    Task1: TTask;
     Pins: TComboBox;
     LazSerial1: TLazSerial;
     ShowTemp: TEdit;
@@ -49,9 +49,9 @@ type
     procedure OneWire1OneWireAlarm(sender: TObject; Pin: Byte; AlarmIDs: array of string);
     procedure OneWire1Search(sender: TObject; Pin: Byte; DeviceIDs: array of string);
     procedure OneWire1WireData(sender: TObject; Pin: Byte; Data: string);
-    procedure Task1QueryTask(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String);
+    procedure Task1QueryTask(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
     procedure Board1SendDataToDevice(sender: TObject; str: string);
-    procedure Task1TaskError(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String);
+    procedure Task1TaskError(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
     procedure FormCreate(Sender: TObject);
     procedure configureClick(Sender: TObject);
     procedure Memo1Click(Sender: TObject);
@@ -124,14 +124,15 @@ end;
 procedure TForm1.DeleteTaskClick(Sender: TObject);
 begin
   TaskCreated:=false;
-  Tasks1.DeleteTask(1);
+  Task1.Enabled:=False;  // Stop task1
   TaskExe.Enabled:=false;
   DeleteTask.Enabled:=false;
+  CreateTask.Enabled:=True;
 end;
 
 procedure TForm1.CreateTaskClick(Sender: TObject);
 var
-  Task: array [1..11] of String;   // array of commands
+  PartialTask: array [1..11] of String;   // array of commands
   i: integer;
   size: integer;
   Pin: TPin;  // I use it to get pin on off data task in a easier way
@@ -139,43 +140,48 @@ begin
   // The last "false" value in functions means not write in board, only get command string
   Pin:=TPin.Create(self);
   Pin.Pin:=13;  // board led
-  Pin.Mode:=PIN_MODE_OUTPUT;    // it is not necessary to enable Pin for use it in tasks
-  Tasks1.SchedulerReset;
-  Task[1]:=OneWire1.ResetAndSelect(OneWireIDs[0], false); // Reset and select device[0]
-  Task[2]:=Tasks1.DelayTask(100, false);
+  Pin.Mode:=PIN_MODE_OUTPUT;    // it is not necessary to enable Pin to use it in tasks
+
+  PartialTask[1]:=OneWire1.ResetAndSelect(OneWireIDs[0], false); // Reset and select device[0]
+  Task1.TimeDelay:=100; // set Delay Task time
+  PartialTask[2]:=Task1.DelayTask(false);
   // Resolution has already been set to 9
-  Task[3]:=OneWire1.Write(chr($44), false);  // convert temperature command and delay 100ms
-  Task[4]:=Pin.SetDigitalPinValue(1, false); // set pin 13 on, LED ON
-  Task[5]:=Tasks1.DelayTask(200, false);    // delay task 2
+  PartialTask[3]:=OneWire1.Write(chr($44), false);  // convert temperature command and delay 100ms
+  PartialTask[4]:=Pin.SetDigitalPinValue(1, false); // set pin 13 on, LED ON
+  Task1.TimeDelay:=200; // set new Delay Task time
+  PartialTask[5]:=Task1.DelayTask(false);    // delay task
   // only 100ms for resolution=9
-  Task[6]:=OneWire1.ResetAndSelect(OneWireIDs[0], false); // Reset and select device[0]
-  Task[7]:=Tasks1.DelayTask(100, false);
+  PartialTask[6]:=OneWire1.ResetAndSelect(OneWireIDs[0], false); // Reset and select device[0]
+  Task1.TimeDelay:=100; // set new Delay Task time
+  PartialTask[7]:=Task1.DelayTask(false);
   // Corelation=2 means read temp;
-  Task[8]:=OneWire1.WriteAndRead(9, 2, chr($BE), false); // Delay 100ms, $BE Send command to read Scratchpad 8 bytes + CRC
-  Task[9]:=Tasks1.DelayTask(1000, false);    // delay task 1
-  Task[10]:=Pin.SetDigitalPinValue(0, false); // set pin 13 off, LED OFF
-  Pin.Destroy;
-  Task[11]:=Tasks1.DelayTask(1500, false);    // delay task 1, this delay keeps task 1 running
+  PartialTask[8]:=OneWire1.WriteAndRead(9, 2, chr($BE), false); // Delay 100ms, $BE Send command to read Scratchpad 8 bytes + CRC
+  Task1.TimeDelay:=1000; // set new Delay Task time
+  PartialTask[9]:=Task1.DelayTask(false);    // delay task 1
+  PartialTask[10]:=Pin.SetDigitalPinValue(0, false); // set pin 13 off, LED OFF
+  Pin.Destroy;  // Pin is not necessary yet
+  Task1.TimeDelay:=1000; // set new Delay Task time
+  PartialTask[11]:=Task1.DelayTask(false);    // delay task 1, this delay keeps task 1 running
+
   size:=0;
-  for i:=1 to Length(Task) do  // calculate length of task 1
-    size:=size+Length(Task[i]);
-
-  Tasks1.CreateTask(1, size);       // Create task command data
-  // fill task 1
-  for i:=1 to Length(Task) do
+  Task1.DataTask:='';
+  for i:=1 to Length(PartialTask) do  // calculate length of task 1 and data task
   begin
-    Tasks1.AddToTask(1,Encode8to7bit(Task[i]));      // add commands to task 1
+    size:=size+Length(PartialTask[i]);
+    Task1.DataTask:=Task1.DataTask+PartialTask[i];
   end;
-  Tasks1.QueryTask(1); // show task information
-
+  Task1.RunOnce:=False;  // has been done in PartialTask[11]
   TaskCreated:=True;
   TaskExe.Enabled:=True;
   DeleteTask.Enabled:=True;
+  CreateTask.Enabled:=False;
 end;
 
 procedure TForm1.TaskExeClick(Sender: TObject);
 begin
-  Tasks1.ScheduleTask(1, 1);  // execute task 1
+  Task1.Enabled:=true;      // Create and run task1 command data
+
+  Task1.QueryTask; // show task information
 end;
 
 procedure TForm1.configureClick(Sender: TObject);
@@ -216,7 +222,6 @@ begin
     end;
   end;
 
-  Tasks1.Enabled:=true;
   Pins.Enabled:=True;
   Pins.ItemIndex:=0;  // First pin
   OneWire1.OneWirePin:=strtoint(Pins.Text);
@@ -241,7 +246,7 @@ begin
     memo1.Clear;
 
     OneWire1.Enabled:=false;
-    Tasks1.Enabled:=false;
+    Task1.Enabled:=false;
 
     Board1.enabled:=false;
     TaskCreated:=False;
@@ -260,9 +265,9 @@ begin
      if OneWire1.OneWirePin = strtoint(Pins.Text) then   // same pin
        exit;
      // Pin has changed
-     // be careful with this chage if a task is running
+     // be careful with this change if a task is running
      if TaskCreated then
-       Tasks1.DeleteTask(1);
+       Task1.Enabled:=False;
      OneWire1.Enabled:=false; // in order to be able to change onewire pin
      OneWire1.OneWirePin:=strtoint(Pins.Text);   // new pin
      OneWire1.Enabled:=True; // enable onewire again
@@ -418,16 +423,16 @@ begin
    OneWire1.Search;
 end;
 
-procedure TForm1.Task1QueryTask(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String);
+procedure TForm1.Task1QueryTask(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
 begin
-  Memo1.Lines.add('TaskID='+inttostr(taskid)+' time='+inttostr(time)+' longitud='+inttostr(length)+' Data='+StrToHexSep(TaskData));
+  Memo1.Lines.add('TaskID='+inttostr(Task1.Taskid)+' time='+inttostr(time)+' longitud='+inttostr(length)+' Data='+StrToHexSep(TaskData));
   if Length <> system.Length(TaskData) then
     Memo1.Lines.Add('Longitud de tarea errónea');
 end;
 
-procedure TForm1.Task1TaskError(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String);
+procedure TForm1.Task1TaskError(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
 begin
-  Memo1.Lines.add('Error TaskID='+inttostr(taskid)+' time='+inttostr(time)+' longitud='+inttostr(length)+'Lugar='+inttostr(Place)+' Data='+StrToHex(TaskData));
+  Memo1.Lines.add('Error TaskID='+inttostr(Task1.Taskid)+' time='+inttostr(time)+' longitud='+inttostr(length)+'Lugar='+inttostr(Place)+' Data='+StrToHex(TaskData));
 end;
 
 

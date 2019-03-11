@@ -1,8 +1,9 @@
 object Form1: TForm1
   Left = 542
   Height = 691
-  Top = 122
+  Top = 181
   Width = 890
+  BorderStyle = bsDialog
   Caption = 'Form1'
   ClientHeight = 691
   ClientWidth = 890
@@ -218,7 +219,11 @@ object Form1: TForm1
     left = 432
     top = 136
   end
-  object Tasks1: TTasks
+  object Task1: TTask
+    TaskID = 0
+    RunOnce = True
+    TimeDelay = 1
+    RunDelay = 1
     Board = Board1
     OnTaskError = Task1TaskError
     OnQueryTask = Task1QueryTask
