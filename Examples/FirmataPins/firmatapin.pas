@@ -29,7 +29,7 @@ type
     Label7: TLabel;
     Pin13: TPin;
     Pin2: TPin;
-    Tasks1: TTasks;
+    Task1: TTask;
     Label5: TLabel;
     Label6: TLabel;
     TaskExe: TButton;
@@ -61,9 +61,9 @@ type
     procedure Board1FirmataReady(sender: TObject);
     function Board1GetDataFromDevice(sender: TObject): integer;
     procedure Pin2PinValue(sender: TObject; Value: integer);
-    procedure Tasks1QueryTask(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String);
+    procedure Task1QueryTask(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
     procedure Board1SendDataToDevice(sender: TObject; str: string);
-    procedure Tasks1TaskError(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String);
+    procedure Task1TaskError(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
     procedure FormCreate(Sender: TObject);
     procedure configureClick(Sender: TObject);
     procedure SetValueClick(Sender: TObject);
@@ -92,7 +92,6 @@ var
   PinMode: Byte;
   PortValue: TPortValue;
   Status: integer;
-  TaskCreated: Boolean;
 
 
 implementation
@@ -107,7 +106,6 @@ begin
   PortValue.byte:=0;   // set all pins to 0
   Status:=0;
   memo1.Clear;
-  TaskCreated:=False;
 
   // Enable Firmata
   Board1.Enabled:=true;
@@ -184,7 +182,6 @@ begin
     Modes.ItemIndex:=1;
     Pin2.Mode:=ByteToPinModes(Modes.ItemIndex);
     Pin2.Enabled:=true;
-    Tasks1.Enabled:=True;
     Pin13.Mode:=PIN_MODE_OUTPUT;
     Pin13.Enabled:=true;
 end;
@@ -242,13 +239,11 @@ begin
     SetValue.Enabled:=false;
     Valuewrite.Enabled:=false;
     ToggleReport.Enabled:=False;
-    Tasks1.SchedulerReset;
-    TaskCreated:=False;
     TaskExe.Enabled:=false;
     DeleteTask.Enabled:=False;
     CreateTask.Enabled:=False;
     ToggleReport.Visible:=false;
-    Tasks1.Enabled:=false;
+    Task1.Enabled:=false;
     Pin2.Enabled:=False;
     Pin13.Enabled:=false;
     Board1.Enabled:=false;
@@ -281,8 +276,7 @@ end;
 
 procedure TForm1.DeleteTaskClick(Sender: TObject);
 begin
-  TaskCreated:=false;
-  Tasks1.DeleteTask(1);
+  Task1.Enabled:=false;
   TaskExe.Enabled:=false;
   DeleteTask.Enabled:=false;
 end;
@@ -290,25 +284,28 @@ end;
 procedure TForm1.CreateTaskClick(Sender: TObject);
 var
   TaskString: string;
+  valor: Boolean;
 begin
-  // The last "false" value in functions means not write in board, only get command string
-  Tasks1.SchedulerReset;
-  TaskString:=Pin13.SetDigitalPinValue(1, false); // set pin 13 on
-  TaskString:=TaskString+Tasks1.DelayTask(1500, false); // delay 1500 ms
-  TaskString:=TaskString+Pin13.SetDigitalPinValue(0, false); // set pin 13 off
-  TaskString:=TaskString+Tasks1.DelayTask(1500, false); // delay 1500 ms
+  Valor:=Task1.Enabled;
+  Task1.TaskID:=1;
+  Task1.TimeDelay:=1500; // delay in delaytask
+  Task1.RunDelay:=1; // delay before run task
 
-  Tasks1.CreateTask(1, Length(TaskString));       // Create task 1
-  Tasks1.AddToTask(1, Encode8To7Bit(TaskString));      // add command to task 1
-  Tasks1.QueryTask(1); // task information
-  TaskCreated:=True;
+  // The last "false" value in functions means not write in board, only get command string
+  TaskString:=Pin13.SetDigitalPinValue(1, false); // set pin 13 on
+  TaskString:=TaskString+Task1.DelayTask(false); // delay 1500 ms
+  TaskString:=TaskString+Pin13.SetDigitalPinValue(0, false); // set pin 13 off
+  Task1.RunOnce:=False;  // set a final delay in task to re-run task
+  Task1.DataTask:=TaskString;
   TaskExe.Enabled:=True;
   DeleteTask.Enabled:=True;
 end;
 
 procedure TForm1.TaskExeClick(Sender: TObject);
 begin
-  Tasks1.ScheduleTask(1, 10);  // execute
+  TaskExe.Enabled:=False;
+  Task1.Enabled:=true;  // create and execute task
+  Task1.QueryTask;
 end;
 
 procedure TForm1.ToggleReportChange(Sender: TObject);
@@ -383,9 +380,9 @@ begin
   ValueRead.Text:=IntTostr(Value);
 end;
 
-procedure TForm1.tasks1QueryTask(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String);
+procedure TForm1.Task1QueryTask(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
 begin
-  Memo1.Lines.add('TaskID='+inttostr(taskid)+' time='+inttostr(time)+' longitud='+inttostr(length)+' Data='+StrToHex(TaskData));
+  Memo1.Lines.add('TaskID='+inttostr(Task1.TaskID)+' time='+inttostr(time)+' longitud='+inttostr(length)+' Data='+StrToHexSep(TaskData));
   if Length <> system.Length(TaskData) then
     Memo1.Lines.Add('Longitud de tarea errónea');
 end;
@@ -408,9 +405,9 @@ begin
   LazSerial1.WriteData(str);
 end;
 
-procedure TForm1.Tasks1TaskError(sender: TObject; TaskID: byte; Time: integer; Length: integer; Place: integer; TaskData: String);
+procedure TForm1.Task1TaskError(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
 begin
-  Memo1.Lines.add('Error TaskID='+inttostr(taskid)+' time='+inttostr(time)+' longitud='+inttostr(length)+'Lugar='+inttostr(Place)+' Data='+StrToHex(TaskData));
+  Memo1.Lines.add('Error TaskID='+inttostr(Task1.TaskID)+' time='+inttostr(time)+' longitud='+inttostr(length)+'Lugar='+inttostr(Place)+' Data='+StrToHexSep(TaskData));
 end;
 
 
