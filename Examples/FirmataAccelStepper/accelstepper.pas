@@ -121,7 +121,7 @@ begin
   else if Move.Caption = 'Stop' then  // Stop
   begin
     Move.Caption:='Wait!!!, stopping';
-    AccelStepper1.Stop;
+    AccelStepper1.FastStop;
   end;
 end;
 
@@ -202,7 +202,7 @@ end;
 
 procedure TForm1.stopClick(Sender: TObject);
 begin
-  AccelStepper1.Stop;
+  AccelStepper1.Stop(true);
 end;
 
 procedure TForm1.ToggleBox1Click(Sender: TObject);
