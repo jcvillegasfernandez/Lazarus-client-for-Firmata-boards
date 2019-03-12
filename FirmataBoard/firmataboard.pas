@@ -505,6 +505,7 @@ uses
        function MoveTo(write: Boolean=True): string;
        function MotorEnable(State: Boolean; write: Boolean=True): string;
        function Stop(write: Boolean=True): string;
+       function FastStop(write: Boolean=True): string;
        function ReportPosition(write: Boolean=True): string;
        function MotorAcceleration(write: Boolean=True): string;
        function MotorSpeed(write: Boolean=True): string;
@@ -3653,6 +3654,8 @@ begin
     FSpeed:=MAX_SPEED
   else
     FSpeed:=Speed;
+  if FEnabled then
+    MotorSpeed;  // change speed
 end;
 
 procedure TAccelStepper.setAcceleration(Value: single);
@@ -3661,6 +3664,8 @@ begin
     FAcceleration:=0.0 // Hack in AccelStepper
   else
     FAcceleration:=Value;
+  if FEnabled then
+    MotorAcceleration;  // change acceleration
 end;
 
 procedure TAccelStepper.setEnabled(State: Boolean);
@@ -3962,10 +3967,18 @@ end;
 1  ACCELSTEPPER_DATA                       (0x62)
 2  ACCELSTEPPER_STOP                       (0x05)
 3  device number                           (0-9)
-4  END_SYSEX                               (0xF7)}
+4  END_SYSEX                             (0xF7)}
 function TAccelStepper.Stop(write: Boolean=True): string;
 begin
-  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_STOP)+chr(FDevice), write);
+    Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_STOP)+chr(FDevice), write);
+end;
+function TAccelStepper.FastStop(write: Boolean=True): string;
+begin
+  // set Acceleration posible
+  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_SET_ACCELERATION)+chr(FDevice)+EncodeAccelFloat(1000000), write);
+  Result:=Result+Stop(write);   // stop with max acceleration
+  // recover Acceleration
+  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_SET_ACCELERATION)+chr(FDevice)+EncodeAccelFloat(FAcceleration), write);
 end;
 {0  START_SYSEX                             (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
