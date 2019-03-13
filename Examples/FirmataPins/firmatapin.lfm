@@ -1,31 +1,30 @@
 object Form1: TForm1
-  Left = 66
-  Height = 814
-  Top = 58
-  Width = 1322
+  Left = 327
+  Height = 888
+  Top = 63
+  Width = 1442
   ActiveControl = Puerto
   Anchors = [akTop]
   BorderStyle = bsDialog
   Caption = 'Form1'
-  ClientHeight = 814
-  ClientWidth = 1322
-  DesignTimePPI = 88
+  ClientHeight = 888
+  ClientWidth = 1442
   Font.CharSet = ANSI_CHARSET
-  Font.Height = -17
+  Font.Height = -19
   Font.Name = 'Arial'
   Font.Pitch = fpVariable
   Font.Quality = fqDraft
   OnCreate = FormCreate
-  LCLVersion = '1.8.4.0'
+  LCLVersion = '2.0.0.4'
   object LedOn: TButton
-    Left = 485
-    Height = 35
-    Top = 248
-    Width = 103
+    Left = 529
+    Height = 38
+    Top = 271
+    Width = 112
     Caption = 'Led on'
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -34,14 +33,14 @@ object Form1: TForm1
     TabOrder = 0
   end
   object LedOff: TButton
-    Left = 628
-    Height = 35
-    Top = 248
-    Width = 95
+    Left = 685
+    Height = 38
+    Top = 271
+    Width = 104
     Caption = 'Led off'
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -50,13 +49,13 @@ object Form1: TForm1
     TabOrder = 1
   end
   object OpenPort: TButton
-    Left = 227
-    Height = 35
-    Top = 12
-    Width = 106
+    Left = 248
+    Height = 38
+    Top = 13
+    Width = 116
     Caption = 'open'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -65,14 +64,14 @@ object Form1: TForm1
     TabOrder = 2
   end
   object ClosePort: TButton
-    Left = 227
-    Height = 35
-    Top = 57
-    Width = 106
+    Left = 248
+    Height = 38
+    Top = 62
+    Width = 116
     Caption = 'close'
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -81,12 +80,12 @@ object Form1: TForm1
     TabOrder = 3
   end
   object Puerto: TEdit
-    Left = 91
+    Left = 99
     Height = 30
-    Top = 12
-    Width = 113
+    Top = 13
+    Width = 123
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -95,13 +94,13 @@ object Form1: TForm1
     Text = 'COM1'
   end
   object Label1: TLabel
-    Left = 45
-    Height = 20
-    Top = 23
-    Width = 36
+    Left = 49
+    Height = 22
+    Top = 25
+    Width = 40
     Caption = 'Port:'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -109,13 +108,13 @@ object Form1: TForm1
     ParentFont = False
   end
   object Memo1: TMemo
-    Left = 34
-    Height = 499
-    Top = 296
-    Width = 1255
+    Left = 37
+    Height = 544
+    Top = 323
+    Width = 1369
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -15
+    Font.Height = -16
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -128,13 +127,13 @@ object Form1: TForm1
     TabOrder = 5
   end
   object Label2: TLabel
-    Left = 28
-    Height = 20
-    Top = 271
-    Width = 421
+    Left = 31
+    Height = 22
+    Top = 296
+    Width = 465
     Caption = 'Pins (click in memo to show pin states and capabilities):'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -142,13 +141,13 @@ object Form1: TForm1
     ParentFont = False
   end
   object configure: TButton
-    Left = 12
-    Height = 35
-    Top = 57
-    Width = 185
+    Left = 13
+    Height = 38
+    Top = 62
+    Width = 202
     Caption = 'configure serial port'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -157,13 +156,13 @@ object Form1: TForm1
     TabOrder = 6
   end
   object Label3: TLabel
-    Left = 916
-    Height = 20
-    Top = 21
-    Width = 29
+    Left = 999
+    Height = 22
+    Top = 23
+    Width = 32
     Caption = 'Pin:'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -171,47 +170,47 @@ object Form1: TForm1
     ParentFont = False
   end
   object Pins: TComboBox
-    Left = 970
-    Height = 32
-    Top = 12
-    Width = 142
+    Left = 1058
+    Height = 30
+    Top = 13
+    Width = 155
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
-    ItemHeight = 0
+    ItemHeight = 22
     OnChange = PinsChange
     ParentFont = False
     TabOrder = 7
     Text = 'Pins'
   end
   object Modes: TComboBox
-    Left = 970
-    Height = 32
-    Top = 61
-    Width = 142
+    Left = 1058
+    Height = 30
+    Top = 67
+    Width = 155
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
-    ItemHeight = 0
+    ItemHeight = 22
     OnChange = ModesChange
     ParentFont = False
     TabOrder = 8
     Text = 'Modes'
   end
   object Label4: TLabel
-    Left = 916
-    Height = 20
-    Top = 71
-    Width = 46
+    Left = 999
+    Height = 22
+    Top = 77
+    Width = 53
     Caption = 'Mode:'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -219,14 +218,14 @@ object Form1: TForm1
     ParentFont = False
   end
   object SetValue: TButton
-    Left = 1114
-    Height = 38
-    Top = 104
-    Width = 158
+    Left = 1215
+    Height = 41
+    Top = 113
+    Width = 172
     Caption = 'Write Value'
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -235,15 +234,15 @@ object Form1: TForm1
     TabOrder = 9
   end
   object Valuewrite: TEdit
-    Left = 971
-    Height = 40
-    Top = 104
-    Width = 131
+    Left = 1059
+    Height = 44
+    Top = 113
+    Width = 143
     Alignment = taRightJustify
     AutoSize = False
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -253,14 +252,14 @@ object Form1: TForm1
     Text = '0'
   end
   object TaskExe: TButton
-    Left = 91
-    Height = 35
-    Top = 182
-    Width = 136
+    Left = 99
+    Height = 38
+    Top = 199
+    Width = 148
     Caption = 'Execute task'
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -269,14 +268,14 @@ object Form1: TForm1
     TabOrder = 11
   end
   object DeleteTask: TButton
-    Left = 249
-    Height = 35
-    Top = 182
-    Width = 129
+    Left = 272
+    Height = 38
+    Top = 199
+    Width = 141
     Caption = 'Delete task'
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -285,14 +284,14 @@ object Form1: TForm1
     TabOrder = 12
   end
   object CreateTask: TButton
-    Left = 103
-    Height = 35
-    Top = 136
-    Width = 265
+    Left = 112
+    Height = 38
+    Top = 148
+    Width = 289
     Caption = 'Create  led 13 ON/OFF task'
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -301,13 +300,13 @@ object Form1: TForm1
     TabOrder = 13
   end
   object Label5: TLabel
-    Left = 485
-    Height = 20
-    Top = 219
-    Width = 228
+    Left = 529
+    Height = 22
+    Top = 239
+    Width = 257
     Caption = 'Manual operation on led pin 13'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -315,13 +314,13 @@ object Form1: TForm1
     ParentFont = False
   end
   object Label6: TLabel
-    Left = 856
-    Height = 20
-    Top = 110
-    Width = 106
+    Left = 934
+    Height = 22
+    Top = 120
+    Width = 117
     Caption = 'Value to write:'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -329,13 +328,13 @@ object Form1: TForm1
     ParentFont = False
   end
   object Label7: TLabel
-    Left = 873
-    Height = 20
-    Top = 166
-    Width = 84
+    Left = 952
+    Height = 22
+    Top = 181
+    Width = 95
     Caption = 'Value read:'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -343,14 +342,14 @@ object Form1: TForm1
     ParentFont = False
   end
   object ValueRead: TEdit
-    Left = 971
-    Height = 40
-    Top = 152
-    Width = 131
+    Left = 1059
+    Height = 44
+    Top = 166
+    Width = 143
     Alignment = taRightJustify
     AutoSize = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -359,13 +358,13 @@ object Form1: TForm1
     TabOrder = 14
   end
   object ToggleReport: TToggleBox
-    Left = 1114
-    Height = 40
-    Top = 152
-    Width = 158
+    Left = 1215
+    Height = 44
+    Top = 166
+    Width = 172
     Caption = 'Report disabled'
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -17
+    Font.Height = -19
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -383,8 +382,8 @@ object Form1: TForm1
     StopBits = sbOne
     Device = 'COM1'
     RcvLineCRLF = False
-    left = 23
-    top = 113
+    left = 25
+    top = 123
   end
   object Board1: TBoard
     SamplingInterval = 19
@@ -398,8 +397,8 @@ object Form1: TForm1
     OnDeviceDataAvailable = Board1DeviceDataAvailable
     OnError = Board1Error
     OnBoardData = Board1FirmataData
-    left = 23
-    top = 182
+    left = 25
+    top = 199
   end
   object Task1: TTask
     TaskID = 1
@@ -409,22 +408,22 @@ object Form1: TForm1
     Board = Board1
     OnTaskError = Task1TaskError
     OnQueryTask = Task1QueryTask
-    left = 396
-    top = 113
+    left = 432
+    top = 123
   end
   object Pin13: TPin
     Board = Board1
     Pin = 13
     Mode = PIN_MODE_OUTPUT
-    left = 545
-    top = 34
+    left = 595
+    top = 37
   end
   object Pin2: TPin
     Board = Board1
     Pin = 2
     Mode = PIN_MODE_OUTPUT
     OnPinValue = Pin2PinValue
-    left = 457
-    top = 71
+    left = 499
+    top = 77
   end
 end

@@ -3,13 +3,13 @@
   <ProjectSession>
     <Version Value="11"/>
     <BuildModes Active="Default"/>
-    <Units Count="34">
+    <Units Count="35">
       <Unit0>
         <Filename Value="FirmataPins.lpr"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="49" Y="10"/>
-        <UsageCount Value="91"/>
+        <UsageCount Value="92"/>
       </Unit0>
       <Unit1>
         <Filename Value="firmatapin.pas"/>
@@ -18,9 +18,9 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Firmatapin"/>
-        <TopLine Value="13"/>
-        <CursorPos X="3" Y="277"/>
-        <UsageCount Value="91"/>
+        <TopLine Value="372"/>
+        <CursorPos X="3" Y="380"/>
+        <UsageCount Value="92"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit1>
@@ -78,21 +78,18 @@
       </Unit7>
       <Unit8>
         <Filename Value="../FirmataBoard/firmataboard.pas"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="28"/>
         <CursorPos X="16" Y="52"/>
         <UsageCount Value="39"/>
-        <Loaded Value="True"/>
       </Unit8>
       <Unit9>
         <Filename Value="../FirmataBoard/firmataconstants.pas"/>
         <UnitName Value="FirmataConstants"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="30"/>
         <CursorPos X="19" Y="136"/>
         <UsageCount Value="39"/>
-        <Loaded Value="True"/>
       </Unit9>
       <Unit10>
         <Filename Value="../../../../Componentes/TLazSerial-master/lazserial.pas"/>
@@ -265,8 +262,114 @@
         <CursorPos X="31" Y="929"/>
         <UsageCount Value="10"/>
       </Unit33>
+      <Unit34>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="1429"/>
+        <CursorPos X="56" Y="1440"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit34>
     </Units>
-    <JumpHistory HistoryIndex="-1"/>
+    <JumpHistory Count="24" HistoryIndex="23">
+      <Position1>
+        <Filename Value="firmatapin.pas"/>
+        <Caret Line="277" Column="3" TopLine="13"/>
+      </Position1>
+      <Position2>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="254" Column="33" TopLine="239"/>
+      </Position2>
+      <Position3>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1443" Column="38" TopLine="1418"/>
+      </Position3>
+      <Position4>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1276" Column="102" TopLine="1275"/>
+      </Position4>
+      <Position5>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1441" Column="31" TopLine="1421"/>
+      </Position5>
+      <Position6>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1443" Column="38" TopLine="1421"/>
+      </Position6>
+      <Position7>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="34" Column="46" TopLine="21"/>
+      </Position7>
+      <Position8>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="254" Column="33" TopLine="229"/>
+      </Position8>
+      <Position9>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1445" Column="3" TopLine="1418"/>
+      </Position9>
+      <Position10>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1441" TopLine="1429"/>
+      </Position10>
+      <Position11>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1365" TopLine="1349"/>
+      </Position11>
+      <Position12>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1366" TopLine="1349"/>
+      </Position12>
+      <Position13>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1367" TopLine="1349"/>
+      </Position13>
+      <Position14>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1371" TopLine="1349"/>
+      </Position14>
+      <Position15>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1372" TopLine="1349"/>
+      </Position15>
+      <Position16>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1373" TopLine="1349"/>
+      </Position16>
+      <Position17>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1381" TopLine="1366"/>
+      </Position17>
+      <Position18>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1383" TopLine="1366"/>
+      </Position18>
+      <Position19>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1394" TopLine="1369"/>
+      </Position19>
+      <Position20>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1444" TopLine="1427"/>
+      </Position20>
+      <Position21>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1443" TopLine="1427"/>
+      </Position21>
+      <Position22>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1365" TopLine="1349"/>
+      </Position22>
+      <Position23>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1444" TopLine="1429"/>
+      </Position23>
+      <Position24>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1446" TopLine="1429"/>
+      </Position24>
+    </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
       <Modes Count="0" ActiveMode="default"/>
