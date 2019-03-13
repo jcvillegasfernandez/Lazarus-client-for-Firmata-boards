@@ -158,12 +158,7 @@ begin
   memo1.lines.add('Firmata Firmare:' + Board1.FirmataFirmware);
   ledon.Enabled:=True;
   ledoff.Enabled:=True;
-  Pins.Enabled:=True;
-  Modes.Enabled:=True;
   Board1.printPinInfo(Memo1);
-  SetValue.Enabled:=True;
-  Valuewrite.Enabled:=True;
-  CreateTask.Enabled:=True;
 
   for i:=0 to Board1.PinsNumber - 1 do
   begin
@@ -178,12 +173,28 @@ begin
     end;
     Valuewrite.Text:='0';
     Pins.ItemIndex:=0;
+    Pins.Visible:=True;
+    Modes.Visible:=True;
     Pin2.Pin:=StrToInt(Pins.Items[Pins.ItemIndex]);
     Modes.ItemIndex:=1;
     Pin2.Mode:=ByteToPinModes(Modes.ItemIndex);
     Pin2.Enabled:=true;
     Pin13.Mode:=PIN_MODE_OUTPUT;
     Pin13.Enabled:=true;
+    //  SetValue.Enabled:=True;
+    SetValue.Visible:=True;
+      //Valuewrite.Enabled:=True;
+    Valuewrite.Visible:=True;
+    CreateTask.Enabled:=True;
+    SetValue.Visible:=True;
+    Valuewrite.Visible:=True;;
+    CreateTask.Enabled:=True;
+    ToggleReport.Visible:=false;
+    ValueWrite.Visible:=true;
+    SetValue.Visible:=True;
+    Label3.Visible:=True;
+    Label4.Visible:=True;
+    Label6.Visible:=True;
 end;
 
 procedure TForm1.Memo1Click(Sender: TObject);
@@ -204,7 +215,6 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-    ToggleReport.Visible:=false;
     memo1.Enabled:=true;
     Memo1.Clear;
 {$IFDEF LINUX}
@@ -236,8 +246,11 @@ begin
     Pins.Enabled:=false;
     Modes.Enabled:=false;
     memo1.Clear;
-    SetValue.Enabled:=false;
-    Valuewrite.Enabled:=false;
+    Pins.Visible:=False;
+    Modes.Visible:=False;
+    SetValue.Visible:=false;
+    Valuewrite.Visible:=false;
+    Valueread.Visible:=false;
     ToggleReport.Enabled:=False;
     TaskExe.Enabled:=false;
     DeleteTask.Enabled:=False;
@@ -247,6 +260,12 @@ begin
     Pin2.Enabled:=False;
     Pin13.Enabled:=false;
     Board1.Enabled:=false;
+    Label3.Visible:=false;
+    Label4.Visible:=false;
+    Label6.Visible:=false;
+    Label7.Visible:=false;
+    Pins.Clear;
+    Modes.Clear;
 end;
 
 procedure TForm1.PinsChange(Sender: TObject);
@@ -327,9 +346,23 @@ begin
      exit;
    // Pin Mode has changed check report visibility
    if ByteToPinModes(Modes.ItemIndex) in [PIN_MODE_INPUT, PIN_MODE_PULLUP, PIN_MODE_ANALOG] then
-     ToggleReport.Visible:=True
+   begin
+     ToggleReport.Visible:=True;
+     ValueWrite.Visible:=false;
+     SetValue.Visible:=False;
+     Label6.Visible:=false;
+     Valueread.Visible:=true;
+     Label7.Visible:=true;
+   end
    else
+   begin
      ToggleReport.Visible:=False;
+     ValueWrite.Visible:=True;
+     SetValue.Visible:=true;
+     Label6.Visible:=true;
+     Valueread.Visible:=false;
+     Label7.Visible:=false
+   end;
 
    if Pin2.Enabled then
    begin
@@ -351,6 +384,7 @@ var
   Valid: Boolean;
 begin
   Valid:=False;
+  Value:=0;
   if Pin2.Mode in [PIN_MODE_OUTPUT, PIN_MODE_PWM, PIN_MODE_SERVO,
                 PIN_MODE_SHIFT, PIN_MODE_STEPPER, PIN_MODE_ENCODER] then
   begin
@@ -361,12 +395,11 @@ begin
        if not Valid then
        begin
          Showmessage(Tedit(Sender).Text+' is not a valid value');
-         TEdit(Sender).Text:='0';
+         Value:=0;
        end;
      end;
-  end
-  else
-    TEdit(Sender).Text:='0';
+  end;
+  TEdit(Sender).Text:=intToStr(Value);
 end;
 
 procedure TForm1.SetValueClick(Sender: TObject);

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectSession>
-    <Version Value="11"/>
+    <Version Value="10"/>
     <BuildModes Active="Default"/>
     <Units Count="35">
       <Unit0>
@@ -9,7 +9,7 @@
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="49" Y="10"/>
-        <UsageCount Value="92"/>
+        <UsageCount Value="93"/>
       </Unit0>
       <Unit1>
         <Filename Value="firmatapin.pas"/>
@@ -18,9 +18,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Firmatapin"/>
-        <TopLine Value="372"/>
-        <CursorPos X="3" Y="380"/>
-        <UsageCount Value="92"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="180"/>
+        <CursorPos X="29" Y="191"/>
+        <UsageCount Value="93"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit1>
@@ -264,15 +265,14 @@
       </Unit33>
       <Unit34>
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <TopLine Value="1429"/>
         <CursorPos X="56" Y="1440"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit34>
     </Units>
-    <JumpHistory Count="24" HistoryIndex="23">
+    <JumpHistory Count="25" HistoryIndex="24">
       <Position1>
         <Filename Value="firmatapin.pas"/>
         <Caret Line="277" Column="3" TopLine="13"/>
@@ -369,11 +369,11 @@
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
         <Caret Line="1446" TopLine="1429"/>
       </Position24>
+      <Position25>
+        <Filename Value="firmatapin.pas"/>
+        <Caret Line="374" Column="12" TopLine="313"/>
+      </Position25>
     </JumpHistory>
-    <RunParams>
-      <FormatVersion Value="2"/>
-      <Modes Count="0" ActiveMode="default"/>
-    </RunParams>
   </ProjectSession>
   <Debugging>
     <Watches Count="13">
