@@ -388,7 +388,6 @@ uses
       FBoard: TBoard;
       FEnabled: Boolean;
 
-      FI2Cconfig: string;
       FDelay: byte;
       FI2CQueries: Byte;
       FSDApin: Byte;
@@ -417,10 +416,8 @@ uses
       // All firmata functions for commands return the string command sent, they have a write parameter, if write is True the data is sent to the external device
       // if write is false then is not sent to device
       // I2c commands
-      function Config(write: Boolean=true): string; overload;  // delay
+      function Config(write: Boolean=true): string;   // delay
       function Config(Delay: byte; write: Boolean=True): string; overload;  // delay
-      function Config(delay: byte; data: string; write: Boolean=true): string; overload;
-      function Config(data: string; write: Boolean=true): string; overload;
       function Request(Slave: word; command: byte; data: string; restart: Boolean=false; mode10bit: boolean=false; write: Boolean=True): string;
       function WriteData(Slave: Byte; Address: integer; AddressSize: Byte; Data: String; restart: Boolean=false; write: Boolean=True): string;
       function Read(Slave: Byte; regID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=true): string;
@@ -1441,7 +1438,7 @@ begin
       2  analog most significant 7 bits}
       $E0 .. $EF: begin  // analog I/O message ,    AnalogPin:= ReadByte and $0F; // Channel number
         Pin:=GetPinFromAnalogPin(ReadByte and $0F);  // get pin from analogpin
-        Value:=GetNextByte or ((GetNextByte << 7) and $7F);
+        Value:=GetNextByte or (GetNextByte << 7);
         if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].FEnabled then
           FPins[Pin].GetAnalogMessage(Value);
       end;
@@ -3102,7 +3099,6 @@ begin
 
   FOnI2CData:=nil;
   FI2CQueries:=0;
-  FI2Cconfig:='';  // initial configuration string
   FDelay:=0;  // default delay is 0
   FSDAPin:=18;  // default SDA pin is 18, A4
   FSCLPin:=19;     // deafult SCL pin is 19, A5
@@ -3167,7 +3163,7 @@ begin
         begin // Configure I2C
           FBoard.FI2C:=self;
           FEnabled:=true;
-          config(FDelay, FI2Cconfig);
+          config(FDelay);
           if Assigned(FOnEnabled) then
             FOnEnabled(self);
         end
@@ -3250,7 +3246,7 @@ end;
 3  Delay in microseconds (MSB) [optional]
 ... user defined for special cases, etc
 n  END_SYSEX (0xF7)}
-function TI2C.Config(Delay: byte; Data: String; write: Boolean=True): string; overload;
+function TI2C.Config(Delay: byte; write: Boolean=True): string; overload;
 var
   I2CData: string;
 begin
@@ -3258,10 +3254,6 @@ begin
   I2CData:='';
   if Delay > 0 then
     I2CData:=chr(Delay and $7F)+chr(Delay >> 7);
-
-  // Not sure what to do with 'Data', in normal use is always null
-  if Data <> '' then
-    I2CData:=I2CData+Encode8To7Bit(Data); // not sure if this is the right conversion, perhaps Encode1ByteCharTo2 function
 
   // Firmata defaults pins, set pin 18 y 19 (analog 4 and 5) to I2c Mode  SDA, SCL
   if write then
@@ -3272,21 +3264,10 @@ begin
   Result:=SendSysEx(chr(I2C_CONFIG)+I2CData, write);
 end;
 
-function TI2C.Config(write: Boolean=true): string; overload;
+function TI2C.Config(write: Boolean=true): string;
 begin
-  Result:=Config(0, '', write);
+  Result:=Config(0, write);
 end;
-
-function TI2C.Config(Data: string; write: Boolean=True): string; overload;  // No delay
-begin
-  Result:=Config(0, Data, write);
-end;
-
-function TI2C.Config(Delay: byte; write: Boolean=True): string; overload;  // delay
-begin
-  Result:=Config(Delay, '', write);
-end;
-
 {0  START_SYSEX (0xF0)
 1  I2C_REQUEST (0x76)
 2  slave address (LSB)
