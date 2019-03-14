@@ -17,6 +17,7 @@ type
   TForm1 = class(TForm)
     Label7: TLabel;
     Display: TLabel;
+    FastStop: TButton;
     Steps: TEdit;
     Move: TButton;
     Label3: TLabel;
@@ -46,6 +47,7 @@ type
     procedure Board1FirmataReady(sender: TObject);
     function Board1GetDataFromDevice(sender: TObject): integer;
     procedure Board1SendDataToDevice(sender: TObject; str: string);
+    procedure FastStopClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure configureClick(Sender: TObject);
     procedure MoveClick(Sender: TObject);
@@ -117,25 +119,32 @@ begin
     else
       AccelStepper1.Move;
     Move.Caption:='Stop';
+    FastStop.Visible:=true;
   end
   else if Move.Caption = 'Stop' then  // Stop
   begin
     Move.Caption:='Wait!!!, stopping';
-    AccelStepper1.FastStop;
+    AccelStepper1.Stop;  // smooth stop
   end;
+end;
+ 
+procedure TForm1.FastStopClick(Sender: TObject);
+begin
+  AccelStepper1.FastStop;  // Fast stop
 end;
 
 procedure TForm1.AccelStepper1StepperMoveCompleted(sender: TObject; Device: byte; Position: integer);
 begin
   if Copy(Move.Caption, 1, 4) <> 'Move' then
   begin
-    if Move.Caption <> 'Stop' then // motor has been stopped
+    if FastStop.Visible or (Move.Caption <> 'Stop') then // motor has been stopped
       Memo1.Lines.Add('Motor has been stopped');
     if ToggleBox1.Checked then
       Move.Caption:='Move to'
     else
       Move.Caption:='Move';
   end;
+  FastStop.Visible:=False;
   Memo1.Lines.Add('New position: '+inttostr(Position));
 end;
 
@@ -166,19 +175,27 @@ begin
   AccelStepper1.MotorPin4:=11;
   AccelStepper1.StepSize:=HALF_STEP;
   Board1.printPinInfo(Memo1);
+
   AccelStepper1.Enabled:=True; // enable accelStepper
 end;
 
 procedure TForm1.ClosePortClick(Sender: TObject);
 begin
+    if AccelStepper1.Running then
+    begin
+      AccelStepper1.Enabled:=false;
+      //sleep(round(AccelStepper1.Speed/AccelStepper1.Acceleration*1000)); // max wait for smooth stop
+    end;
+    if ToggleBox1.Checked then
+      Move.Caption:='Move to'
+    else
+      Move.Caption:='Move';
+    memo1.Clear;
     puerto.Enabled:=true;
     closeport.Enabled:=False;
     Openport.Enabled:=True;
     configure.Enabled:=True;
-
-    memo1.Clear;
-
-    AccelStepper1.Enabled:=false;
+    FastStop.Visible:=False;
 
     Board1.enabled:=false;
 end;

@@ -1,19 +1,19 @@
 object Form1: TForm1
-  Left = 289
-  Height = 784
-  Top = 127
-  Width = 1142
+  Left = 476
+  Height = 855
+  Top = 144
+  Width = 1246
   Caption = 'Form1'
-  ClientHeight = 784
-  ClientWidth = 1142
-  Font.Height = -16
+  ClientHeight = 855
+  ClientWidth = 1246
+  Font.Height = -17
   OnCreate = FormCreate
   LCLVersion = '2.0.0.4'
   object OpenPort: TButton
-    Left = 215
-    Height = 32
-    Top = 17
-    Width = 97
+    Left = 235
+    Height = 35
+    Top = 19
+    Width = 106
     Caption = 'open'
     Default = True
     OnClick = OpenPortClick
@@ -21,10 +21,10 @@ object Form1: TForm1
     TabOrder = 0
   end
   object ClosePort: TButton
-    Left = 215
-    Height = 32
-    Top = 59
-    Width = 97
+    Left = 235
+    Height = 35
+    Top = 64
+    Width = 106
     Caption = 'close'
     Enabled = False
     OnClick = ClosePortClick
@@ -32,48 +32,48 @@ object Form1: TForm1
     TabOrder = 1
   end
   object Puerto: TEdit
-    Left = 89
+    Left = 97
     Height = 23
-    Top = 17
-    Width = 104
+    Top = 19
+    Width = 113
     ParentFont = False
     TabOrder = 2
   end
   object Steps: TEdit
-    Left = 1019
+    Left = 1112
     Height = 23
-    Top = 20
-    Width = 99
+    Top = 22
+    Width = 108
     OnEditingDone = StepsEditingDone
     ParentFont = False
     TabOrder = 7
     Text = '1000'
   end
   object Label6: TLabel
-    Left = 971
+    Left = 1059
     Height = 15
-    Top = 29
+    Top = 32
     Width = 31
     Caption = 'Steps:'
     ParentColor = False
     ParentFont = False
   end
   object Label1: TLabel
-    Left = 48
+    Left = 52
     Height = 15
-    Top = 27
+    Top = 29
     Width = 25
     Caption = 'Port:'
     ParentColor = False
     ParentFont = False
   end
   object Memo1: TMemo
-    Left = 21
-    Height = 565
-    Top = 201
-    Width = 1101
+    Left = 23
+    Height = 616
+    Top = 219
+    Width = 1201
     Enabled = False
-    Font.Height = -14
+    Font.Height = -15
     Lines.Strings = (
       'Memo1'
     )
@@ -84,38 +84,38 @@ object Form1: TForm1
     TabOrder = 3
   end
   object Label2: TLabel
-    Left = 23
+    Left = 25
     Height = 15
-    Top = 164
+    Top = 179
     Width = 300
     Caption = 'Pins (click in memo to show pin modes and capabilities):'
     ParentColor = False
     ParentFont = False
   end
   object configure: TButton
-    Left = 17
-    Height = 32
-    Top = 59
-    Width = 170
+    Left = 19
+    Height = 35
+    Top = 64
+    Width = 185
     Caption = 'configure serial port'
     OnClick = configureClick
     ParentFont = False
     TabOrder = 4
   end
   object Label4: TLabel
-    Left = 838
+    Left = 914
     Height = 15
-    Top = 29
+    Top = 32
     Width = 38
     Caption = 'Device:'
     ParentColor = False
     ParentFont = False
   end
   object MotorDevice: TEdit
-    Left = 890
+    Left = 971
     Height = 23
-    Top = 20
-    Width = 67
+    Top = 22
+    Width = 73
     Enabled = False
     ParentFont = False
     ReadOnly = True
@@ -123,65 +123,76 @@ object Form1: TForm1
     Text = '0'
   end
   object Move: TButton
-    Left = 1019
-    Height = 29
-    Top = 61
-    Width = 99
+    Left = 1112
+    Height = 32
+    Top = 67
+    Width = 108
     Caption = 'Move'
     OnClick = MoveClick
     ParentFont = False
     TabOrder = 6
   end
   object Label3: TLabel
-    Left = 393
-    Height = 25
-    Top = 17
-    Width = 350
+    Left = 429
+    Height = 30
+    Top = 19
+    Width = 384
     Caption = 'Motor  28BYJ-48 and ULN2003 module'
-    Font.Height = -19
+    Font.Height = -21
     Font.Style = [fsBold]
     ParentColor = False
     ParentFont = False
   end
   object Label5: TLabel
-    Left = 393
-    Height = 80
-    Top = 69
-    Width = 390
+    Left = 429
+    Height = 84
+    Top = 75
+    Width = 407
     Caption = 'Motor Pins:'#13#10#13#10'In 1 to motorpin 1 (pin 8)            In 2 to motorpin 2 (pin 10)'#13#10'In 3 to motorpin 3 (pin 9)            In 4 to motorpin 4 (pin 11)'
-    Font.Height = -15
+    Font.Height = -16
     ParentColor = False
     ParentFont = False
   end
   object ToggleBox1: TToggleBox
-    Left = 914
-    Height = 29
-    Top = 61
-    Width = 89
+    Left = 997
+    Height = 32
+    Top = 67
+    Width = 97
     Caption = 'Relative'
     OnClick = ToggleBox1Click
     ParentFont = False
     TabOrder = 8
   end
   object Label7: TLabel
-    Left = 838
+    Left = 914
     Height = 15
-    Top = 65
+    Top = 71
     Width = 59
     Caption = 'Move type:'
     ParentColor = False
     ParentFont = False
   end
   object Display: TLabel
-    Left = 916
-    Height = 44
-    Top = 113
-    Width = 157
+    Left = 1004
+    Height = 48
+    Top = 157
+    Width = 171
     AutoSize = False
-    Constraints.MaxWidth = 218
-    Font.Height = -16
+    Constraints.MaxWidth = 238
+    Font.Height = -17
     ParentColor = False
     ParentFont = False
+  end
+  object FastStop: TButton
+    Left = 1112
+    Height = 32
+    Top = 105
+    Width = 108
+    Caption = 'Fast Stop'
+    OnClick = FastStopClick
+    ParentFont = False
+    TabOrder = 9
+    Visible = False
   end
   object Board1: TBoard
     SamplingInterval = 19
@@ -195,8 +206,8 @@ object Form1: TForm1
     OnDeviceDataAvailable = Board1DeviceDataAvailable
     OnError = Board1Error
     OnBoardData = Board1FirmataData
-    left = 628
-    top = 157
+    left = 685
+    top = 171
   end
   object LazSerial1: TLazSerial
     Active = False
@@ -207,8 +218,8 @@ object Form1: TForm1
     StopBits = sbOne
     Device = 'COM1'
     RcvLineCRLF = False
-    left = 733
-    top = 157
+    left = 800
+    top = 171
   end
   object AccelStepper1: TAccelStepper
     Board = Board1
@@ -230,7 +241,7 @@ object Form1: TForm1
     Acceleration = 100
     OnStepperPosition = AccelStepper1StepperPosition
     OnStepperMoveCompleted = AccelStepper1StepperMoveCompleted
-    left = 819
-    top = 157
+    left = 893
+    top = 171
   end
 end
