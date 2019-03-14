@@ -152,6 +152,7 @@ uses
       procedure setEnabled(State: Boolean);
       procedure initBoardVariables;
       procedure InternalBoardReady;
+      procedure DisableModules;
       procedure setTimeEnd(TimeToWait: Qword);  // milisec to wait for firmata
 
       function GetBoardPin(Index: Integer): TBoardPin;
@@ -467,6 +468,7 @@ uses
                                //HALF_STEP =                $01; // XXX001X = half step
        FSpeed: single;
        FAcceleration: single;
+       FRunning: Boolean;
 
        FOnEnabled: TOnEnabled;
        FOnDisabled: TOnDisabled;
@@ -526,6 +528,7 @@ uses
        property Speed: single read FSpeed write setSpeed;
        property Steps: integer read FSteps write FSteps;
        property Acceleration: single read FAcceleration write setAcceleration;
+       property Running: Boolean read FRunning;
        property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
        property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
        property OnStepperPosition: TOnStepperPosition read FOnStepperPosition write FOnStepperPosition;
@@ -1202,7 +1205,10 @@ begin
   if State then
      Open
   else
+  begin
+     DisableModules;
      Close;
+  end;
 end;
 
 procedure TBoard.Open;
@@ -1275,11 +1281,60 @@ begin
     FEncoders[i]:=nil;
 end;
 
+procedure TBoard.DisableModules;
+var
+  i: integer;
+begin
+  // disable AccelStepperGroup
+  if Assigned(FAccelStepperGroup) and FAccelStepperGroup.FEnabled then
+    FAccelStepperGroup.setEnabled(False);
+
+  // disable AccelSteppers
+  for i:=0 to MAX_ACCELSTEPPER_DEVICES - 1 do
+    if Assigned(FAccelSteppers[i]) and FAccelSteppers[i].FEnabled then
+      FAccelSteppers[i].setEnabled(False);
+
+  // disable I2C
+  if Assigned(FI2C) and FI2C.FEnabled then
+    FI2C.setEnabled(False);
+
+  // disable Onewire modules
+  for i:=0 to FBoardPinsNumber - 1 do
+    if Assigned(FOneWires[i]) and FOneWires[i].FEnabled then
+      FOneWires[i].setEnabled(false);
+
+  // disable tasks
+  for i:=0 to 127 do
+    if Assigned(FTasks[i]) and FTasks[i].FEnabled then
+      FTasks[i].setEnabled(False);
+
+  // disable servos
+  for i:=0 to MAX_SERVOS - 1 do
+    if Assigned(FServos[i]) and FServos[i].FEnabled then
+      FServos[i].setEnabled(false);
+
+  // disable encoders
+  for i:=0 to MAX_ENCODERS - 1 do
+    if Assigned(FEncoders[i]) and FEncoders[i].FEnabled then
+      FEncoders[i].setEnabled(false);
+
+  // disable serial ports
+  for i:=0 to MAX_SERIAL_PORTS - 1 do
+    if Assigned(FSerials[ByteToSerialPorts(i)]) and FSerials[ByteToSerialPorts(i)].FEnabled then
+      FSerials[ByteToSerialPorts(i)].setEnabled(False);
+
+ // disable pins
+ for i:=0 to FBoardPinsNumber - 1 do
+  if Assigned(FPins[i]) and FPins[i].FEnabled then
+    FPins[i].setEnabled(False);
+
+end;
+
 procedure TBoard.Close;
 begin
   FEnabled:=False;
 
-  // stop runnung thread
+  // stop running thread
   if FBoardThread <> nil then begin
     FBoardThread.FreeOnTerminate:=false;
     FBoardThread.MustDie:= true;
@@ -1632,9 +1687,7 @@ begin
                   FBoardPins[Pin].ActualMode:=Mode;
                   if Assigned(FPins[Pin].FOnPinState) then
                     FPins[Pin].FOnPinState(self, FPins[Pin].FMode, Value);
-                end
-                else   // Module is not asigned or enabled
-                  RaiseError(32,'Pin State Response');
+                end;
           end;
           {0  START_SYSEX              (0xF0)
           1  EXTENDED_ANALOG           (0x6F)
@@ -1658,9 +1711,7 @@ begin
                 FPins[Pin].FValue:=Value;
                 if Assigned(FPins[Pin].FOnPinValue) then
                   FPins[Pin].FOnPinValue(self, Value);
-              end
-              else   // Module is not asigned or enabled
-                RaiseError(32,'Extended Analog Reponse');;
+              end;
           end;
           {0  START_SYSEX        (0xF0)
           1  STRING_DATA        (0x71)
@@ -1710,10 +1761,7 @@ begin
             begin
                if Assigned(FSerials[ByteToSerialPorts(Port)].FOnSerialMessage) then
                  FSerials[ByteToSerialPorts(Port)].FOnSerialMessage(self, DataString);
-            end
-            else   // Module is not asigned or enabled
-              RaiseError(32,'Serial Message response');
-
+            end;
           end;
           {0  START_SYSEX              (0xF0)
            1  Scheduler Command        (0x7B)
@@ -1747,9 +1795,7 @@ begin
                 // get TaskID
                 TaskID:=ord(DataString[2]);
                 if Assigned(FTasks[TaskID]) and FTasks[TaskID].Enabled then
-                  FTasks[TaskID].GetFirmataCommand(Self, DataString)
-                else   // Module is not asigned or enabled
-                  RaiseError(32,'Scheduler Data Response');
+                  FTasks[TaskID].GetFirmataCommand(Self, DataString);
               end;
               {0  START_SYSEX          (0xF0)
                1  Scheduler Command    (0x7B)
@@ -1790,9 +1836,7 @@ begin
               ReadByte:=GetNextByte;
             end;
             if Assigned(FI2C) and FI2C.Enabled then
-              FI2C.GetFirmataCommand(Self, DataString)
-            else   // Module is not asigned or enabled
-              RaiseError(32,'I2C Replay');
+              FI2C.GetFirmataCommand(Self, DataString);
           end;
           ONEWIRE_DATA: begin //  $73;
             ReadByte:=GetNextByte;
@@ -1804,9 +1848,7 @@ begin
             // first byte is subcommand
             Pin:=ord(DataString[2]);  // second byte
             if Assigned(FOneWires[Pin]) and FOneWires[Pin].Enabled then
-              FOneWires[Pin].GetFirmataCommand(Self, DataString)
-            else   // Module is not asigned or enabled
-              RaiseError(32,'OneWire Data Response');
+              FOneWires[Pin].GetFirmataCommand(Self, DataString);
           end;
           ACCELSTEPPER_DATA: begin  // $62
             ReadByte:=GetNextByte;
@@ -1831,9 +1873,7 @@ begin
                  // Device is second byte
                  Device:=ord(DataString[2]);
                  if Assigned(FAccelSteppers[Device]) and FAccelSteppers[Device].Enabled then
-                    FAccelSteppers[Device].GetFirmataCommand(Self, DataString)
-                 else   // Module is not asigned or enabled
-                   RaiseError(32,'AccelStepper Data Response');
+                    FAccelSteppers[Device].GetFirmataCommand(Self, DataString);
                end;
                {0  START_SYSEX                             (0xF0)
                1  ACCELSTEPPER_DATA                       (0x62)
@@ -1842,9 +1882,7 @@ begin
                4  END_SYSEX(0xF7)}
                ACCELSTEPPER_MULTI_MOVE_COMPLETED: begin  // group of accelstepper
                  if Assigned(FAccelStepperGroup) and FAccelStepperGroup.Enabled then
-                   FAccelStepperGroup.GetFirmataCommand(Self, DataString)
-                 else   // Module is not asigned or enabled
-                   RaiseError(32,'AccelStepperGroup Multi Move Completed');
+                   FAccelStepperGroup.GetFirmataCommand(Self, DataString);
               end
               else  // subcommand unknown
               begin
@@ -1881,7 +1919,7 @@ begin
                 FEncoders[Device].GetFirmataCommand(Self, EncoderData);
             end;
             if ord(DataString[Length(DataString)]) <> END_SYSEX then
-              RaiseError(47, 'ENCODER_DATA'); // last Byte must be END_SYSEX
+              RaiseError(47, 'ENCODER_DATA'); // last Byte should be END_SYSEX
           end;
           else   // Sysex command unknown
           begin
@@ -3555,6 +3593,7 @@ begin
   FSpeed:=1000;
   FSteps:=0;
   FAcceleration:=40;
+  FRunning:=False;
   FInterfaceType:=ACCEL_INTERFACE_4_WIRE;  // default to 4 wire
   FOnStepperPosition:=nil;
   FOnStepperMoveCompleted:=nil;
@@ -3659,6 +3698,7 @@ begin
 
   if State then
   begin
+    FRunning:=false;
     FEnabled:=True;
     if Assigned(FBoard) and FBoard.Enabled then
     begin
@@ -3753,6 +3793,8 @@ begin
   begin
     if Assigned(FOnDisabled) then
       FOnDisabled(self);
+    if FRunning then
+      Stop; // send stop
     FBoard.FBoardPins[FMotorPin1].Busy:=false;   // free pins
     FBoard.FBoardPins[FMotorPin2].Busy:=false;
     FBoard.FBoardPins[FMotorPin3].Busy:=false;
@@ -3801,8 +3843,14 @@ begin
       if Assigned(FBoard.FAccelSteppers[Device].FOnStepperPosition) then
           FBoard.FAccelSteppers[Device].FOnStepperPosition(self, Device, Position);
     end
-    else if Assigned(FBoard.FAccelSteppers[Device].FOnStepperMoveCompleted) then
+    else
+    begin
+      FRunning:=False; // stepper has stopped
+      if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
+        MotorEnable(False);
+      if Assigned(FBoard.FAccelSteppers[Device].FOnStepperMoveCompleted) then
           FBoard.FAccelSteppers[Device].FOnStepperMoveCompleted(self, Device, Position);
+    end;
 end;
 { Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
 function TAccelStepper.SendSysEx(data7bit: string; write: Boolean=true): string;
@@ -3918,7 +3966,13 @@ end;
 9  END_SYSEX                               (0xF7)}
 function TAccelStepper.Move(write: Boolean=True): string;
 begin
-  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_STEP)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
+  Result:='';
+  if write then
+    FRunning:=True;
+
+  if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
+    Result:=MotorEnable(True, write);
+  Result:=Result+SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_STEP)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
 end;
 {0  START_SYSEX                            (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
@@ -3932,7 +3986,13 @@ end;
 9 END_SYSEX                               (0xF7)}
 function TAccelStepper.MoveTo(write: Boolean=True): string;
 begin
-  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_TO)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
+  Result:='';
+  if write then
+    FRunning:=True;
+
+  if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
+    Result:=MotorEnable(True, write);
+  Result:=Result+SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_TO)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
 end;
 {0  START_SYSEX                             (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
@@ -4130,6 +4190,8 @@ begin
 end;
 
 procedure TAccelStepperGroup.setEnabled(State: Boolean);
+var
+  i: integer;
 begin
     if not Assigned(FBoard) then
       exit;
@@ -4166,7 +4228,10 @@ begin
       if Assigned(FOnDisabled) then
         FOnDisabled(self);
       if Assigned(FBoard) then
+      begin
+        StepperMultiStop;
         FBoard.FAccelStepperGroup:=nil;
+      end;
       FEnabled:=False;
     end;
 end;
