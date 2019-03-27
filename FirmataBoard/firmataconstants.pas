@@ -8,8 +8,19 @@ interface
 uses
   Classes, SysUtils;
 
- 
 type
+  {TPinValue = 0..1;
+
+  TPortPins = bitpacked record
+    Pin0, Pin1, Pin2, Pin3, Pin4, Pin5, Pin6, Pin7: TPinValue;
+  end;
+
+  TPortValue = packed record
+     case Integer of
+       0: (Byte: Byte);
+       1: (Pins: TPortPins);
+     end; }
+
   TErrorRec = record
     Number: integer;
     Text: string;
@@ -96,9 +107,9 @@ ErrorsArray: array [1..47] of String = (
    START_SYSEX =             $F0; // start a MIDI Sysex message
    END_SYSEX =               $F7; // end a MIDI Sysex message
    EXTENDED_SYSEX =          $00; // extended SysEx commands, netx to bytes are extended command
-
-  // extended command set using sysex (0-127/$00-$7F)
-  { $00-$0F redevved for udev-defined commands }
+   // extended command set using sysex (0-127/$00-$7F)
+  { $00-$0F reserv for user-defined commands }
+   PS2MOUSE_DATA =           $50; // user defined command PS2 mouse
    SERIAL_DATA =             $60; // SERIAL DATA
    ENCODER_DATA =            $61; // reply with encoders current positions
    ACCELSTEPPER_DATA =       $62; // Accelerated stepper data
@@ -136,6 +147,7 @@ ErrorsArray: array [1..47] of String = (
    PIN_MODE_ENCODER =        $09; // pin configured for rotary encoders
    PIN_MODE_SERIAL =         $0A; // pin configured for serial communication
    PIN_MODE_PULLUP =         $0B; // enable internal pull-up resistor for pin
+   PIN_MODE_PS2MOUSE =       $0C; // mouse mode pin
    PIN_MODE_IGNORE =         $7F; // pin configured to be ignored by digitalWrite and capabilityResponse
 
    HIGH = 1;
@@ -265,7 +277,26 @@ ErrorsArray: array [1..47] of String = (
    ENCODER_DETACH =           $05;  // detach encoder
    DIRECTION_MASK =           $40;  // B01000000
    ENCODER_MASK =             $3F;  // B00111111, ENCODER
-
+   // PS2 mouse
+   MAX_MICE =                  $03;
+   PS2MOUSE_RESET      =       $00;
+   PS2MOUSE_STATUS     =       $01;
+   PS2MOUSE_CONFIG     =       $02;
+   PS2MOUSE_DEVICEID   =       $03;
+   PS2MOUSE_SET_RESOLUTION  =  $04;
+   PS2MOUSE_SET_SAMPLE_RATE =  $05;
+   PS2MOUSE_REPORTING  =       $06;
+   PS2MOUSE_SET_FIVE_BUTTONS = $07;
+   PS2MOUSE_SET_STREAM_MODE =  $08;
+   PS2MOUSE_SET_REMOTE_MODE =  $09;
+   PS2MOUSE_REMOTE     =       $01;
+   PS2MOUSE_STREAM     =       $00;
+   PS2MOUSE_1_COUNT_MM =       0;
+   PS2MOUSE_2_COUNT_MM =       1;
+   PS2MOUSE_4_COUNT_MM =       2;
+   PS2MOUSE_8_COUNT_MM =       3;
+   PS2MOUSE_SCALING_1_TO_1  =  $E6;
+   PS2MOUSE_SCALING_2_TO_1  =  $E7;
 
 implementation
 
