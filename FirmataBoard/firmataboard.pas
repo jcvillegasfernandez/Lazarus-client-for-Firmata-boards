@@ -4959,6 +4959,7 @@ begin
             FBoard.FBoardPins[FPin].Busy:=True;
             FBoard.FServos[FDevice]:=self;
             Config;  // set pin mode to servo and config min and max pulses
+            WriteValue;
             if Assigned(FOnEnabled) then
                  FOnEnabled(self);
           end
@@ -5057,7 +5058,7 @@ end;
 7  END_SYSEX            (0xF7) }
 function TServo.config(write: Boolean=true): string;
 begin
-  Result:=SendSysEx(chr(SERVO_CONFIG)+chr(FMinPulse and $7F)+chr((FMinPulse >> 7) and $7F)+chr(FMaxPulse and $7F)+chr((FMaxPulse << 7) and $7F), write);
+  Result:=SendSysEx(chr(SERVO_CONFIG)+chr(FPin)+chr(FMinPulse and $7F)+chr((FMinPulse >> 7) and $7F)+chr(FMaxPulse and $7F)+chr((FMaxPulse << 7) and $7F), write);
   if write then
     FBoard.FBoardPins[FPin].ActualMode:=PinModesToByte(PIN_MODE_SERVO);
 end;
@@ -5069,7 +5070,7 @@ function TServo.AnalogWrite(Value: integer; write: Boolean=true): string;
 begin
   if write then
     FValue:=Value;
-  Result:=SendCommand(chr(ANALOG_MESSAGE or FPin)+chr(Value and $7F)+chr(Value >> 7 and $7F), write);
+  Result:=SendCommand(chr(ANALOG_MESSAGE or FPin)+chr(Value and $7F)+chr(Value >> 7 and $7F), write)
 end;
 {0  START_SYSEX              (0xF0)
 1  extended analog message  (0x6F)
