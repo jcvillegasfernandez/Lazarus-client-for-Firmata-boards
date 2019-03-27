@@ -12,4 +12,4 @@ TBoard uses TThreads (like LazSerial does) but be careful because TThread only r
 When you enable a TBoard instance it triggers a TOnBoardReady, that means TBoard is enabled, knows all board capabilities and it is ready to get and send data.
 TBoard has two events TOnBeforeOpen is triggered before Enabled TBoard and TOnAfterClose triggered after disable TBoard.
 
-At this moment it is a beta version 0.2, I made a few examples, I haven’t tested some modules yet because I don’t have devices to try (I ordered some but still waiting for them), if there is not an example for a module it means not tested.
+At this moment it is a beta version 0.5, I made a few examples, I haven’t tested some modules yet because I don’t have devices to try (I ordered some but still waiting for them), if there is not an example for a module it means not tested.
