@@ -8,6 +8,6 @@ The core component is TBoard with some modules to link TPin, TI2C, TTask, TOneWi
 
 When you enable a TBoard instance it triggers a TOnBoardReady, that means TBoard is enabled, the board knows all board capabilities and it is ready to get and send data.
 
-Take a look to the examples.
+Take a look to the examples. I made all my tests on Arduino Uno boards.
 
 At this moment it is a beta version 0.5, I made a few examples, if there is not an example for a module it means not tested.
