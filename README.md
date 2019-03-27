@@ -1,5 +1,5 @@
 # Lazarus client for Firmata boards
-Components for working with Firmata boards on Lazarus
+Components working with Firmata boards on Lazarus (free Pascal)
 
 I am not a master in programming but with hard work I have built some pieces to work with Lazarus (I think it will be easy to port to Delphi).
 
