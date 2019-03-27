@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 476
+  Left = 290
   Height = 855
-  Top = 144
+  Top = 88
   Width = 1246
   Caption = 'Form1'
   ClientHeight = 855
@@ -197,7 +197,7 @@ object Form1: TForm1
   object Board1: TBoard
     SamplingInterval = 19
     LastError = 42
-    TimeStarting = 6000
+    MaxTime = 6000
     OnBeforeOpen = Board1BeforeOpen
     OnAfterClose = Board1AfterClose
     OnBoardReady = Board1FirmataReady

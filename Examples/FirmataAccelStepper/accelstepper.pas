@@ -167,7 +167,7 @@ procedure TForm1.Board1FirmataReady(sender: TObject);
 begin
   Display.Caption:='Aacceleration: '+floattoStr(AccelStepper1.Acceleration)+LineEnding+'Speed: '+floattoStr(AccelStepper1.Speed);
   memo1.clear;
-  memo1.lines.add('Firmata started in, '+inttostr(Board1.TimeToStart)+' milisec');
+  memo1.lines.add('Firmata started in, '+inttostr(Board1.StartingTime)+' milisec');
   memo1.lines.add('Firmata Firmare:' + Board1.FirmataFirmware);
   AccelStepper1.MotorPin1_or_DriverStep:=8;
   AccelStepper1.MotorPin2_or_DriverDirection:=10;
@@ -177,6 +177,12 @@ begin
   Board1.printPinInfo(Memo1);
 
   AccelStepper1.Enabled:=True; // enable accelStepper
+  if not AccelStepper1.Enabled then
+  begin
+    memo1.Lines.add('');
+    memo1.Lines.add('AccelStepper module is not installed or therea ren''t any free supported pins in ConfigurableFirmata');
+   exit;
+  end;
 end;
 
 procedure TForm1.ClosePortClick(Sender: TObject);

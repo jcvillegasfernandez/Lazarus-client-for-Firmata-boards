@@ -1,57 +1,26 @@
 object Form1: TForm1
-  Left = 162
-  Height = 664
-  Top = 143
-  Width = 1270
+  Left = 390
+  Height = 724
+  Top = 206
+  Width = 1137
   ActiveControl = Puerto
   Anchors = [akTop]
   BorderStyle = bsDialog
   Caption = 'Form1'
-  ClientHeight = 664
-  ClientWidth = 1270
-  DesignTimePPI = 88
+  ClientHeight = 724
+  ClientWidth = 1137
   Font.CharSet = ANSI_CHARSET
-  Font.Height = -13
+  Font.Height = -14
   Font.Name = 'Arial'
   Font.Pitch = fpVariable
   Font.Quality = fqDraft
   OnCreate = FormCreate
   LCLVersion = '2.0.0.4'
-  object LedOn: TButton
-    Left = 535
-    Height = 30
-    Top = 55
-    Width = 80
-    Caption = 'Led on'
-    Enabled = False
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    OnClick = LedOnClick
-    ParentFont = False
-    TabOrder = 0
-  end
-  object LedOff: TButton
-    Left = 630
-    Height = 30
-    Top = 55
-    Width = 75
-    Caption = 'Led off'
-    Enabled = False
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    OnClick = LedOffClick
-    ParentFont = False
-    TabOrder = 1
-  end
   object OpenPort: TButton
-    Left = 278
-    Height = 27
-    Top = 32
-    Width = 92
+    Left = 303
+    Height = 29
+    Top = 35
+    Width = 100
     Caption = 'open'
     Font.CharSet = ANSI_CHARSET
     Font.Name = 'Arial'
@@ -59,13 +28,13 @@ object Form1: TForm1
     Font.Quality = fqDraft
     OnClick = OpenPortClick
     ParentFont = False
-    TabOrder = 2
+    TabOrder = 0
   end
   object ClosePort: TButton
-    Left = 278
-    Height = 26
-    Top = 81
-    Width = 92
+    Left = 303
+    Height = 28
+    Top = 88
+    Width = 100
     Caption = 'close'
     Enabled = False
     Font.CharSet = ANSI_CHARSET
@@ -74,26 +43,26 @@ object Form1: TForm1
     Font.Quality = fqDraft
     OnClick = ClosePortClick
     ParentFont = False
-    TabOrder = 3
+    TabOrder = 1
   end
   object Puerto: TEdit
-    Left = 137
-    Height = 25
-    Top = 32
-    Width = 123
+    Left = 149
+    Height = 26
+    Top = 35
+    Width = 134
     Font.CharSet = ANSI_CHARSET
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     ParentFont = False
-    TabOrder = 4
+    TabOrder = 2
     Text = 'COM1'
   end
   object Label1: TLabel
-    Left = 104
-    Height = 15
-    Top = 40
-    Width = 25
+    Left = 113
+    Height = 18
+    Top = 44
+    Width = 33
     Caption = 'Port:'
     Font.CharSet = ANSI_CHARSET
     Font.Name = 'Arial'
@@ -103,13 +72,13 @@ object Form1: TForm1
     ParentFont = False
   end
   object Memo1: TMemo
-    Left = 32
-    Height = 413
-    Top = 216
-    Width = 1214
+    Left = 35
+    Height = 451
+    Top = 236
+    Width = 1085
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -12
+    Font.Height = -13
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -119,13 +88,13 @@ object Form1: TForm1
     OnClick = Memo1Click
     ParentFont = False
     ScrollBars = ssAutoVertical
-    TabOrder = 5
+    TabOrder = 3
   end
   object Label2: TLabel
-    Left = 32
-    Height = 15
-    Top = 190
-    Width = 301
+    Left = 35
+    Height = 18
+    Top = 207
+    Width = 386
     Caption = 'Pins (click in memo to show pin states and capabilities):'
     Font.CharSet = ANSI_CHARSET
     Font.Name = 'Arial'
@@ -135,10 +104,10 @@ object Form1: TForm1
     ParentFont = False
   end
   object configure: TButton
-    Left = 87
-    Height = 26
-    Top = 81
-    Width = 173
+    Left = 95
+    Height = 28
+    Top = 88
+    Width = 189
     Caption = 'configure serial port'
     Font.CharSet = ANSI_CHARSET
     Font.Name = 'Arial'
@@ -146,214 +115,224 @@ object Form1: TForm1
     Font.Quality = fqDraft
     OnClick = configureClick
     ParentFont = False
-    TabOrder = 6
+    TabOrder = 4
   end
-  object Label3: TLabel
-    Left = 960
-    Height = 15
-    Top = 16
-    Width = 21
-    Caption = 'Pin:'
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    ParentColor = False
-    ParentFont = False
-    Visible = False
-  end
-  object Pins: TComboBox
-    Left = 1004
-    Height = 27
-    Top = 8
-    Width = 100
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    ItemHeight = 0
-    OnChange = PinsChange
-    ParentFont = False
-    TabOrder = 7
-    Text = 'Pins'
-    Visible = False
-  end
-  object Modes: TComboBox
-    Left = 1003
-    Height = 27
-    Top = 46
-    Width = 187
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    ItemHeight = 0
-    OnChange = ModesChange
-    ParentFont = False
-    TabOrder = 8
-    Text = 'Modes'
-    Visible = False
-  end
-  object Label4: TLabel
-    Left = 944
-    Height = 15
-    Top = 56
-    Width = 34
-    Caption = 'Mode:'
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    ParentColor = False
-    ParentFont = False
-    Visible = False
-  end
-  object SetValue: TButton
-    Left = 1096
-    Height = 22
-    Top = 92
-    Width = 103
-    Caption = 'Write Value'
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    OnClick = SetValueClick
-    ParentFont = False
-    TabOrder = 9
-    Visible = False
-  end
-  object Valuewrite: TEdit
-    Left = 1004
-    Height = 23
-    Top = 92
-    Width = 83
-    Alignment = taRightJustify
-    AutoSize = False
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    OnEditingDone = ValuewriteEditingDone
-    ParentFont = False
-    TabOrder = 10
-    Text = '0'
-    Visible = False
-  end
-  object TaskExe: TButton
-    Left = 519
-    Height = 35
-    Top = 170
-    Width = 87
-    Caption = 'Execute task'
-    Enabled = False
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    OnClick = TaskExeClick
-    ParentFont = False
-    TabOrder = 11
-  end
-  object DeleteTask: TButton
-    Left = 631
-    Height = 35
-    Top = 170
-    Width = 88
-    Caption = 'Delete task'
-    Enabled = False
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    OnClick = DeleteTaskClick
-    ParentFont = False
-    TabOrder = 12
-  end
-  object CreateTask: TButton
-    Left = 519
-    Height = 28
-    Top = 128
-    Width = 200
-    Caption = 'Create  led 13 ON/OFF task'
-    Enabled = False
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    OnClick = CreateTaskClick
-    ParentFont = False
-    TabOrder = 13
-  end
-  object Label5: TLabel
-    Left = 535
-    Height = 15
-    Top = 32
-    Width = 170
-    Caption = 'Manual operation on led pin 13'
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    ParentColor = False
-    ParentFont = False
-  end
-  object Label6: TLabel
-    Left = 905
-    Height = 15
-    Top = 99
-    Width = 76
-    Caption = 'Value to write:'
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    ParentColor = False
-    ParentFont = False
-    Visible = False
-  end
-  object Label7: TLabel
-    Left = 919
-    Height = 15
-    Top = 160
-    Width = 62
-    Caption = 'Value read:'
-    Font.CharSet = ANSI_CHARSET
-    Font.Name = 'Arial'
-    Font.Pitch = fpVariable
-    Font.Quality = fqDraft
-    ParentColor = False
-    ParentFont = False
-    Visible = False
-  end
-  object ValueRead: TEdit
-    Left = 1004
+  object Edit1: TEdit
+    Left = 560
     Height = 24
-    Top = 152
-    Width = 83
-    Alignment = taRightJustify
-    AutoSize = False
+    Top = 8
+    Width = 144
     Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     ParentFont = False
     ReadOnly = True
-    TabOrder = 14
-    Visible = False
+    TabOrder = 5
+    Text = 'Edit1'
   end
-  object ToggleReport: TToggleBox
-    Left = 1096
-    Height = 24
-    Top = 151
-    Width = 103
-    Caption = 'Report disabled'
+  object Label3: TLabel
+    Left = 472
+    Height = 16
+    Top = 16
+    Width = 77
+    Caption = 'Mouse type:'
     Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
-    OnChange = ToggleReportChange
-    OnClick = TogglereportClick
+    ParentColor = False
+    ParentFont = False
+  end
+  object x_Edit: TEdit
+    Left = 595
+    Height = 24
+    Top = 44
+    Width = 80
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+    ReadOnly = True
+    TabOrder = 6
+  end
+  object Label4: TLabel
+    Left = 565
+    Height = 16
+    Top = 51
+    Width = 10
+    Caption = 'x:'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object y_Edit: TEdit
+    Left = 595
+    Height = 24
+    Top = 80
+    Width = 80
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+    ReadOnly = True
+    TabOrder = 7
+  end
+  object Label5: TLabel
+    Left = 565
+    Height = 16
+    Top = 85
+    Width = 11
+    Caption = 'y:'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object GetMouseData: TButton
+    Left = 969
+    Height = 25
+    Top = 70
+    Width = 136
+    Caption = 'Manual Get Data'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = GetMouseDataClick
+    ParentFont = False
+    TabOrder = 8
+  end
+  object Reporting: TToggleBox
+    Left = 969
+    Height = 25
+    Top = 105
+    Width = 139
+    Caption = 'Reporting Off'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    OnClick = ReportingClick
+    ParentFont = False
+    TabOrder = 9
+  end
+  object z_Edit: TEdit
+    Left = 595
+    Height = 24
+    Top = 113
+    Width = 80
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+    ReadOnly = True
+    TabOrder = 10
+  end
+  object Label6: TLabel
+    Left = 540
+    Height = 16
+    Top = 120
+    Width = 40
+    Caption = 'wheel:'
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+  end
+  object ButtonLeft: TCheckBox
+    Left = 736
+    Height = 20
+    Top = 8
+    Width = 89
+    Caption = 'Left Button'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+    TabOrder = 11
+  end
+  object ButtonRight: TCheckBox
+    Left = 736
+    Height = 20
+    Top = 45
+    Width = 98
+    Caption = 'Right Button'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+    TabOrder = 12
+  end
+  object ButtonMiddle: TCheckBox
+    Left = 736
+    Height = 20
+    Top = 77
+    Width = 106
+    Caption = 'Middle Button'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+    TabOrder = 13
+  end
+  object ButtonFour: TCheckBox
+    Left = 736
+    Height = 20
+    Top = 113
+    Width = 107
+    Caption = 'Fourth Button'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+    TabOrder = 14
+    Visible = False
+  end
+  object ButtonFive: TCheckBox
+    Left = 736
+    Height = 20
+    Top = 145
+    Width = 104
+    Caption = 'Fiveth Button'
+    Enabled = False
+    Font.CharSet = ANSI_CHARSET
+    Font.Height = -14
+    Font.Name = 'Arial'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
     ParentFont = False
     TabOrder = 15
     Visible = False
@@ -367,8 +346,8 @@ object Form1: TForm1
     StopBits = sbOne
     Device = 'COM1'
     RcvLineCRLF = False
-    left = 63
-    top = 142
+    left = 69
+    top = 155
   end
   object Board1: TBoard
     SamplingInterval = 19
@@ -382,33 +361,20 @@ object Form1: TForm1
     OnDeviceDataAvailable = Board1DeviceDataAvailable
     OnError = Board1Error
     OnBoardData = Board1FirmataData
-    left = 40
-    top = 95
+    left = 44
+    top = 104
   end
-  object Task1: TTask
-    TaskID = 1
-    RunOnce = True
-    TimeDelay = 1500
-    RunDelay = 1500
+  object PS2Mouse1: TPS2Mouse
+    Resolution = PS2MOUSE_8_COUNT_MM
+    SampleRate = R_40
+    ClockPin = 5
+    DataPin = 6
     Board = Board1
-    OnTaskError = Task1TaskError
-    OnQueryTask = Task1QueryTask
-    left = 470
-    top = 142
-  end
-  object Pin13: TPin
-    Board = Board1
-    Pin = 13
-    Mode = PIN_MODE_OUTPUT
-    left = 462
-    top = 59
-  end
-  object Pin2: TPin
-    Board = Board1
-    Pin = 2
-    Mode = PIN_MODE_OUTPUT
-    OnPinValue = Pin2PinValue
-    left = 406
-    top = 107
+    Reporting = False
+    OnMouseData = PS2Mouse1MouseData
+    OnMouseStatus = PS2Mouse1MouseStatus
+    OnMouseDeviceID = PS2Mouse1MouseDeviceID
+    left = 168
+    top = 160
   end
 end

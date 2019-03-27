@@ -93,7 +93,6 @@ var
   PortValue: TPortValue;
   Status: integer;
 
-
 implementation
 
 {$R *.lfm}
@@ -123,12 +122,9 @@ begin
 end;
 
 procedure TForm1.Board1BeforeOpen(sender: TObject);
-var
-  Text1: string;
 begin
   // Open way of comunication
   LazSerial1.Device:=Puerto.Text;
-  Text1:=Puerto.Text;
   LazSerial1.Open;
   if LazSerial1.active=false then
   begin
@@ -154,7 +150,7 @@ var
   i: Integer;
 begin
   memo1.clear;
-  memo1.lines.add('Firmata started in, '+inttostr(Board1.TimeToStart)+' milisec');
+  memo1.lines.add('Firmata started in, '+inttostr(Board1.StartingTime)+' milisec');
   memo1.lines.add('Firmata Firmare:' + Board1.FirmataFirmware);
   ledon.Enabled:=True;
   ledoff.Enabled:=True;
@@ -318,6 +314,7 @@ begin
   Task1.DataTask:=TaskString;
   TaskExe.Enabled:=True;
   DeleteTask.Enabled:=True;
+  Createtask.Enabled:=False;
 end;
 
 procedure TForm1.TaskExeClick(Sender: TObject);

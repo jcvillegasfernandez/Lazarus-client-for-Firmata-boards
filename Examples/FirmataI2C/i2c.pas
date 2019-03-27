@@ -89,9 +89,8 @@ var
   Form1: TForm1;
   Chip: TChip;
   BlockValue: TBlockValues;
-  Cadena: string;
-  FNumBytes: integer;
-  FBytesRead: integer;
+  DataString: string;
+  FBytesLeft: integer;
 
 implementation
 
@@ -134,8 +133,8 @@ begin
   ComboBox1.ItemIndex:=0;
   ComboBox1CloseUp(ComboBox1);
   //AsignValuesToChip(Chip, ComboBox1.ItemIndex, BinToInt(EditA2A1A0.Text);
-  FNumBytes:=0;
-  FBytesRead:=0;
+
+  FBytesLeft:=0;
 end;
 
 procedure TForm1.AsignValuesToChip(var Chip: TChip; TypeID: Byte; As_Sel: Byte);
@@ -265,34 +264,38 @@ begin
 end;
 
 procedure TForm1.ReadDataClick(Sender: TObject);
-var
-  i: integer;
 begin
-  FNumBytes:=StrToInt(NumBytes.Text);
-  if FNumBytes <= 0 then
+  FBytesLeft:=StrToInt(NumBytes.Text);
+  if FBytesLeft <= 0 then
     exit;
+
+  DataString:='';  // global variable needed because we read by an event;
 
   // start address of reading is Chip.Actual_Address
   Chip.Actual_Address:=strtoint(Address.Text);
-  ReadBytesFromDevice(Chip, FNumBytes);
+  ReadBytesFromDevice(Chip, FBytesLeft);
 end;
 
 procedure TForm1.I2C1I2CData(sender: TObject; Slave: Byte; Reg_Number: Byte; Data: string);
 var
-  i: integer;
   StrData: string;
 begin
-    StrData:='';
-    Memo1.Lines.Add('I2C, Slave='+inttoStr(Slave));
-    Memo1.Lines.Add('I2C, Data='+StrToHexSep(Data));
-    For i:=1 to Length(Data) do
-    begin
-      if (Data[i] >= ' ') and (Data[i] <= '~') then
-        StrData:=StrData+Data[i]
-      else
-        StrData:=StrData+' ';
-    end;
-    Memo1.Lines.Add('I2C, String('+inttoStr(FBytesRead)+')='+StrData);
+  DataString:=DataString+Data;
+  FBytesLeft:=FBytesLeft - Length(Data);
+  if FBytesLeft > 0 then
+    exit;
+
+  StrData:='';
+  Memo1.Lines.Add('I2C, Slave ('+inttoStr(Slave)+') Data('+IntToStr(Length(DataString) - FBytesLeft)+')='+StrToHexSep(DataString));
+  {For i:=1 to Length(DataString) do
+  begin
+    if (DataString[i] >= ' ') and (DataString[i] <= '~') then
+      StrData:=StrData+DataString[i]
+    else
+      StrData:=StrData+' ';
+  end;
+  Memo1.Lines.Add('I2C, String('+inttoStr(FBytesRead)+')='+StrData);
+  }
 end;
 
 // slow method write max of 8 bytes, start addres of writting is Chip.Actual_Address
@@ -612,12 +615,18 @@ end;
 procedure TForm1.Board1FirmataReady(sender: TObject);
 begin
   memo1.clear;
-  memo1.lines.add('Firmata started in, '+inttostr(Board1.TimeToStart)+' milisec');
+  memo1.lines.add('Firmata started in, '+inttostr(Board1.StartingTime)+' milisec');
   memo1.lines.add('Firmata Firmare:' + Board1.FirmataFirmware);
 
   I2C1.Enabled:=true;  // prepare i2c and config pins
 
   Board1.printPinInfo(Memo1);
+  if not I2C1.Enabled then
+  begin
+    memo1.Lines.add('');
+    memo1.Lines.add('I2C module is not installed or there aren''t any free supported pins in ConfigurableFirmata');
+    exit;
+  end;
   Address.Enabled:=True;
   NumBytes.Enabled:=True;
   ReadData.Enabled:=True;

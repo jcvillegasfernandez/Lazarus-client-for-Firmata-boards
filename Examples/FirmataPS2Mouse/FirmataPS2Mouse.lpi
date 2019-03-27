@@ -5,7 +5,7 @@
     <General>
       <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
-      <Title Value="FirmataPins"/>
+      <Title Value="FirmataPS2Mouse"/>
       <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
       <Icon Value="0"/>
@@ -35,23 +35,22 @@
     </RequiredPackages>
     <Units Count="2">
       <Unit0>
-        <Filename Value="FirmataPins.lpr"/>
+        <Filename Value="FirmataPS2Mouse.lpr"/>
         <IsPartOfProject Value="True"/>
       </Unit0>
       <Unit1>
-        <Filename Value="firmatapin.pas"/>
+        <Filename Value="firmatamouse.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="Form1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="Firmatapin"/>
       </Unit1>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="FirmataPins"/>
+      <Filename Value="FirmataPS2Mouse"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>

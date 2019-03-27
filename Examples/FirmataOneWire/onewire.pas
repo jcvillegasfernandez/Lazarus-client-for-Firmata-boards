@@ -204,7 +204,7 @@ var
   i, j: integer;
 begin
   memo1.clear;
-  memo1.lines.add('Firmata started in, '+inttostr(Board1.TimeToStart)+' milisec');
+  memo1.lines.add('Firmata started in, '+inttostr(Board1.StartingTime)+' milisec');
   memo1.lines.add('Firmata Firmare:' + Board1.FirmataFirmware);
 
   Board1.printPinInfo(Memo1);
@@ -222,10 +222,19 @@ begin
     end;
   end;
 
+  
+  if Pins.Items.Count = 0 then // onewire module is not installed in ConfigurableFirmata
+  begin
+    memo1.Lines.add('');
+    memo1.Lines.add('Onewire module is not installed, or there isn''t a free supported pin in ConfigurableFirmata');
+    exit;
+  end;
+
   Pins.Enabled:=True;
   Pins.ItemIndex:=0;  // First pin
   OneWire1.OneWirePin:=strtoint(Pins.Text);
   OneWire1.Enabled:=True;
+
   search.enabled:=true;
   Readtemp.enabled:=true;
   CreateTask.Enabled:=True;
