@@ -17,30 +17,34 @@ AnalogInputFirmata analogInput;
 #include <AnalogOutputFirmata.h>
 AnalogOutputFirmata analogOutput;
 
-#include <Servo.h>
-#include <ServoFirmata.h>
-ServoFirmata servo;
+//#include <Servo.h>
+//#include <ServoFirmata.h>
+//ServoFirmata servo;
 
 //#include <Wire.h>
 //#include <I2CFirmata.h>
 //I2CFirmata i2c;
 
-//#include <OneWireFirmata.h>
-//OneWireFirmata oneWire;
+#include <OneWireFirmata.h>
+OneWireFirmata oneWire;
 
-#include <AccelStepperFirmata.h>
-AccelStepperFirmata accelStepper;
+//#include <AccelStepperFirmata.h>
+//AccelStepperFirmata accelStepper;
 
-//#include <FirmataScheduler.h>
-//FirmataScheduler scheduler;
+#include <FirmataScheduler.h>
+FirmataScheduler scheduler;
 
 //#include <Encoder.h>
 //#include <FirmataEncoder.h>
 //FirmataEncoder encoder;
 
-#include <PS2Mouse.h>
-#include <FirmataPS2Mouse.h>
-FirmataPS2Mouse ps2mouse;
+//#include <PS2Mouse.h>
+//#include <FirmataPS2Mouse.h>
+//FirmataPS2Mouse ps2mouse;
+
+#include <Adafruit_NeoPixel.h>
+#include <FirmataNeopixels.h>
+FirmataNeopixels pixels;
 
 #include <FirmataExt.h>
 FirmataExt firmataExt;
@@ -77,13 +81,14 @@ void initFirmata()
   firmataExt.addFeature(digitalOutput);
   firmataExt.addFeature(analogInput);
   firmataExt.addFeature(analogOutput);
-  firmataExt.addFeature(servo);
+  //firmataExt.addFeature(servo);
   //firmataExt.addFeature(i2c);
-  //firmataExt.addFeature(oneWire);
-  firmataExt.addFeature(accelStepper);
-  //firmataExt.addFeature(scheduler);
+  firmataExt.addFeature(oneWire);
+  //firmataExt.addFeature(accelStepper);
+  firmataExt.addFeature(scheduler);
   //firmataExt.addFeature(encoder);
-  firmataExt.addFeature(ps2mouse);   
+  //firmataExt.addFeature(ps2mouse);   
+  firmataExt.addFeature(pixels);     
   firmataExt.addFeature(reporting);
  
 
@@ -105,19 +110,20 @@ void loop()
 
   while(Firmata.available()) {
     Firmata.processInput();
-    //if (!Firmata.isParsingMessage()) {
-    //  goto runtasks;
-   // }
+    if (!Firmata.isParsingMessage()) {
+      goto runtasks;
+    }
   }
- //if (!Firmata.isParsingMessage()) {
-//runtasks: scheduler.runTasks();
-//  }
+ if (!Firmata.isParsingMessage()) {
+runtasks: scheduler.runTasks();
+  }
 
   if (reporting.elapsed()) {
     analogInput.report();
-  //  i2c.report();
-//    encoder.report();
-    ps2mouse.report();
+    //i2c.report();
+    //encoder.report();
+    //ps2mouse.report();
+    pixels.update();
   }
-  accelStepper.update();
+  //accelStepper.update();
 }
