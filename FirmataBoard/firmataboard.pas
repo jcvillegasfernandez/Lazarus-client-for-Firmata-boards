@@ -53,10 +53,10 @@ uses
   cthreads,
 {$ENDIF}
 {$ELSE}
-  Windows, Classes, //registry,
+  Classes, //registry,
 {$ENDIF}
  ExtCtrls, sysUtils, forms, firmataconstants,
-  StdCtrls, dialogs,  LResources, LclIntf, math;
+  StdCtrls, dialogs,  LResources, LclIntf, math, graphics;
 
  type
   // Digital Pin register type
@@ -70,7 +70,7 @@ uses
   {:Possible pin modes}
   TPinModes = (PIN_MODE_INPUT, PIN_MODE_OUTPUT, PIN_MODE_ANALOG, PIN_MODE_PWM, PIN_MODE_SERVO,
            PIN_MODE_SHIFT, PIN_MODE_I2C, PIN_MODE_ONEWIRE, PIN_MODE_STEPPER, PIN_MODE_ENCODER,
-           PIN_MODE_SERIAL, PIN_MODE_PULLUP, PIN_MODE_PS2MOUSE, PIN_MODE_IGNORE);
+           PIN_MODE_SERIAL, PIN_MODE_PULLUP, PIN_MODE_PS2MOUSE, PIN_MODE_NEOPIXELS, PIN_MODE_IGNORE);
 
   {:Possible serial port values}
   TSerialPorts = (HW_SERIAL0, HW_SERIAL1, HW_SERIAL2, HW_SERIAL3,
@@ -113,6 +113,8 @@ uses
 
   {:Possible mouse types}
   TMouseType = (STANDARD, INTELLI_MOUSE=3, FIVEBUTTONS, STILL_UNKNOWN);
+
+  TFadeType= (STRIP, PIXEL);
 
   {:Event run just before enable the object}
   TOnBeforeOpen = procedure(sender: TObject) of Object;
@@ -168,6 +170,9 @@ uses
   TOnMouseStatus = procedure(sender: TObject; MouseStatus: TPS2MouseStatus) of Object;
   {:Information about a mouse type}
   TOnMouseDeviceID = procedure(sender: TObject; MouseType: TMouseType) of Object;
+  {:Event reporting fade end}
+  TOnFadeEnd = procedure(sender: TObject) of Object;
+
 
   TBoard = class;
 
@@ -193,6 +198,7 @@ uses
   TServo = class;
   TEncoder = class;
   TPS2Mouse = class;
+  TNeoPixel = class;
 
   {:Array of pin modules, max number is board pins}
   TPins = array of TPin;
@@ -210,6 +216,8 @@ uses
   TEncoders = array [0..MAX_ENCODERS - 1] of TEncoder;
   {:Array of Mouse modules}
   TMice = array [0..MAX_MICE - 1] of TPS2Mouse;
+  {:Array of Neopixels modules}
+  TNeoPixels = array [0..MAX_NEOPIXELS - 1] of TNeoPixel;
 
   TBoard = class (TComponent)
     private
@@ -270,6 +278,7 @@ uses
       FServos: TServos;
       FEncoders: TEncoders;
       FMice: TMice;
+      FNeoPixels: TNeoPixels;
 
       procedure setEnabled(State: Boolean);
       {:procedure for initialize board variables}
@@ -337,25 +346,34 @@ uses
       function GetPinResolution(Pin: Byte; Mode: TPinModes): Integer;
       {:fill a memo with pins capability}
       procedure printPinInfo(Memo: TMemo);
-
+      {: array of Board Pins}
       property BoardPins[Index:Integer]: TBoardPin read GetBoardPin write SetBoardPin;
       property Enabled: Boolean read FEnabled write SetEnabled;
     published
+      {: Sampling interval for board default 19 milisec}
       property SamplingInterval: integer read FSamplingInterval write SetSamplingInterval;
       property LastError: integer read FLastError write FLastError;
+      {: number of pins in board}
       property PinsNumber: integer read FBoardPinsNumber;
+      {: number of analog pins in board}
       property AnalogPinsNumber: integer read FAnalogPinsNumber;
-      property MaxTime: Qword read FMaxTime write setMaxTime;  // max time to wait for starting
-      property StartingTime: Qword read FStartingTime;  // time spend starting firmata
+      {: max time to wait for starting board}
+      property MaxTime: Qword read FMaxTime write setMaxTime;
+      {: time spend starting firmata}
+      property StartingTime: Qword read FStartingTime;
+      {: Firmware version of firmata board}
       property FirmataFirmware: string read FBoardStringFirmware;
       property OnBeforeOpen: TOnBeforeOpen read FOnBeforeOpen write FOnBeforeOpen;
       property OnAfterClose: TOnAfterClose read FOnAfterClose write FOnAfterClose;
+      {: when firmata board became ready}
       property OnBoardReady: TOnBoardReady read FOnBoardReady write FOnBoardReady;
       property OnSendDataToDevice: TOnSendDataToDevice read FOnSendDataToDevice write FOnSendDataToDevice;
       property OnGetDataFromDevice: TOnGetDataFromDevice read FOnGetDataFromDevice write FOnGetDataFromDevice;
       property OnDeviceDataAvailable: TOnDeviceDataAvailable read FOnDeviceDataAvailable write FOnDeviceDataAvailable;
       property OnError: TOnError read FOnError write FOnError;
+      {: when the board send data, but is not a command}
       property OnBoardData: TOnBoardData read FOnBoardData write FOnBoardData;
+      {: Response to QueryAllTask command}
       property OnQueryAllTask: TOnQueryAllTask read FOnQueryAllTask write FOnQueryAllTask;
   end;
 
@@ -383,26 +401,39 @@ uses
       procedure setBoard(Board: TBoard);
     public
       // digital ports
+      {: write digital values in all pins of port}
       function DigitalWritePort(Port: byte; Value: integer; write: Boolean=true): string;
       // pins general
+      {: ask pin state command}
       function askPinState(write: Boolean=true): string;
-      function SetPinMode(write: Boolean=true): string; // if write true then send bytes to device
+      {: set pin mode command}
+      function SetPinMode(write: Boolean=true): string;
+      {: Enable/disable digital reporting, be carefull with digital pins}
       function DigitalReport(enabled: boolean; write: Boolean=true): string;
       // digital pins
-      function DigitalWrite(Value: Byte; write: Boolean=true): string;  //Same as SetDigitalPinValue
-      function SetDigitalPinValue(Value: Byte; write: Boolean=true): string;   // only set value for one digital pin
+      {: write digital value of pin}
+      function DigitalWrite(Value: Byte; write: Boolean=true): string;
+      {: same as DigitalWrite}
+      function SetDigitalPinValue(Value: Byte; write: Boolean=true): string;
       // Analog pins
+      {: write analog value, PWM, servo, etc.}
       function AnalogWrite(Value: integer; write: Boolean=true): string;
-      function AnalogWriteExtended(Value: integer; write: Boolean=true): string;  // analog write (PWM, Servo, etc) to any pin
+      {: write extended analog value, PWM, servo, etc.}
+      function AnalogWriteExtended(Value: integer; write: Boolean=true): string;
+      {: Enable/disable analog reporting}
       function AnalogReport(enabled: boolean; write: Boolean=true): string;
       // get command
+      {: get analog value}
       procedure GetAnalogMessage(Value: integer);
       // send commands
+      {: send a command, not sysex}
       function SendCommand(Data: string; write: Boolean=True): string;
+      {: send a sysex command}
       function SendSysEx(data7bit: string; write: Boolean=true): string;
 
-      // enable report for digital pin or analog pin
+      {: enable/disable report for digital pin or analog pin}
       function ReportPin(Enabled: boolean; write: Boolean=true): string;
+      {: write analog or digital pin value}
       function WriteValue(Value: integer; write: Boolean=True): string;
 
       constructor Create(AOwner: TComponent); override;
@@ -410,14 +441,24 @@ uses
 
       property Enabled: Boolean read FEnabled write SetEnabled;
     published
+      {: board owned pin}
       property Board: TBoard read FBoard write setBoard;
+      {: pin number in board}
       property Pin: byte read FPin write setPin;
+      {: mode of pin}
       property Mode: TPinModes read FMode write setMode;
+      {: last value read of pin}
       property Value: integer read FValue;
+      {: true when pin is reporting data}
       Property Reporting: Boolean read FReporting;
+      {: last value written}
       property State: integer read FState;
+      {: event reporting pin value}
       property OnPinValue: TOnPinValue read FOnPinValue write FOnPinValue;
+      {: event reportint pin state}
       property OnPinState: TOnPinState read FOnPinState write FOnPinState;
+      property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
+      property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
   end;
 
   TTask = class (TComponent)
@@ -444,29 +485,40 @@ uses
       procedure setRunDelay(Delay: integer);
 
       function SendSysEx(data7bit: string; write: Boolean=true): string;
-
+      {: internal run task}
       function ScheduleTask(write: Boolean=true): string;
     public
       procedure GetFirmataCommand(Sender: TObject; CommandData: String);
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
+      {: create task}
       function CreateTask(write: Boolean=true): string;
+      {: stop and delte task}
       function DeleteTask(write: Boolean=true): string;
+      {: add data to task}
       function AddToTask(Data7Bit: String; write: Boolean=true): string;
+      {: ask query data task}
       function QueryTask(write: Boolean=true): string;
+      {: delay a running task}
       function DelayTask(write: Boolean=true): string;
-
+      {: If enabled, then task is run}
       property Enabled: Boolean read FEnabled write SetEnabled;
     published
+      {: ID of task, 0..127}
       property TaskID: Byte read FTaskID write setTask;
+      {: Task data string}
       property DataTask: string read FDataTask write FDataTask;
+      {: if false and automatic end delay is assigned, to run it again}
       property RunOnce: Boolean read FRunOnce write FRunOnce;  // task is only run once
+      {: time delay after task end, used for automatic run again}
       property TimeDelay: integer read FTimeDelay write setTimeDelay;  // delay for task
+      {: time delay for first run in automatic run again}
       property RunDelay: integer read FRunDelay write setRunDelay;  // delay for firts run
       property Board: TBoard read FBoard write setBoard;
       property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
       property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
       property OnTaskError: TOnTaskError read FOnTaskError write FOnTaskError;
+      {: response for query task data}
       property OnQueryTask: TOnQueryTask read FOnQueryTask write FOnQueryTask;
   end;
 
@@ -498,15 +550,20 @@ uses
       // All firmata functions for commands return the string command sent, they have a write parameter, if write is True the data is sent to the external device
       // if write is false then is not sent to device
       // Onewire functions
+      {: config one wire pin}
       function config(write: Boolean=true): string;
+      {: search for one wire devices on bus}
       function Search(write: Boolean=true): string;
+      {: search devices in alarm state on bus}
       function AlarmSearch(write: Boolean=true): string;
+      {: reset one wire bus}
       function Reset(write: Boolean=true): string;
+      {: send a command to all onewire devices}
       function Skip(write: Boolean=true): string;
+      {: select device on bus}
       function Select(Device: string; write: Boolean=true): string;
       function ResetAndSelect(Device: string; write: Boolean=true): string;
       function Read(BytestoRead: uint16; Correlation: uint16; write: Boolean=true): string;
-      function Delay(Delay: integer; write: Boolean=true): string;
       function Write(Data: string; write: Boolean=true): string;
       function Write(Delay: integer; Data: string; write: Boolean=true): string; overload;
       function WriteAndRead(BytestoRead: uint16; Correlation: uint16; Data: string; write: Boolean=true): string;
@@ -517,14 +574,19 @@ uses
 
       property Enabled: Boolean read FEnabled write SetEnabled;
     published
+      {: one wire bus pin}
       property OneWirePin: Byte read FOneWirePin write setOneWirePin;
       property Board: TBoard read FBoard write setBoard;
       property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
       Property Device: string read FDevice write FDevice;
       property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
+      {: get data response event}
       property OnOneWireData: TOnOneWireData read FOnOneWireData write FOnOneWireData;
+      {: reponse for query device IDs on bus}
       property OnSearch: TOnSearch read FOnSearch write FOnSearch;
+      {: reponse for query alarm device IDs on bus}
       property OnOneWireAlarm: TOnOneWireAlarm read FOnOneWireAlarm write FOnOneWireAlarm;
+      {: Enable/disable parasitistic power on bus}
       property ParasitisticPower: Boolean read FParasitisticPower write FParasitisticPower;
   end;
 
@@ -971,6 +1033,102 @@ uses
         property OnMouseDeviceID: TOnMouseDeviceID read FOnMouseDeviceID write FOnMouseDeviceID;
     end;
 
+  TPixel = record
+    PixelColor: longword; // 8 bits color, RGBW = 32 bits
+  end;
+
+  TPixels= array of TPixel;
+
+  TNeoPixel = class (TComponent)
+    private
+       FBoard: TBoard;
+       FEnabled: Boolean;
+       FPin: Byte;
+       FDevice: Byte;
+       FLedColors: String;
+       FKHZ400: Boolean;
+       FPixelsNumber: smallint;
+       FPixels: TPixels;
+       FBrightness: Byte;
+       FGamma: single;
+       FFadeRunning: Boolean;
+       FFadeColor: longword;
+       FFadeFirst: smallint;
+       FFadeLast: smallint;
+       FFadeLoopsWait: byte;
+       FShiftFirst: smallint;
+       FShiftLast: smallint;
+       FShiftRunning: Boolean;
+       FShiftType: byte;
+       FOnFadeEnd: TOnFadeEnd;
+       FOnEnabled: TOnEnabled;
+       FOnDisabled: TOnDisabled;
+
+       procedure setPin(Pin: Byte);
+       procedure setBoard(Board: TBoard);
+       procedure setEnabled(State: Boolean);
+       procedure setLedColors(rgbwType: string); // 0bRRRRGGBB for RGB + NEO_KHZ800,  0bWWRRGGBB for RGBW devices
+       procedure setPixelsNumber(Number: smallint);
+       procedure setBrightness(value: Byte);
+       function getPixel(Index: integer): TPixel;
+       procedure setFadeRunning(Enabled: Boolean);
+       procedure setFadeLoopsWait(Loops: byte);
+       procedure setGamma(Value: single);
+       procedure GetFirmataCommand(Sender: TObject);
+       function SendSysEx(data7bit: string; write: Boolean=true): string;
+     public
+       constructor Create(AOwner: TComponent); override;
+       destructor Destroy; override;
+
+       // Firmata comands
+       // All firmata functions for commands return the string command sent, they have a write parameter, if write is True the data is sent to the external device
+       // if write is false then is not sent to device
+       // neopixel functions
+       function config(write: Boolean=true): string;
+       function Off(write: Boolean=true): string;
+       function Show(write: Boolean=true): string;
+
+       function PixelColor(Pixel: smallint; Color: longword; do_show: boolean; write: Boolean=true): string;
+       function PixelColor(Pixel: smallint; Red: byte; Green: byte; Blue: Byte; White: byte; do_show: boolean; write: Boolean=true): string; overload;
+       function PixelColor(Pixel: smallint; Color: longword; write: Boolean=true): string; overload;
+       function PixelColor(Pixel: smallint; Red: byte; Green: byte; Blue: Byte; White: byte; write: Boolean=true): string; overload;
+       function FillSegment(Color: longword; First: smallint; Last: smallint; do_show: Boolean; write: Boolean=true): string;
+       function FillSegment(Red: byte; Green: byte; Blue: Byte; White: byte; first: smallint; last: smallint; do_show: Boolean; write: Boolean=true): string; overload;
+       function FillStrip(Color: longword; do_show: Boolean; write: Boolean=true): string;
+       function FillStrip(Red: byte; Green: byte; Blue: Byte; White: byte; do_show: Boolean; write: Boolean=true): string; overload;
+       function ShiftSegmentConfig(First: smallint; last: smallint; Direction: char; Wrap: Boolean; do_show: Boolean; write: Boolean=true): string;
+       function ShiftStripConfig(Direction: char; Wrap: Boolean; do_show: Boolean; write: Boolean=true): string; overload;
+       function FadeSegmentConfig(color: longword; first: smallint; last: smallint; write: Boolean=True): string;
+       function FadeSegmentConfig(Red: byte; Green: byte; Blue: Byte; White: byte; first: smallint; last: smallint; write: Boolean=True): string; overload;
+       function FadeStripConfig(color: longword; write: Boolean=True): string;
+       function FadeStripConfig(Red: byte; Green: byte; Blue: Byte; White: byte; write: Boolean=True): string;  overload;
+       function ShiftRun(write: Boolean=True): string;
+       function ShiftRun(ShiftType: Byte; write: Boolean=True): string; overload;
+       function FadeRunPause(write: Boolean=True): string;
+       function FadeOneStep(do_show: boolean; write: Boolean=True): string;
+       function Movepixels(src: smallint; dest: smallint; count: smallint; do_show: Boolean; write: Boolean=True): string;
+       function sendBrightness(do_show: Boolean; write: Boolean=true): string;
+       procedure RecalculateBrightness;
+
+       property Pixels[Index: integer]: TPixel read getPixel;
+       property Enabled: Boolean read FEnabled write SetEnabled;
+       property Device: Byte read FDevice;
+       property ShiftType: byte read FShiftType;
+     published
+       property FadeWait: Byte read FFadeLoopsWait write setFadeLoopsWait;
+       property FadeRunning: Boolean read FFadeRunning write setFadeRunning;
+       property Gamma: single read FGamma write setGamma;
+       property Brightness: Byte read FBrightness write setBrightness;
+       property LedColors: string read FLedColors write setLedColors;
+       property KHZ400: Boolean read FKHZ400 write FKHZ400;
+       property PixelsNumber: smallint read FPixelsNumber write setPixelsNumber;
+       property Pin: Byte read FPin write setPin;
+       property Board: TBoard read FBoard write setBoard;
+       property OnFadeEnd: TOnFadeEnd read FOnFadeEnd write FOnFadeEnd;
+       property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
+       property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
+   end;
+
 // Utils functions
 {: encode 1 8-bit-byte char into 2 7-bit-char}
 function Encode1ByteCharTo2(Data1Byte: string): string;
@@ -986,6 +1144,8 @@ function Decode7To8bit(Data7bit: string): String;
 function Encode8To7Bit(Data8bit:string): string;
 {: converts a N bytes string, low byte first, into a positive integer}
 function DecodeNBytesToInt(DataString: String): integer;
+{: converts a 32-bit unsigned int value into a byte string low byte first}
+function encode32BitUnSignedInt(Value: Integer): String;
 {: converts a 32-bit int value into a byte string low byte first}
 function encode32BitSignedInt(Value: Integer): String;
 {: converts a string of bytes, low byte first, into a 32-bit int value}
@@ -1012,11 +1172,13 @@ function PinModesToByte(PinMode: TPinModes): Byte;
 function ByteToSerialPorts(Value: Byte): TSerialPorts;
 {: function retuning serial port type from value}
 function SerialPortsToByte(SerialPort: TSerialPorts): Byte;
+{: function returning gamma corrected color}
+function gammaRGB(RGBColor: longword; gamma: single): longword;
 
 const
   PinModesString: array[TPinModes] of string = ('INPUT', 'OUTPUT', 'ANALOG', 'PWM', 'SERVO',
                                       'SHIFT', 'I2C', 'ONEWIRE', 'STEPPER', 'ENCODER',
-                                      'SERIAL', 'PULLUP', 'PS2MOUSE', 'IGNORE PIN');
+                                      'SERIAL', 'PULLUP', 'PS2MOUSE', 'NEOPIXELS', 'IGNORE PIN');
 
 procedure Register;
 
@@ -1030,7 +1192,7 @@ procedure Register;
 begin
   {$I firmataboard.lrs}
   RegisterComponents('Firmata', [TBoard, TPin, TTask, TOneWire, TI2C,
-                   TAccelStepper, TAccelStepperGroup, TSerial, TServo, TEncoder, TPS2Mouse]);
+                   TAccelStepper, TAccelStepperGroup, TSerial, TServo, TEncoder, TPS2Mouse, TNeoPixel]);
 end;
 
 //
@@ -1089,6 +1251,15 @@ begin
   for n := 1 to Length(Value) do
     Result := Result + Format('%3.2x', [ord(Value[n])]);
   Result := upperCase(Result);
+end;
+
+function encode32BitUnSignedInt(Value: Integer): String;
+var
+  i: integer;
+begin
+  Result:='';
+  for i:=0 to 4 do
+    Result:=Result+chr((Value >> (7 * i)) and $7F);
 end;
 
 function encode32BitSignedInt(Value: integer): string;
@@ -1350,10 +1521,22 @@ begin
   if Sign then
     Result:=-Result;
 end;
+//
+//
+//
+{: function returning gamma corrected color}
+function gammaRGB(RGBColor: longword; gamma: single): longword;
+  function GammaCorrection(color: byte): longword; // actually return a byte value
+  begin
+    Result:=trunc(255*Power(color/255, gamma));
+  end;
+begin
+  Result:=GammaCorrection(RGBColor and $FF) or // Blue
+         (GammaCorrection((RGBColor >> 8) and $FF) << 8) or // green
+         (GammaCorrection((RGBColor >> 16) and $FF) << 16) or // red
+         (GammaCorrection((RGBColor >> 24) and $FF) << 24); // white
+end;
 
-//
-//
-//
 { TComPortReadThread }
 procedure TBoardThread.CallEvent;
 begin
@@ -1539,12 +1722,20 @@ begin
 
   for i:=0 to MAX_MICE - 1 do
     FMice[i]:=nil;
+
+  for i:=0 to MAX_NEOPIXELS - 1 do
+    FNeoPixels[i]:=nil;
 end;
 
 procedure TBoard.DisableModules;
 var
   i: integer;
 begin
+   // disable neopixels
+   for i:=0 to MAX_NEOPIXELS - 1 do
+     if Assigned(FNeoPixels[i]) and  FNeoPixels[i].FEnabled then
+        FNeoPixels[i]:=nil;
+
    // disable mice
    for i:=0 to MAX_MICE - 1 do
      if Assigned(FMice[i]) and  FMice[i].FEnabled then
@@ -2202,6 +2393,25 @@ begin
             if Assigned(FMice[Device]) and FMice[Device].Enabled then
                 FMice[Device].GetFirmataCommand(Self, DataString);
           end;
+           {0  START_SYSEX      (0xF0)
+           1  NEOPIXELS_DATA    (0X51)
+           2  NEOPIXELS_RUN_PAUSE  (0X04)
+           3  deviceNum (0-3)
+           4  END_SYSEX        (0xF7) }
+          NEOPIXELS_DATA: begin // 0x51
+            // first byte subcommand
+            // second byte device
+            if GetNextByte <> NEOPIXELS_FADE_RUN_PAUSE then
+            begin
+              Repeat
+              until GetNextByte = END_SYSEX; // discart command
+              RaiseError(4, 'Got an unknown SysEx neopixels command data');
+              exit;
+            end;
+            Device:=GetNextByte;
+            if Assigned(FNeoPixels[Device]) and FNeoPixels[Device].Enabled then
+                FNeoPixels[Device].GetFirmataCommand(Self);
+          end;
           else   // Sysex command unknown
           begin
             // now read until end command
@@ -2788,7 +2998,7 @@ procedure TTask.setTask(Task: Byte);
 begin
   if FEnabled then
     FBoard.RaiseError(33, 'setTask')
-  else if (Task < 0) or (Task > 127) then
+  else if Task > 127 then
     FTaskID:=0
   else
     FTaskID:=Task;
@@ -3362,12 +3572,6 @@ function TOneWire.Read(BytestoRead: uint16; Correlation: uint16; write: Boolean=
 begin
   //Command, Device, numBytesToRead, correlationId, delay, dataToWrite, write
   Result:=SendCommands(ONEWIRE_READ_REQUEST_BIT, '', BytestoRead, correlation, 0, '', write);
-end;
-
-function TOneWire.Delay(Delay: integer; write: Boolean=true): string;
-begin
-  //Command, Device, numBytesToRead, correlationId, delay, dataToWrite, write
-  Result:=SendCommands(ONEWIRE_DELAY_REQUEST_BIT, '', 0, 0, Delay, '', write);
 end;
 
 function TOneWire.Write(Data: string; write: Boolean=true): string;
@@ -4667,7 +4871,8 @@ begin
     FBoard.RaiseError(33, 'setRxPin');
     exit;
   end;
-  FRxPin:=Pin;
+  if Pin < PinModesToByte(PIN_MODE_IGNORE) then
+    FRxPin:=Pin;
 end;
 
 procedure TSerial.setTxPin(Pin: Byte);
@@ -4677,7 +4882,8 @@ begin
     FBoard.RaiseError(33, 'setTxPin');
     exit;
   end;
-  FTxPin:=Pin;
+  if Pin < PinModesToByte(PIN_MODE_IGNORE) then
+    FTxPin:=Pin;
 end;
 
 procedure TSerial.setBaudRate(BaudRate: integer);
@@ -5222,7 +5428,7 @@ procedure TEncoder.setPinA(Pin: Byte);
 begin
   if FEnabled then // cannot do that
     FBoard.RaiseError(33, 'setPinA')
-  else if Pin < PinModesToByte(PIN_MODE_IGNORE) then  // disabled
+  else if Pin < PinModesToByte(PIN_MODE_IGNORE) then
     FPinA:=Pin;
 end;
 
@@ -5230,7 +5436,7 @@ procedure TEncoder.setPinB(Pin: Byte);
 begin
   if FEnabled then // cannot do that
     FBoard.RaiseError(33, 'setPinB')
-  else if Pin < PinModesToByte(PIN_MODE_IGNORE) then  // disabled
+  else if Pin < PinModesToByte(PIN_MODE_IGNORE) then
     FPinB:=Pin;
 end;
 
@@ -5370,396 +5576,8 @@ begin
   if Assigned(FOnEncoderPosition) then
     FOnEncoderPosition(self, ord((ord(CommandData[1]) and DIRECTION_MASK) <> 0), Position);
 end;
-//
-//
-//
-{ TPS2Mouse }
-//
-//
-//
-constructor TPS2Mouse.Create(AOwner: TComponent);
-begin
-  inherited;
 
-  FBoard:= nil;
-  FEnabled:=false;
-
-  FOnEnabled:=nil;
-  FOnDisabled:=nil;
-
-  FOnMouseData:=nil;
-  FOnMouseStatus:=nil;
-  FOnMouseDeviceID:=nil;
-
-  FClockPin:=PinModesToByte(PIN_MODE_IGNORE);
-  FDataPin:=FClockPin;
-  FDevice:=FClockPin; // PIN_MODE_IGNORE means no device
-  FMode:=PS2MOUSE_REMOTE;
-  FMouseType:=STILL_UNKNOWN;
-  FResolution:=PS2MOUSE_8_COUNT_MM;
-  FSampleRate:=R_60;
-  FScaling:=PS2MOUSE_SCALING_1_TO_1;
-  FillChar(FStatus, SizeOf(FStatus), 0);  // initilize record
-  FillChar(FMouseData, SizeOf(FMouseData), 0);  // initilize record
-end;
-
-destructor TPS2Mouse.Destroy();
-begin
-  inherited Destroy;
-end;
-
-procedure TPS2Mouse.setBoard(Board: TBoard);
-begin
-  if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
-  else if Assigned(Board) then
-    FBoard:=Board;
-end;
-
-procedure TPS2Mouse.setClockPin(Pin: Byte);
-begin
-  if FEnabled then
-    FBoard.RaiseError(33, 'setClockPin')
-  else
-    FClockPin:=Pin;
-end;
-
-procedure TPS2Mouse.setDataPin(Pin: Byte);
-begin
-  if FEnabled then
-    FBoard.RaiseError(33, 'setDataPin')
-  else
-    FDataPin:=Pin;
-end;
-
-procedure TPS2Mouse.setReporting(Enable: Boolean);
-begin
-   if FReporting = Enable then
-     exit;
-   FReporting:=Enable;
-   if FEnabled then
-     SendReporting;
-end;
-
-procedure TPS2Mouse.setResolution(Resolution: TMouseResolution);
-begin
-   if FResolution = Resolution then
-     exit;
-   FResolution:=Resolution;
-   if FEnabled then
-     SendResolution;
-end;
-
-procedure TPS2Mouse.setSampleRate(SampleRate: TMouseSampleRate);
-begin
-   if FSampleRate = SampleRate then
-     exit;
-   FSampleRate:=SampleRate;
-   if FEnabled then
-     SendSampleRate;
-end;
-
-procedure TPS2Mouse.setEnabled(State: Boolean);
-var
-  i: integer;
-begin
-  if not Assigned(FBoard) then
-    exit;
-
-  if FEnabled = State then
-     exit;
-
-  if State then
-  begin
-    FEnabled:=True;
-    if Assigned(FBoard) and FBoard.Enabled then
-    begin
-      // Check if supported pin
-      if FBoard.CheckCapability(FClockPin, PIN_MODE_PS2MOUSE) and
-         FBoard.CheckCapability(FDataPin, PIN_MODE_PS2MOUSE) then
-      begin
-        if FBoard.FBoardPins[FClockPin].Busy or FBoard.FBoardPins[FDataPin].Busy then
-        begin
-          FEnabled:=false;
-          FBoard.RaiseError(12, 'setEnabled');
-        end
-        else  // pin is free
-        begin
-          for i:=0 to MAX_MICE - 1 do  // looking for a free mice
-          begin
-            if not Assigned(FBoard.FMice[i]) then // found one free
-            begin
-              FDevice:=i;
-              break;
-            end;
-          end;
-        end;
-      end
-      else // No supported pin
-      begin
-        FEnabled:=false;
-        FBoard.RaiseError(11, 'setEnabled');
-      end;
-    end
-    else
-    begin
-      FEnabled:=false; // firmataboard not enabled
-      FBoard.RaiseError(36, 'setEnabled');
-    end;
-    if FDevice = PinModesToByte(PIN_MODE_IGNORE) then // There isn't a free mouse
-    begin
-      FEnabled:=False;
-      FBoard.RaiseError(44, 'setEnabled');
-    end;
-    if FEnabled then
-    begin
-      FMouseType:=STILL_UNKNOWN;
-      FBoard.FMice[FDevice]:=self;
-      FBoard.FBoardPins[FClockPin].Busy:=true;  //  pin is assigned to this module
-      FBoard.FBoardPins[FDataPin].Busy:=true;  //  pin is assigned to this module
-      config;  // configure mouse
-      // After mouse config, mouse is set to SampleRate:=R_60, Mode:=PS2MOUSE_REMOTE, MouseType:=STILL_UNKNOWN,
-      //                     Resolution:=PS2MOUSE_8_COUNT_MM, SampleRate:=R_60, Scaling:=SCALING_1_TO_1
-      if Assigned(FOnEnabled) then
-        FOnEnabled(self);
-    end;
-  end
-  else  // disable
-  begin
-    if Assigned(FOnDisabled) then
-      FOnDisabled(self);
-    if Assigned(FBoard) then
-    begin
-      FBoard.FBoardPins[FClockPin].Busy:=false; // free clock pin
-      FBoard.FBoardPins[FDataPin].Busy:=false; // free data pin
-      FBoard.FMice[FDevice]:=nil;
-    end;
-    FEnabled:=False;
-  end;
-end;
-
-procedure TPS2Mouse.GetFirmataCommand(Sender: TObject; CommandData: String);
-begin
-  // first byte is subcommand
-  // second byte is Mouse number
-  case ord(CommandData[1]) of
-       {0  START_SYSEX      (0xF0)
-        1  PS2MOUSE_DATA     Command (0x50)
-        2  PS2MOUSE_STATUS   (0x01)
-        3  Mouse number      (0-2)
-        4  status            (lsb)
-        5  status            (msb)
-        6 Resolution        (lsb)
-        7 Resolution        (msb)
-        8 SampleRate        (lsb)
-        9 SampleRate        (msb)
-        10 END_SYSEX        (0xF7)}
-       { TStatusMouseBits = bitpacked record
-            always_0: 0;
-            Mode: 0..1; // 1 remote, 0 stream
-            Reporting: Boolean;
-            Scaling: TMouseScaling;
-            always_0_0: 0:
-            mid_button: Boolean;
-            right_button: Boolean;
-            lef_button: Boolean;
-        end;}
-    PS2MOUSE_STATUS: begin
-      FMouseStatus.StatusMouse:=ord(CommandData[3]) or (ord(CommandData[4]) << 7);
-      FMouseStatus.Resolution:=ord(CommandData[5]) or (ord(CommandData[6]) << 7);
-      FMouseStatus.SampleRate:=ord(CommandData[7]) or (ord(CommandData[8]) << 7);
-      if Assigned(FOnMouseStatus) then
-        FOnMouseStatus(self, FMouseStatus);
-    end;
-    {0  START_SYSEX      (0xF0)
-     1  PS2MOUSE_DATA     Command (0x50)
-     2  PS2MOUSE_DATA   (0x50)
-     3  Mouse number      (0-2)
-     4  Mouse Type       (0-127)    3 = intelli_mouse
-     5 END_SYSEX        (0xF7)}
-    PS2MOUSE_DEVICEID: begin
-      // first byte subcommand
-      // second byte device
-      // third byte type
-      FMouseType:=TMouseType(ord(CommandData[3]));
-      if Assigned(FOnMouseDeviceID) then
-        FOnMouseDeviceID(self, FMouseType);
-    end;
-    {0  START_SYSEX      (0xF0)
-     1  PS2MOUSE_DATA     Command (0x50)
-     2  PS2MOUSE_DATA   (0x50)
-     3  Mouse number      (0-2)
-     4  status            (lsb)
-     5  status            (msb)
-     6  x position        (lsb)
-     7  x position        (msb)
-     8  y position        (lsb)
-     9  y position        (msb)
-     10 wheel             (lsb)
-     11 wheel             (msb)
-     12 END_SYSEX        (0xF7)}
-     { TWheelBits = bitpacked record
-       two_bits: 0..3;
-       5th_button: Boolean;
-       4th_buton: Boolean;
-       Move: 0..15;
-       end; }
-
-     { TStatusMoveBits = bitpacked record
-       y_of: Boolean;   // y overflow
-       x_of: Boolean;     // x overflow
-       y_sign: Boolean;
-       x_sign: Boolean;
-       always_1: 1;
-       mid_button: Boolean;
-       right_button: Boolean;
-       lef_button: Boolean;
-       end;       }
-    PS2MOUSE_DATA: begin
-      // first byte subcommand
-      // second byte device
-      FMouseData.StatusMove:=ord(CommandData[3]) or (ord(CommandData[4]) << 7);
-      FMouseData.Position.x:=ord(CommandData[5]) or (ord(CommandData[6]) << 7);
-      FMouseData.Position.y:=ord(CommandData[7]) or (ord(CommandData[8]) << 7);
-      FMouseData.Wheel:=ord(CommandData[9]) or (ord(CommandData[10]) << 7);
-      if Assigned(FOnMouseData) then
-        FOnMouseData(self, MouseData);
-    end;
-  end;
-end;
-{ Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
-function TPS2Mouse.SendSysEx(data7bit: string; write: Boolean=true): string;
-begin
-  Result:='';
-  if not FEnabled and write then
-    exit;
-
-  Result:=FBoard.SendSysEx(Data7bit, write);
-end;
-//
-// MOUSE commands
-//
-
-{0  START_SYSEX      (0xF0)
-1  PS2MOUSE_DATA     Command (0x50)
-2  PS2MOUSE_CONFIG   (0x02)
-3  mouse number      (0-3)
-3  ClockPin          (0-127)
-4  DataPin           (0-127)
-5  Mode              (optional) REMOTE 1, STREAM 0
-5/6  END_SYSEX (0xF7)}
-function TPS2Mouse.config(write: Boolean=true): string;
-begin
-  // FMode default to remote mode
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_CONFIG)+chr(FDevice)+chr(FClockPin)+chr(FDataPin)+chr(ord(FMode)), write);
-  if write then
-  begin
-    FBoard.FBoardPins[FClockPin].ActualMode:=PinModesToByte(PIN_MODE_PS2MOUSE);
-    FBoard.FBoardPins[FDataPin].ActualMode:=PinModesToByte(PIN_MODE_PS2MOUSE);
-  end;
-end;
-
-{0  START_SYSEX      (0xF0)
- 1  PS2MOUSE_DATA     Command (0x50)
- 2  PS2MOUSE_STATUS   (0x01)
- 3  Mouse number      (0-2)
- 4  END_SYSEX        (0xF7)}
-function TPS2Mouse.QueryStatus(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_STATUS)+chr(FDevice), write);
-end;
-
-{0  START_SYSEX      (0xF0)
- 1  PS2MOUSE_DATA     Command (0x50)
- 2  PS2MOUSE_DEVICEID   (0x03)
- 3  Mouse number      (0-2)
- 4  END_SYSEX        (0xF7)}
-function TPS2Mouse.QueryDeviceID(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_DEVICEID)+chr(FDevice), write);
-end;
-{0  START_SYSEX      (0xF0)
- 1  PS2MOUSE_DATA     Command (0x50)
- 2  PS2MOUSE_DATA    Command (0x50)
- 3  Mouse number      (0-2)
- 4  END_SYSEX        (0xF7)}
-function TPS2Mouse.QueryData(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_DATA)+chr(FDevice), write);
-end;
-{0  START_SYSEX      (0xF0)
- 1  PS2MOUSE_DATA     Command (0x50)
- 2  PS2MOUSE_RESET    Command (0x00)
- 3  Mouse number      (0-2)
- 4  END_SYSEX        (0xF7)}
-function TPS2Mouse.Reset(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_RESET)+chr(FDevice), write);
-end;
-{0  START_SYSEX      (0xF0)
- 1  PS2MOUSE_DATA     Command (0x50)
- 2  PS2MOUSE_SET_SAMPLE_RATE    Command (0x05)
- 3  Mouse number      (0-2)
- 4  sample rate        lsb
- 5  sample rate        msb
- 6  END_SYSEX        (0xF7)}
-function TPS2Mouse.SendSampleRate(write: Boolean=true): string;
-var
-  SampleRate: Byte;
-begin
-  case FSampleRate of
-    R_10, R_20: SampleRate:=(ord(FSampleRate)+1)*10;
-    R_40, R_60, R_80, R_100: SampleRate:=(ord(FSampleRate))*20;
-    R_200: SampleRate:=200;
-  end;
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_SET_SAMPLE_RATE)+chr(FDevice)+chr(SampleRate and $7F)+chr((SampleRate >> 7) and $7F), write);
-end;
-{0  START_SYSEX      (0xF0)
- 1  PS2MOUSE_DATA     Command (0x50)
- 2  PS2MOUSE_SET_RESOLUTION     Command (0x04)
- 3  Mouse number      (0-2)
- 4  resolution        (0-3)
- 5  END_SYSEX        (0xF7)}
-function TPS2Mouse.SendResolution(write: Boolean=true): string;
-var
-  Resolution: Byte;
-begin
-  Resolution:=ord(FResolution);
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_SET_RESOLUTION)+chr(FDevice)+chr(ord(FResolution)), write);
-end;
-{0  START_SYSEX      (0xF0)
- 1  PS2MOUSE_DATA     Command (0x50)
- 2  PS2MOUSE_REPORTING  Command (0x06)
- 3  Mouse number      (0-2)
- 4  Reporting         (0-1) 1 enable, 0 disable, it is firmata reporting not mouse reporting
- 5  END_SYSEX        (0xF7)}
-function TPS2Mouse.SendReporting(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_REPORTING)+chr(FDevice)+chr(ord(FReporting)), write);
-end;
-{0  START_SYSEX      (0xF0)
- 1  PS2MOUSE_DATA     Command (0x50)
- 2  PS2MOUSE_SET_FIVE_BUTTONS  Command (0x07)
- 3  Mouse number      (0-2)
- 5  END_SYSEX        (0xF7)}
-function TPS2Mouse.SendFiveButtonsMode(write: Boolean=true): string;
-begin
-  Result:='';
-  if write and (FMouseType <> INTELLI_MOUSE) then
-    exit;
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_SET_FIVE_BUTTONS)+chr(FDevice), write);
-end;
-{0  START_SYSEX      (0xF0)
- 1  PS2MOUSE_DATA     Command (0x50)
- 2  PS2MOUSE_SET_REMOTE_MODE   Command (0x09)
- 3  Mouse number      (0-2)
- 5  END_SYSEX        (0xF7)}
-function TPS2Mouse.SendRemoteMode(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(PS2MOUSE_DATA)+chr(PS2MOUSE_SET_REMOTE_MODE)+chr(FDevice), write);
-  if write then
-    FMode:=PS2MOUSE_REMOTE;
-end;
+{$include 'firmataboard1.inc'};
 
 end.
 

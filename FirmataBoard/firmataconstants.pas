@@ -28,7 +28,7 @@ type
 
 const
 // if error > 1000 + ErrorArray index then irrecuperable error close application
-ErrorsArray: array [1..47] of String = (
+ErrorsArray: array [1..53] of String = (
   'No way to send data, check OnSendDataToDevice event',       // 1
   'Firmata board not enabled',                                 // 2
   'Too much time waiting for firmata, close firmata',          // 3
@@ -73,9 +73,15 @@ ErrorsArray: array [1..47] of String = (
   'Number out of range',                                       // 42
   'AccelStepper module already exists',                        // 43
   'No more room for',                                          // 44
-  'There s already a module',                                  // 45
+  'There is already a module',                                 // 45
   'No valid device',                                           // 46
-  'Sys Ex command error'                                       // 47
+  'Sys Ex command error',                                      // 47
+  'Not valid type',                                            // 48
+  'Min number of pixels must be > 1',                          // 49
+  'Pixel number out of range',                                 // 50
+  'Wrong led color support',                                   // 51
+  'Only positive values for gamma',                            // 52
+  'Fade is running'                                            // 53
   );
 
    FIRMWARE_MAJOR_VERSION =  2;
@@ -110,6 +116,7 @@ ErrorsArray: array [1..47] of String = (
    // extended command set using sysex (0-127/$00-$7F)
   { $00-$0F reserv for user-defined commands }
    PS2MOUSE_DATA =           $50; // user defined command PS2 mouse
+   NEOPIXELS_DATA =          $51; // user defined command Neopixels
    SERIAL_DATA =             $60; // SERIAL DATA
    ENCODER_DATA =            $61; // reply with encoders current positions
    ACCELSTEPPER_DATA =       $62; // Accelerated stepper data
@@ -148,6 +155,7 @@ ErrorsArray: array [1..47] of String = (
    PIN_MODE_SERIAL =         $0A; // pin configured for serial communication
    PIN_MODE_PULLUP =         $0B; // enable internal pull-up resistor for pin
    PIN_MODE_PS2MOUSE =       $0C; // mouse mode pin
+   PIN_MODE_NEOPIXELS =      $0D; // mode for neopixels leds
    PIN_MODE_IGNORE =         $7F; // pin configured to be ignored by digitalWrite and capabilityResponse
 
    HIGH = 1;
@@ -297,6 +305,23 @@ ErrorsArray: array [1..47] of String = (
    PS2MOUSE_8_COUNT_MM =       3;
    PS2MOUSE_SCALING_1_TO_1  =  $E6;
    PS2MOUSE_SCALING_2_TO_1  =  $E7;
+   // NeoPixel NEOPIXELS_DATA = $51          hybridgroup/FirmataNeopixels
+   MAX_NEOPIXELS        =	4;
+
+   NEOPIXELS_OFF        =      $00; // set strip to be off
+   NEOPIXELS_CONFIG     =      $01; // configure the strip
+   NEOPIXELS_SHOW       =      $02; // latch the pixels and show them
+   NEOPIXELS_SET_PIXEL  =      $03; // set the color value of pixel n
+   NEOPIXELS_FADE_RUN_PAUSE =  $04; // run and pause fade
+   NEOPIXELS_SET_BRIGHTNESS =  $05; // set the brightness of pixel n using 8bit value
+   NEOPIXELS_SHIFT_CONFIG   =  $06; // shift pixels places along the strip
+   NEOPIXELS_FILL_SEGMENT   =  $07; // Fills all or a given start+length of strip.
+   NEOPIXELS_FADE_CONFIG    =  $08; // progressive pixels color change
+   NEOPIXELS_SHIFT_RUN      =  $09; // run shift step
+   NEOPIXELS_FADE_ONE_STEP  =  $0A; // progressive pixels color change, 1 step
+   NEOPIXELS_MOVE_PIXELS    =  $0B; // move pixels from src to dest
+
+
 
 implementation
 
