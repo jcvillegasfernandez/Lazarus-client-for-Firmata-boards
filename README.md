@@ -4,10 +4,10 @@ Components working with Firmata boards on Lazarus (free Pascal)
 I am not a master in programming but with hard work I have built some pieces to work with Lazarus (I think it will be easy to port to Delphi).
 
 After installing FirmataBoard.lpk package you need to know the basic lines to work with them.
-The core component is TBoard with some modules to link TPin, TI2C, TTask, TOneWire, TAccelStepper, TPS2Mouse,  etc.
+The core component is TBoard with some modules to link TPin, TI2C, TTask, TOneWire, TAccelStepper, TServo, TPS2Mouse, TNeoPixel,  etc.
 
-When you enable a TBoard instance it triggers a TOnBoardReady, that means TBoard is enabled, the board knows all board capabilities and it is ready to get and send data.
+PS2Mouse and NeoPixel are not ConfigurableFirmata standard modules.
 
 Take a look to the examples. I made all my tests on Arduino Uno boards.
 
-At this moment it is a beta version 0.5, I made a few examples, if there is not an example for a module it means not tested.
+At this moment it is a beta version 0.6, I made a few examples, if there is not an example for a module it means not tested.
