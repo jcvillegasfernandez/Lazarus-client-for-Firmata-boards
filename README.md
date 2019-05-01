@@ -5,7 +5,7 @@ I have built some pieces to work with Lazarus (I think it will be easy to port t
 
 To install the components, install FirmataBoard.lpk package.
 There are simple docs, Spanish and English (I hope you understand them) in order to lock how they work.
-The core component is TBoard where you can link different modules TPin, TI2C, TTask, TOneWire, TAccelStepper, TServo, TPS2Mouse, TNeoPixel, etc. You can manage some boards (with their own modules) and the same time.
+The core component is TBoard where you can link different modules TPin, TI2C, TTask, TOneWire, TAccelStepper, TServo, TPS2Mouse, TNeoPixel, etc. You can manage some boards (with their own modules) at the same time.
 
 PS2Mouse and NeoPixel are not ConfigurableFirmata standard modules.
 
