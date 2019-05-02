@@ -8,7 +8,7 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, LazSerialPort, firmataneopixel, firmataboard, fill_with_color, fade_config,
-  Pixel_Color, shift_config, copy_pixels;
+  Pixel_Color, shift_config, copy_pixels, unit1;
 
 {$R *.res}
 

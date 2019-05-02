@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="11"/>
     <BuildModes Active="Default"/>
-    <Units Count="54">
+    <Units Count="55">
       <Unit0>
         <Filename Value="FirmataNeoPixels.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -30,10 +30,10 @@
         <ComponentName Value="Fill_with_Color1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="6"/>
         <TopLine Value="92"/>
         <CursorPos X="36" Y="128"/>
-        <UsageCount Value="45"/>
+        <UsageCount Value="46"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit2>
@@ -43,10 +43,10 @@
         <ComponentName Value="Fade_config1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="4"/>
         <TopLine Value="103"/>
         <CursorPos X="30" Y="66"/>
-        <UsageCount Value="45"/>
+        <UsageCount Value="46"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit3>
@@ -56,10 +56,10 @@
         <ComponentName Value="Pixel_color1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="5"/>
         <TopLine Value="78"/>
         <CursorPos X="20" Y="92"/>
-        <UsageCount Value="45"/>
+        <UsageCount Value="46"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit4>
@@ -69,10 +69,10 @@
         <ComponentName Value="Shift_Config1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="7"/>
         <TopLine Value="82"/>
         <CursorPos X="7" Y="117"/>
-        <UsageCount Value="45"/>
+        <UsageCount Value="46"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit5>
@@ -85,7 +85,7 @@
         <EditorIndex Value="1"/>
         <TopLine Value="55"/>
         <CursorPos X="4" Y="74"/>
-        <UsageCount Value="31"/>
+        <UsageCount Value="32"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit6>
@@ -336,8 +336,7 @@
       </Unit39>
       <Unit40>
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="8"/>
         <TopLine Value="1103"/>
         <CursorPos X="27" Y="1126"/>
         <UsageCount Value="62"/>
@@ -346,7 +345,7 @@
       <Unit41>
         <Filename Value="../../FirmataBoard/firmataconstants.pas"/>
         <UnitName Value="FirmataConstants"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="10"/>
         <TopLine Value="290"/>
         <CursorPos X="25" Y="322"/>
         <UsageCount Value="62"/>
@@ -362,9 +361,10 @@
       </Unit42>
       <Unit43>
         <Filename Value="../../FirmataBoard/firmataboard1.inc"/>
-        <EditorIndex Value="8"/>
-        <TopLine Value="1169"/>
-        <CursorPos X="42" Y="1198"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="9"/>
+        <TopLine Value="909"/>
+        <CursorPos Y="928"/>
         <UsageCount Value="58"/>
         <Loaded Value="True"/>
       </Unit43>
@@ -450,8 +450,16 @@
         <CursorPos Y="597"/>
         <UsageCount Value="9"/>
       </Unit53>
+      <Unit54>
+        <Filename Value="C:/lazarus/ide/lazarus.pp"/>
+        <UnitName Value="Lazarus"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="28"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit54>
     </Units>
-    <JumpHistory Count="12" HistoryIndex="11">
+    <JumpHistory Count="15" HistoryIndex="14">
       <Position1>
         <Filename Value="shift_config.pas"/>
         <Caret Line="108" TopLine="82"/>
@@ -497,9 +505,21 @@
         <Caret Line="887" Column="3" TopLine="863"/>
       </Position11>
       <Position12>
-        <Filename Value="firmataneopixel.pas"/>
-        <Caret Line="250" Column="28" TopLine="278"/>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="1126" Column="27" TopLine="1103"/>
       </Position12>
+      <Position13>
+        <Filename Value="FirmataNeoPixels.lpr"/>
+        <Caret Line="18" Column="33"/>
+      </Position13>
+      <Position14>
+        <Filename Value="C:/lazarus/ide/lazarus.pp"/>
+        <Caret TopLine="28"/>
+      </Position14>
+      <Position15>
+        <Filename Value="../../FirmataBoard/firmataboard1.inc"/>
+        <Caret Line="891" TopLine="875"/>
+      </Position15>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
