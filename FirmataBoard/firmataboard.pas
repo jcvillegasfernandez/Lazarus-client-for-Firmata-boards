@@ -1058,7 +1058,6 @@ uses
        FFadeLoopsWait: byte;
        FShiftFirst: smallint;
        FShiftLast: smallint;
-       FShiftRunning: Boolean;
        FShiftType: byte;
        FOnFadeEnd: TOnFadeEnd;
        FOnEnabled: TOnEnabled;

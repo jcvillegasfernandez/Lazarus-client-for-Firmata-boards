@@ -405,21 +405,21 @@ begin
 
   FPin:=PinModesToByte(PIN_MODE_IGNORE);
   FDevice:=FPin; // PIN_MODE_IGNORE means no device
-  FLedColors:='BGRW';
+  FLedColors:='GRB';
   FPixels:=nil;
   FPixelsNumber:=1;
   FGamma:=1;
   FFadeRunning:=false;
-  FShiftRunning:=false;
   FFadeColor:=0;
   FFadeFirst:=0;
   FFadeLast:=0;
   FShiftFirst:=0;
   FShiftLast:=0;
-  FShiftType:=1; // bit0 = 1 right, bit1 = 1 wrap, = 0 left
+  FShiftType:=7; // bit0 = 1 right = 0 left, bit1 = 1 wrap,
                   //  bit2 = 1 do_show
   FFadeLoopsWait:=1;  // if SamplingRate = 19, 1 is about 25 Hz eye speed
   FBrightness:=0;  // 0=mAX, 1=Min, 255= 1 below max
+  FKHZ400:=false;
 end;
 
 destructor TNeoPixel.Destroy();
@@ -605,6 +605,8 @@ begin
       FBoard.FNeoPixels[FDevice]:=self;
       FBoard.FBoardPins[FPin].Busy:=true;  //  pin is assigned to this module
       config;  // configure
+      if FFadeLoopsWait <> 1 then
+        FadeSegmentConfig(FFadeColor, FFadeFirst, FFadeLast);
       if Assigned(FOnEnabled) then
         FOnEnabled(self);
     end;
@@ -686,9 +688,16 @@ begin
   begin
     if FBrightness <> 0 then // update brighness
       sendBrightness(false); // do not show
+    // defaul not fade, not wrap, right, not show, loops to wait = 1
     FFadeRunning:=false;
-    FShiftType:=$02;
+    FShiftType:=$07;  // defaul not fade, wrap, right, show
+
     FBoard.FBoardPins[FPin].ActualMode:=PinModesToByte(PIN_MODE_NEOPIXELS);
+    FFadeFirst:=0;
+    FFadeLast:=FPixelsNumber -1;
+    FFadeColor:=0;
+    FShiftfirst:=0;
+    FShiftlast:=FPixelsNumber -1;
   end;
 end;
 
@@ -820,8 +829,10 @@ begin
                     chr(Last and $7F)+chr((Last >> 7) and $7F), write);
 
   if write then
+  begin
     for i:=First to Last do
       FPixels[i].PixelColor:=tmpColor;
+  end;
 end;
 function TNeoPixel.FillSegment(Red: byte; Green: byte; Blue: Byte; White: byte; first: smallint; last: smallint; do_show: Boolean; write: Boolean=true): string; overload;
 begin
@@ -867,22 +878,17 @@ end;
 1  NEOPIXELS_DATA    (0X51)
 2  NEOPIXELS_SHIFT_CONFIG   (0x06)
 3  device            (0-3)
-4  shif_type         bit0 = 1 right, bit1 = 1 wrap, = 0 left
+4  First pixel       lsb  Optional
+5                    msb
+6  Last pixel        lsb  optional
+7                    msb
+8  shif_type         optional bit0 = 1 right, bit1 = 1 wrap, = 0 left
                      bit2 = 1 do_show
-5  First pixel       lsb
-6                    msb
-7  Last pixel        lsb
-8                    msb
-9  END_SYSEX        (0xF7)}
+4/9  END_SYSEX        (0xF7)}
 function TNeoPixel.ShiftSegmentConfig(First: smallint; Last: smallint; Direction: char; Wrap: Boolean; do_show: Boolean; write: Boolean=true): string;
 begin
   Result:='';
 
-  if FShiftRunning then // Shift is running
-  begin
-    FBoard.RaiseError(53, 'Shift');
-    exit;
-  end;
   if First >= FPixelsNumber then
   begin
     FBoard.RaiseError(50, 'Shift');
@@ -899,8 +905,8 @@ begin
   FShiftType:=ord('R' = UpperCase(Direction)) or (ord(Wrap) << 1) or (ord(do_show) << 2);
 
   Result:=SendSysEx(chr(NEOPIXELS_DATA)+chr(NEOPIXELS_SHIFT_CONFIG)+chr(FDevice)+
-                    chr(FShiftType)+chr(First and $7F)+chr((First >> 7) and $7F)+
-                    chr(Last and $7F)+chr((Last >> 7) and $7F), write);
+                    chr(First and $7F)+chr((First >> 7) and $7F)+
+                    chr(Last and $7F)+chr((Last >> 7) and $7F)+chr(FShiftType), write);
 
   if write then
   begin
@@ -920,12 +926,7 @@ function TNeoPixel.ShiftStripConfig(Direction: char; Wrap: Boolean; do_show: Boo
 begin
   Result:='';
 
-  if FShiftRunning then // shift is running
-  begin
-    FBoard.RaiseError(53, 'Shift');
-    exit;
-  end;
-  // right = bit0 1=right, 0=left
+  // direction = bit0 1=right, 0=left
   // wrap =  bit1 1=wrap
   // do_show = bit2 1=show
   FShiftType:=ord('R' = UpperCase(Direction)) or (ord(Wrap) << 1) or (ord(do_show) << 2);
