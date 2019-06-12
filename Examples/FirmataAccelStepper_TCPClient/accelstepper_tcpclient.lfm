@@ -1,0 +1,245 @@
+object Form1: TForm1
+  Left = 31
+  Height = 855
+  Top = 127
+  Width = 1181
+  Caption = 'Form1'
+  ClientHeight = 855
+  ClientWidth = 1181
+  Font.Height = -17
+  OnClose = FormClose
+  OnCreate = FormCreate
+  LCLVersion = '2.0.2.0'
+  object OpenPort: TButton
+    Left = 200
+    Height = 35
+    Top = 96
+    Width = 106
+    Caption = 'open'
+    Default = True
+    OnClick = OpenPortClick
+    ParentFont = False
+    TabOrder = 0
+  end
+  object ClosePort: TButton
+    Left = 200
+    Height = 35
+    Top = 141
+    Width = 106
+    Caption = 'close'
+    Enabled = False
+    OnClick = ClosePortClick
+    ParentFont = False
+    TabOrder = 1
+  end
+  object Puerto: TEdit
+    Left = 70
+    Height = 23
+    Top = 151
+    Width = 113
+    ParentFont = False
+    TabOrder = 2
+    Text = '3030'
+  end
+  object Steps: TEdit
+    Left = 614
+    Height = 23
+    Top = 176
+    Width = 108
+    OnEditingDone = StepsEditingDone
+    ParentFont = False
+    TabOrder = 6
+    Text = '1000'
+  end
+  object Label6: TLabel
+    Left = 568
+    Height = 15
+    Top = 184
+    Width = 31
+    Caption = 'Steps:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Label1: TLabel
+    Left = 25
+    Height = 15
+    Top = 159
+    Width = 25
+    Caption = 'Port:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Memo1: TMemo
+    Left = 25
+    Height = 616
+    Top = 219
+    Width = 1136
+    Enabled = False
+    Font.Height = -12
+    Lines.Strings = (
+      'Memo1'
+    )
+    OnClick = Memo1Click
+    ParentFont = False
+    ReadOnly = True
+    ScrollBars = ssAutoVertical
+    TabOrder = 3
+  end
+  object Label2: TLabel
+    Left = 25
+    Height = 15
+    Top = 196
+    Width = 300
+    Caption = 'Pins (click in memo to show pin modes and capabilities):'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Label4: TLabel
+    Left = 416
+    Height = 15
+    Top = 184
+    Width = 38
+    Caption = 'Device:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object MotorDevice: TEdit
+    Left = 473
+    Height = 23
+    Top = 176
+    Width = 73
+    Enabled = False
+    ParentFont = False
+    ReadOnly = True
+    TabOrder = 4
+    Text = '0'
+  end
+  object Move: TButton
+    Left = 1054
+    Height = 32
+    Top = 96
+    Width = 108
+    Caption = 'Move'
+    OnClick = MoveClick
+    ParentFont = False
+    TabOrder = 5
+  end
+  object Label3: TLabel
+    Left = 392
+    Height = 30
+    Top = 8
+    Width = 386
+    Caption = 'Motor  28BYJ-48 and ULN2003 module'
+    Font.Height = -21
+    Font.Style = [fsBold]
+    ParentColor = False
+    ParentFont = False
+  end
+  object Label5: TLabel
+    Left = 392
+    Height = 84
+    Top = 64
+    Width = 382
+    Caption = 'Motor Pins (on esp8266)'#13#10#13#10'motorpin 1 (pin 1) to In 1        motorpin 2 (pin 2) to In 2'#13#10'motorpin 3 (pin 3) to In 3        motorpin 4 (pin 4) to In 4'
+    Font.Height = -16
+    ParentColor = False
+    ParentFont = False
+  end
+  object ToggleBox1: TToggleBox
+    Left = 939
+    Height = 32
+    Top = 96
+    Width = 97
+    Caption = 'Relative'
+    OnClick = ToggleBox1Click
+    ParentFont = False
+    TabOrder = 7
+  end
+  object Label7: TLabel
+    Left = 856
+    Height = 15
+    Top = 100
+    Width = 59
+    Caption = 'Move type:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Display: TLabel
+    Left = 856
+    Height = 48
+    Top = 155
+    Width = 171
+    AutoSize = False
+    Constraints.MaxWidth = 238
+    Font.Height = -17
+    ParentColor = False
+    ParentFont = False
+  end
+  object FastStop: TButton
+    Left = 1054
+    Height = 32
+    Top = 134
+    Width = 108
+    Caption = 'Fast Stop'
+    OnClick = FastStopClick
+    ParentFont = False
+    TabOrder = 8
+    Visible = False
+  end
+  object Server: TEdit
+    Left = 70
+    Height = 23
+    Top = 105
+    Width = 113
+    ParentFont = False
+    TabOrder = 9
+    Text = '192.168.10.11'
+  end
+  object Label8: TLabel
+    Left = 25
+    Height = 15
+    Top = 113
+    Width = 35
+    Caption = 'Server:'
+    ParentColor = False
+    ParentFont = False
+  end
+  object Board1: TBoard
+    SamplingInterval = 19
+    LastError = 42
+    MaxTime = 6000
+    OnBeforeOpen = Board1BeforeOpen
+    OnAfterClose = Board1AfterClose
+    OnBoardReady = Board1FirmataReady
+    OnDeviceDataAvailable = Board1DeviceDataAvailable
+    OnSendDataToDevice = Board1SendDataToDevice
+    OnGetDataFromDevice = Board1GetDataFromDevice
+    OnError = Board1Error
+    OnBoardData = Board1FirmataData
+    left = 432
+    top = 296
+  end
+  object AccelStepper1: TAccelStepper
+    Board = Board1
+    Device = 0
+    MotorPin1_or_DriverStep = 1
+    MotorPin2_or_DriverDirection = 2
+    MotorPin3 = 3
+    MotorPin4 = 4
+    MotorEnablePin = 127
+    InvertMotorPin1 = False
+    InvertMotorPin2 = False
+    InvertMotorPin3 = False
+    InvertMotorPin4 = False
+    InvertEnablePin = False
+    InterfaceType = ACCEL_INTERFACE_4_WIRE
+    StepSize = HALF_STEP
+    Speed = 1000
+    Steps = 0
+    Acceleration = 100
+    OnStepperPosition = AccelStepper1StepperPosition
+    OnStepperMoveCompleted = AccelStepper1StepperMoveCompleted
+    left = 664
+    top = 264
+  end
+end

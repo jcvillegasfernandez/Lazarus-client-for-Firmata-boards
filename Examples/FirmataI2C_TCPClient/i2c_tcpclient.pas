@@ -1,4 +1,4 @@
-unit I2c;
+unit i2c_TCPClient;
 
 {$mode objfpc}{$H+}
 
@@ -6,7 +6,8 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
-  StdCtrls, ExtCtrls, firmataconstants, FirmataBoard, LazSerial;
+  StdCtrls, ExtCtrls, firmataconstants, FirmataBoard, blcksock, synsock,
+  LazSerial;
 
 type
   TChip = record
@@ -30,13 +31,14 @@ type
   TForm1 = class(TForm)
     I2C1: TI2C;
     Label5: TLabel;
+    Label9: TLabel;
+    Puerto: TEdit;
     WriteString: TButton;
     ComboBox1: TComboBox;
     EditA2A1A0: TEdit;
     Label7: TLabel;
     Label8: TLabel;
     Label_A2A1A0: TLabel;
-    LazSerial1: TLazSerial;
     Address: TEdit;
     Label6: TLabel;
     NumBytes: TEdit;
@@ -45,19 +47,20 @@ type
     Label3: TLabel;
     Label4: TLabel;
     Board1: TBoard;
-    configure: TButton;
     Label1: TLabel;
     Label2: TLabel;
     Memo1: TMemo;
-    Puerto: TEdit;
+    Server: TEdit;
     OpenPort: TButton;
     ClosePort: TButton;
 
+    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure WriteStringClick(Sender: TObject);
     procedure ComboBox1CloseUp(Sender: TObject);
     procedure EditA2A1A0EditingDone(Sender: TObject);
     procedure Board1AfterClose(sender: TObject);
     procedure Board1BeforeOpen(sender: TObject);
+    function Board1DeviceDataAvailable(sender: TObject): Boolean;
     procedure Board1Error(sender: TObject; Error: integer; TextError: string; Afected: integer);
     procedure Board1FirmataData(sender: TObject; Command: Byte; Data: string);
     procedure Board1FirmataReady(sender: TObject);
@@ -65,7 +68,6 @@ type
     procedure I2C1I2CData(sender: TObject; Slave: Byte; Reg_Number: Byte; Data: string);
     procedure Board1SendDataToDevice(sender: TObject; str: string);
     procedure FormCreate(Sender: TObject);
-    procedure configureClick(Sender: TObject);
     procedure Memo1Click(Sender: TObject);
     procedure NumBytesEditingDone(Sender: TObject);
     procedure OpenPortClick(Sender: TObject);
@@ -78,6 +80,10 @@ type
     procedure ReadBytesFromDevice(Chip: TChip; BytesToRead: integer);
     function BinToInt(Value: string): Integer;
     function StringToMemo(Data: string): string;
+    procedure SocketStatusHandler(Sender: TObject; Reason: THookSocketReason;
+                                 const Value: AnsiString);
+    procedure MonitorSocket(Sender: TObject; Writing: Boolean;
+                                 const Buffer: TMemory; Len: Integer);
   private
     { private declarations }
   public
@@ -86,6 +92,7 @@ type
 
 var
   Form1: TForm1;
+  client: TTCPBlockSocket;
   Chip: TChip;
   BlockValue: TBlockValues;
   DataString: string;
@@ -96,18 +103,71 @@ implementation
 {$R *.lfm}
 
 { TForm1 }
+procedure TForm1.SocketStatusHandler(Sender: TObject; Reason: THookSocketReason;
+                                         const Value: AnsiString);
+var
+  Status: String;
+begin
+  case Reason of
+    HR_ResolvingBegin:
+      Status := 'ResolvingBegin';
+    HR_ResolvingEnd:
+      Status := 'ResolvingEnd';
+    HR_SocketCreate:
+      Status := 'SocketCreate';
+    HR_SocketClose:
+      Status := 'SocketClose';
+    HR_Connect:
+      Status := 'Connect';
+    HR_CanRead:
+      Status := 'CanRead';
+    HR_CanWrite:
+      Status := 'CanWrite';
+    HR_ReadCount:
+      Status := 'ReadCount';
+    HR_WriteCount:
+      Status := 'WriteCount';
+    HR_Wait:
+      Status := 'Wait';
+    HR_Error:
+      Status := 'Error';
+  end;
+  Memo1.Lines.add(Status+ ', ' + Value);
+end;
+
+procedure TForm1.MonitorSocket(Sender: TObject; Writing: Boolean;
+        const Buffer: TMemory; Len: Integer);
+var
+  i: integer;
+  s: string;
+begin
+  setstring(s, Buffer, Len);
+
+  if writing then // writing to device
+  begin
+    i:=memo1.lines.Add('Written: ');
+  end
+  else
+  begin
+    i:=memo1.lines.Add('Read: ');
+  end;
+  Memo1.Lines[i]:=Memo1.Lines[i]+StrToHexSep(s);
+end;
 
 procedure TForm1.OpenPortClick(Sender: TObject);
 begin
   memo1.Clear;
-  // Enable Firmata
 
+  client:=TTCPBlockSocket.Create;
+  //client.OnStatus:=@SocketStatusHandler;
+  //client.OnMonitor:=@MonitorSocket;
+
+  // Enable Firmata
   Board1.Enabled:=true;
 
-  Puerto.Enabled:=false;
-  puerto.Enabled:=false;
+  Server.Enabled:=false;
   closeport.Enabled:=True;
-  configure.Enabled:=false;
+  puerto.Enabled:=false;
   Openport.Enabled:=False;
 end;
 
@@ -115,23 +175,20 @@ procedure TForm1.FormCreate(Sender: TObject);
 begin
   memo1.Enabled:=true;
   Memo1.Clear;
-  {$IFDEF LINUX}
-  Puerto.Text:='/dev/ttyUSB0';
-  {$ELSE}
-  Puerto.Text:='COM1';
-  {$ENDIF}
-  LazSerial1.Device:=Puerto.Text;
-  LazSerial1.BaudRate:=br_57600;
-  LazSerial1.FlowControl:=fcNone;
-  LazSerial1.StopBits:=sbOne;
-  LazSerial1.DataBits:=db8bits;
-  LazSerial1.Parity:=pNone;
+
+  Puerto.Text:='3030';
+  Server.Text:='192.168.10.11';
 
   ComboBox1.ItemIndex:=0;
   ComboBox1CloseUp(ComboBox1);
   //AsignValuesToChip(Chip, ComboBox1.ItemIndex, BinToInt(EditA2A1A0.Text);
 
   FBytesLeft:=0;
+end;
+
+procedure TForm1.Board1AfterClose(sender: TObject);
+begin
+  client.CloseSocket;
 end;
 
 procedure TForm1.AsignValuesToChip(var Chip: TChip; TypeID: Byte; As_Sel: Byte);
@@ -208,31 +265,30 @@ begin
      Chip.DeviceID:=Chip.DeviceID or Chip.As_Sel;
 end;
 
-procedure TForm1.configureClick(Sender: TObject);
-begin
-  LazSerial1.ShowSetupDialog;
-  Puerto.text:=LazSerial1.Device;
-end;
-
 procedure TForm1.Board1SendDataToDevice(sender: TObject; str: string);
 begin
-  LazSerial1.WriteData(str);
+  client.SendString(str);
 end;
 
 function TForm1.Board1GetDataFromDevice(sender: TObject): integer;
 begin
-  if LazSerial1.DataAvailable then
-    Result:=LazSerial1.SynSer.RecvByte(100)
+  if client.CanReadEx(100) then
+    Result:=client.RecvByte(0)
   else
     Result:=-1;
 end;
 
+function TForm1.Board1DeviceDataAvailable(sender: TObject): Boolean;
+begin
+  Result:=client.CanReadEx(0);
+end;
+
 procedure TForm1.ClosePortClick(Sender: TObject);
 begin
-  puerto.Enabled:=true;
+  Server.Enabled:=true;
   closeport.Enabled:=False;
   Openport.Enabled:=True;
-  configure.Enabled:=True;
+  puerto.Enabled:=True;
 
   I2C1.Enabled:=False;
   Board1.enabled:=false;
@@ -255,6 +311,11 @@ begin
   WriteBytesToDevice(Chip, StringToWrite.Text, True);
 end;
 
+procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+begin
+    ClosePortClick(self);
+end;
+
 procedure TForm1.ReadDataClick(Sender: TObject);
 begin
   FBytesLeft:=StrToInt(NumBytes.Text);
@@ -271,23 +332,24 @@ end;
 procedure TForm1.I2C1I2CData(sender: TObject; Slave: Byte; Reg_Number: Byte; Data: string);
 var
   StrData: string;
+  i: integer;
 begin
   DataString:=DataString+Data;
   FBytesLeft:=FBytesLeft - Length(Data);
   if FBytesLeft > 0 then
-    exit;
+    exit;  // haven't been read all bytes yet
 
   StrData:='';
   Memo1.Lines.Add('I2C, Slave ('+inttoStr(Slave)+') Data('+IntToStr(Length(DataString) - FBytesLeft)+')='+StrToHexSep(DataString));
-  {For i:=1 to Length(DataString) do
+  For i:=1 to Length(DataString) do
   begin
     if (DataString[i] >= ' ') and (DataString[i] <= '~') then
       StrData:=StrData+DataString[i]
     else
       StrData:=StrData+' ';
   end;
-  Memo1.Lines.Add('I2C, String('+inttoStr(FBytesRead)+')='+StrData);
-  }
+  Memo1.Lines.Add('I2C, String('+inttoStr(i)+')='+StrData);
+
 end;
 
 // slow method write max of 8 bytes, start addres of writting is Chip.Actual_Address
@@ -572,25 +634,20 @@ begin
   Chip.As_Sel:=BinToInt(s);
 end;
 
-procedure TForm1.Board1AfterClose(sender: TObject);
-begin
-  if LazSerial1.Active then
-    LazSerial1.Close;
-end;
-
 procedure TForm1.Board1BeforeOpen(sender: TObject);
 begin
-    // Open way of comunication
-  LazSerial1.Device:=Puerto.Text;
-  LazSerial1.Open;
-  if LazSerial1.active=false then
-  begin
-     Board1.Enabled:=False;
-     memo1.Append('Could not open port');
-     exit;
-  end;
-  Memo1.Clear;
+  // Open way of comunication
   memo1.Append('Wait !!!, Firmata starting....');
+  Client.Connect(server.text, puerto.text);
+
+  if client.LastError <> 0 then
+  begin
+    Board1.Enabled:=False;
+    board1.RaiseError(1002,'Could not open connection');
+  end;
+
+  Board1SendDataToDevice(self,chr($F9)); // askversion
+  Board1SendDataToDevice(self,chr($F0)+chr($79)+chr($F7)); // askFirmware
 end;
 
 procedure TForm1.Board1Error(sender: TObject; Error: integer;
@@ -610,13 +667,14 @@ begin
   memo1.lines.add('Firmata started in, '+inttostr(Board1.StartingTime)+' milisec');
   memo1.lines.add('Firmata Firmare:' + Board1.FirmataFirmware);
 
-  I2C1.Enabled:=true;  // prepare i2c and config pins
-
   Board1.printPinInfo(Memo1);
+  I2C1.SDApin:=4;
+  I2C1.SCLpin:=5;
+  I2C1.Enabled:=true;  // prepare i2c and config pins
   if not I2C1.Enabled then
   begin
     memo1.Lines.add('');
-    memo1.Lines.add('I2C module is not installed or there aren''t any free supported pins in ConfigurableFirmata');
+    memo1.Lines.add('I2C module is not installed in ConfigurableFirmata');
     exit;
   end;
   Address.Enabled:=True;
@@ -624,6 +682,10 @@ begin
   ReadData.Enabled:=True;
   WriteString.Enabled:=True;
   StringToWrite.Enabled:=True;
+
+  openPort.Enabled:=false;
+  Server.Enabled:=false;
+  Closeport.Enabled:=true;
 end;
 
 procedure TForm1.Memo1Click(Sender: TObject);

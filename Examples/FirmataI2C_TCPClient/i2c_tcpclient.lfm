@@ -1,14 +1,15 @@
 object Form1: TForm1
-  Left = 384
+  Left = 173
   Height = 827
-  Top = 197
+  Top = 115
   Width = 1162
   Caption = 'Form1'
   ClientHeight = 827
   ClientWidth = 1162
   Font.Height = -14
+  OnClose = FormClose
   OnCreate = FormCreate
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.2.0'
   object OpenPort: TButton
     Left = 208
     Height = 32
@@ -23,7 +24,7 @@ object Form1: TForm1
   object ClosePort: TButton
     Left = 208
     Height = 32
-    Top = 52
+    Top = 48
     Width = 97
     Caption = 'close'
     Enabled = False
@@ -31,20 +32,21 @@ object Form1: TForm1
     ParentFont = False
     TabOrder = 1
   end
-  object Puerto: TEdit
+  object Server: TEdit
     Left = 83
     Height = 23
     Top = 11
     Width = 104
     ParentFont = False
     TabOrder = 2
+    Text = '192.168.10.11'
   end
   object Label1: TLabel
     Left = 41
     Height = 15
     Top = 21
-    Width = 25
-    Caption = 'Port:'
+    Width = 35
+    Caption = 'Server:'
     ParentColor = False
     ParentFont = False
   end
@@ -72,22 +74,12 @@ object Form1: TForm1
     ParentColor = False
     ParentFont = False
   end
-  object configure: TButton
-    Left = 16
-    Height = 32
-    Top = 52
-    Width = 170
-    Caption = 'configure serial port'
-    OnClick = configureClick
-    ParentFont = False
-    TabOrder = 4
-  end
   object Label3: TLabel
-    Left = 665
+    Left = 633
     Height = 15
     Top = 21
-    Width = 264
-    Caption = '( On Arduino Uno SDA pin is 18 and SCL pin is 19 )'
+    Width = 226
+    Caption = '( On esp8266 SDA pin is 4 and SCL pin is 5 )'
     ParentColor = False
     ParentFont = False
   end
@@ -109,7 +101,7 @@ object Form1: TForm1
     Enabled = False
     OnClick = ReadDataClick
     ParentFont = False
-    TabOrder = 5
+    TabOrder = 4
   end
   object StringToWrite: TEdit
     Left = 817
@@ -118,7 +110,7 @@ object Form1: TForm1
     Width = 218
     Enabled = False
     ParentFont = False
-    TabOrder = 6
+    TabOrder = 5
   end
   object Label6: TLabel
     Left = 559
@@ -137,7 +129,7 @@ object Form1: TForm1
     Enabled = False
     OnEditingDone = AddressEditingDone
     ParentFont = False
-    TabOrder = 7
+    TabOrder = 6
     Text = '0'
   end
   object ComboBox1: TComboBox
@@ -159,7 +151,7 @@ object Form1: TForm1
     )
     OnCloseUp = ComboBox1CloseUp
     ParentFont = False
-    TabOrder = 8
+    TabOrder = 7
   end
   object Label_A2A1A0: TLabel
     Left = 633
@@ -185,7 +177,7 @@ object Form1: TForm1
     ParentFont = False
     ParentShowHint = False
     ShowHint = True
-    TabOrder = 9
+    TabOrder = 8
     Text = '000'
   end
   object NumBytes: TEdit
@@ -196,7 +188,7 @@ object Form1: TForm1
     Enabled = False
     OnEditingDone = NumBytesEditingDone
     ParentFont = False
-    TabOrder = 10
+    TabOrder = 9
     Text = '0'
   end
   object Label7: TLabel
@@ -217,7 +209,7 @@ object Form1: TForm1
     Enabled = False
     OnClick = WriteStringClick
     ParentFont = False
-    TabOrder = 11
+    TabOrder = 10
   end
   object Label8: TLabel
     Left = 817
@@ -237,6 +229,24 @@ object Form1: TForm1
     ParentColor = False
     ParentFont = False
   end
+  object Puerto: TEdit
+    Left = 83
+    Height = 23
+    Top = 48
+    Width = 104
+    ParentFont = False
+    TabOrder = 11
+    Text = '3030'
+  end
+  object Label9: TLabel
+    Left = 41
+    Height = 15
+    Top = 52
+    Width = 25
+    Caption = 'Port:'
+    ParentColor = False
+    ParentFont = False
+  end
   object Board1: TBoard
     SamplingInterval = 19
     LastError = 0
@@ -244,23 +254,12 @@ object Form1: TForm1
     OnBeforeOpen = Board1BeforeOpen
     OnAfterClose = Board1AfterClose
     OnBoardReady = Board1FirmataReady
+    OnDeviceDataAvailable = Board1DeviceDataAvailable
     OnSendDataToDevice = Board1SendDataToDevice
     OnGetDataFromDevice = Board1GetDataFromDevice
     OnError = Board1Error
     OnBoardData = Board1FirmataData
     left = 104
-    top = 83
-  end
-  object LazSerial1: TLazSerial
-    Active = False
-    BaudRate = br_57600
-    DataBits = db8bits
-    Parity = pNone
-    FlowControl = fcNone
-    StopBits = sbOne
-    Device = 'COM1'
-    RcvLineCRLF = False
-    left = 41
     top = 83
   end
   object I2C1: TI2C
