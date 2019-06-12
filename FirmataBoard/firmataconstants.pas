@@ -173,7 +173,6 @@ ErrorsArray: array [1..53] of String = (
    SW_SERIAL2 =              $0A;
    SW_SERIAL3 =              $0B;
 
-   SERIAL_MESSAGE =          $60;
    SERIAL_CONFIG =           $10;
    SERIAL_WRITE =            $20;
    SERIAL_READ =             $30;
@@ -220,7 +219,6 @@ ErrorsArray: array [1..53] of String = (
    ONEWIRE_DELAY_REQUEST_BIT = $10;
    ONEWIRE_WRITE_REQUEST_BIT = $20;
    ONEWIRE_WITHDATA_REQUEST_BITS = $3C;
-   ONEWIRE_CRC = $00; //for OneWire.h: crc-functions are not used
 
    // Scheduler
    CREATE_TASK =             $00; // Create_task command  (0x00)
@@ -319,7 +317,7 @@ ErrorsArray: array [1..53] of String = (
    NEOPIXELS_FADE_CONFIG    =  $08; // progressive pixels color change
    NEOPIXELS_SHIFT_RUN      =  $09; // run shift step
    NEOPIXELS_FADE_ONE_STEP  =  $0A; // progressive pixels color change, 1 step
-   NEOPIXELS_MOVE_PIXELS    =  $0B; // move pixels from src to dest
+   NEOPIXELS_COPY_PIXELS    =  $0B; // move pixels from src to dest
 
 
 

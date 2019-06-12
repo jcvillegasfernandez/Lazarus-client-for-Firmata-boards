@@ -118,14 +118,14 @@ uses
 
   {:Event run just before enable the object}
   TOnBeforeOpen = procedure(sender: TObject) of Object;
-  {:Event run just after close disable the object}
+  {:Event run just after enable the object}
   TOnAfterClose = procedure(sender: TObject) of Object;
   {:Procedure to send data to the board}
   TOnSendDataToDevice = procedure(sender: TObject; str: string) of Object;
   {:Procedure to get data from the board}
-  TOnGetDataFromDevice = function(sender: TObject): integer of object;
-  {:Procedure to check if there is send data available from board}
   TOnDeviceDataAvailable = function(sender: TObject): Boolean of object;
+  {:Procedure to check if data available on device}
+  TOnGetDataFromDevice = function(sender: TObject): string of object;
   {:Event run when an error occur}
   TOnError = procedure(sender: TObject; Error: integer; TextError: string) of Object;
   {:Event run when board is initialized and got their cpabilities}
@@ -137,7 +137,7 @@ uses
   {:Event run when received pin value state from board, pin mode and last written value}
   TOnPinState = procedure(sender: TObject; Mode: TPinModes; State: integer) of object;
   {:Procedure to get an extended sysex command}
-  TOnExtendedSysex = procedure(sender: TObject; ID0: byte; ID1: byte; Data: String) of Object;
+  TOnExtendedSysex = procedure(sender: TObject; Data: String) of Object;
   {:Event run when a module is enabled}
   TOnEnabled = procedure(sender: TObject) of Object;
   {:Event run when a module is disabled}
@@ -221,6 +221,9 @@ uses
 
   TBoard = class (TComponent)
     private
+      FCommandBuffer: string;
+      FCommandData: string;
+      FIndex: integer;
       FBoardThread: TBoardThread;
       FEnabled: Boolean;
       FStarting: Boolean;
@@ -235,16 +238,15 @@ uses
       FOnBeforeOpen: TOnBeforeOpen;
       FOnAfterClose: TOnAfterClose;
       FOnError: TOnError;
+      FOnDeviceDataAvailable: TOnDeviceDataAvailable;
       FOnSendDataToDevice: TOnSendDataToDevice;
       FOnGetDataFromDevice: TOnGetDataFromDevice;
-      FOnDeviceDataAvailable: TOnDeviceDataAvailable;
       FOnExtendedSysex: TOnExtendedSysex;
 
     private
       {:Store last error number.}
       FLastError: integer;
-
-      {:array of board pins capbilities, values, mode, etc}
+      {:array of board pins capabilities, values, mode, etc}
       FBoardPins: TBoardPins;
       {:Total board pins}
       FBoardPinsNumber: integer;
@@ -279,6 +281,7 @@ uses
       FEncoders: TEncoders;
       FMice: TMice;
       FNeoPixels: TNeoPixels;
+      procedure ParseData;
 
       procedure setEnabled(State: Boolean);
       {:procedure for initialize board variables}
@@ -295,13 +298,12 @@ uses
       procedure SetBoardPin(Index: integer; Pin: TBoardPin);
       {:set board sampling interval, min value is 19 milisecs}
       procedure SetSamplingInterval(Interval: integer);
+    public
       {:procedure error, need more work}
       procedure RaiseError(Error: integer; FunctionError: string; TextError: string='');
-    public
-      {:get next byte from board}
-      function GetNextByte: Byte;
       {:get command or sysex command from board}
-      procedure GetFirmataCommand(Sender: TObject);
+      procedure parseCommand(Data: string);
+      procedure parseSysExCommand(Data:string); // string includes END_SYSEX byte
 
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
@@ -327,9 +329,6 @@ uses
       function SendCommand(Data: string; write: Boolean=True): string;
       {:send sysex command to board}
       function SendSysEx(data7bit: string; write: Boolean=true): string;
-
-      {:procedure to send sysex commands to modules}
-      procedure GetSysExCommandData(Command: Byte);
       {:reset board and client}
       procedure Reset;
       {:enable board}
@@ -367,9 +366,9 @@ uses
       property OnAfterClose: TOnAfterClose read FOnAfterClose write FOnAfterClose;
       {: when firmata board became ready}
       property OnBoardReady: TOnBoardReady read FOnBoardReady write FOnBoardReady;
+      property OnDeviceDataAvailable: TOnDeviceDataAvailable read FOnDeviceDataAvailable write FOnDeviceDataAvailable;
       property OnSendDataToDevice: TOnSendDataToDevice read FOnSendDataToDevice write FOnSendDataToDevice;
       property OnGetDataFromDevice: TOnGetDataFromDevice read FOnGetDataFromDevice write FOnGetDataFromDevice;
-      property OnDeviceDataAvailable: TOnDeviceDataAvailable read FOnDeviceDataAvailable write FOnDeviceDataAvailable;
       property OnError: TOnError read FOnError write FOnError;
       {: when the board send data, but is not a command}
       property OnBoardData: TOnBoardData read FOnBoardData write FOnBoardData;
@@ -382,9 +381,9 @@ uses
       FBoard: TBoard;
       FEnabled: Boolean;
       FPin: Byte;
-      FValue: integer;
+      FValue: integer;   // last value read on pin
       FMode: TPinModes;
-      FState: integer;
+      FState: integer;         // last value written on pin
       FReporting: Boolean;  // if report must enabled when set mode to input or analoginput
       FBoardPinsNumber: integer;  // Number of total pins
       FAnalogPinsNumber: integer;  //number of analog pins
@@ -447,11 +446,11 @@ uses
       property Pin: byte read FPin write setPin;
       {: mode of pin}
       property Mode: TPinModes read FMode write setMode;
-      {: last value read of pin}
+      {: last value read on pin}
       property Value: integer read FValue;
       {: true when pin is reporting data}
       Property Reporting: Boolean read FReporting;
-      {: last value written}
+      {: last value written on pin}
       property State: integer read FState;
       {: event reporting pin value}
       property OnPinValue: TOnPinValue read FOnPinValue write FOnPinValue;
@@ -488,7 +487,7 @@ uses
       {: internal run task}
       function ScheduleTask(write: Boolean=true): string;
     public
-      procedure GetFirmataCommand(Sender: TObject; CommandData: String);
+      procedure parsefirmatacommand(Sender: TObject; CommandData: String);
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
       {: create task}
@@ -542,7 +541,7 @@ uses
 
       function SendSysEx(data7bit: string; write: Boolean=true): string;
     public
-      procedure GetFirmataCommand(Sender: TObject; CommandData: String);
+      procedure parsefirmatacommand(Sender: TObject; CommandData: String);
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
 
@@ -561,15 +560,15 @@ uses
       {: send a command to all onewire devices}
       function Skip(write: Boolean=true): string;
       {: select device on bus}
-      function Select(Device: string; write: Boolean=true): string;
-      function ResetAndSelect(Device: string; write: Boolean=true): string;
+      function Select(write: Boolean=true): string;
+      function ResetAndSelect(write: Boolean=true): string;
       function Read(BytestoRead: uint16; Correlation: uint16; write: Boolean=true): string;
       function Write(Data: string; write: Boolean=true): string;
       function Write(Delay: integer; Data: string; write: Boolean=true): string; overload;
       function WriteAndRead(BytestoRead: uint16; Correlation: uint16; Data: string; write: Boolean=true): string;
       function WriteAndRead(BytestoRead: uint16; Correlation: uint16;
                                        Delay: integer; Data: string; write: Boolean=true): string; overload;
-      function SendCommands(Command: Byte; Device: String; numBytesToRead: uint16; correlationId: uint16;
+      function SendCommands(Command: Byte; numBytesToRead: uint16; correlationId: uint16;
                                        delay: integer; dataToWrite: String; write: Boolean=true): string;
 
       property Enabled: Boolean read FEnabled write SetEnabled;
@@ -615,7 +614,7 @@ uses
       function SendSysEx(data7bit: string; write: Boolean=true): string;
 
     public
-      procedure GetFirmataCommand(Sender: TObject; CommandData: String);
+      procedure parsefirmatacommand(Sender: TObject; CommandData: String);
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
 
@@ -639,8 +638,8 @@ uses
       function StopReading10Bits(Slave: uint16; write: Boolean=True): string;
       // not published
       property Enabled: Boolean read FEnabled write SetEnabled;
-      property SDApin: Byte read FSDApin; // for now is read only,  write setSDAPin;  // fixed pin in arduino
-      property SCLpin: Byte read FSCLpin; // for now is read only,  write setSCLPin;  // fixed pin in arduino
+      property SDApin: Byte read FSDApin write setSDApin; // for now is read only,  write setSDAPin;  // fixed pin in arduino
+      property SCLpin: Byte read FSCLpin write setSCLpin; // for now is read only,  write setSCLPin;  // fixed pin in arduino
     published
       property Delay: Byte read FDelay write FDelay;
       property Board: TBoard read FBoard write setBoard;
@@ -696,7 +695,7 @@ uses
 
        function SendSysEx(data7bit: string; write: Boolean=true): string;
      public
-       procedure GetFirmataCommand(Sender: TObject; CommandData: String);
+       procedure parsefirmatacommand(Sender: TObject; CommandData: String);
        constructor Create(AOwner: TComponent); override;
        destructor Destroy; override;
 
@@ -764,7 +763,7 @@ uses
       function SendSysEx(data7bit: string; write: Boolean=true): string;
 
     public
-      procedure GetFirmataCommand(Sender: TObject; commandData: String);
+      procedure parsefirmatacommand(Sender: TObject; commandData: String);
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
 
@@ -900,7 +899,7 @@ uses
       function SendSysEx(data7bit: string; write: Boolean=true): string;
 
     public
-      procedure GetFirmataCommand(Sender: TObject; CommandData: String);
+      procedure parsefirmatacommand(Sender: TObject; CommandData: String);
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
 
@@ -991,7 +990,7 @@ uses
 
         function SendSysEx(data7bit: string; write: Boolean=true): string;
       public
-        procedure GetFirmataCommand(Sender: TObject; CommandData: String);
+        procedure parsefirmatacommand(Sender: TObject; CommandData: String);
         constructor Create(AOwner: TComponent); override;
         destructor Destroy; override;
 
@@ -1073,7 +1072,7 @@ uses
        procedure setFadeRunning(Enabled: Boolean);
        procedure setFadeLoopsWait(Loops: byte);
        procedure setGamma(Value: single);
-       procedure GetFirmataCommand(Sender: TObject);
+       procedure parsefirmatacommand(Sender: TObject);
        function SendSysEx(data7bit: string; write: Boolean=true): string;
      public
        constructor Create(AOwner: TComponent); override;
@@ -1105,7 +1104,7 @@ uses
        function ShiftRun(ShiftType: Byte; write: Boolean=True): string; overload;
        function FadeRunPause(write: Boolean=True): string;
        function FadeOneStep(do_show: boolean; write: Boolean=True): string;
-       function Movepixels(src: smallint; dest: smallint; count: smallint; do_show: Boolean; write: Boolean=True): string;
+       function CopyPixels(src: smallint; dest: smallint; count: smallint; do_show: Boolean; write: Boolean=True): string;
        function sendBrightness(do_show: Boolean; write: Boolean=true): string;
        procedure RecalculateBrightness;
 
@@ -1541,13 +1540,30 @@ procedure TBoardThread.CallEvent;
 begin
   if Assigned(owner.FOnDeviceDataAvailable) then
   begin
-     if Owner.FOnDeviceDataAvailable(self) then  // must return true if dataavailable
-       Owner.GetFirmataCommand(self)  // must be a new command
+    if Owner.FOnDeviceDataAvailable(self) then
+      owner.FCommandBuffer:=owner.FCommandBuffer+owner.FOnGetDataFromDevice(owner)
+    else  // no new data
+    begin
+      if Owner.FStarting then// Check if firmata has started to stop time out
+      begin
+        Owner.FStartingTime:=TThread.GetTickCount64-Owner.FInitTime;   // Get milisec ticks
+        if Owner.FStartingTime > Owner.FMaxTime then  // time out for firmata, default to 6 second
+          Owner.RaiseError(1003, 'CallEvent');
+        if Owner.FStartingTime > Owner.FMaxTime - 3000 then // try askversion and askfirmware
+        begin
+          if not Owner.FGotVersion then // force to receive version, firmware
+          begin
+            Owner.askVersion;
+            Owner.askFirmware; // ask firmware and capabilities
+          end;
+        end;
+      end;
+    end;
+    if length(owner.FCommandBuffer) > 2 then // there ara data in buffer
+      owner.ParseData;
   end
   else
-  begin
     Owner.RaiseError(1026, 'CallEvent');  // now way to check available data
-  end;
 end;
 
 procedure TBoardThread.Execute;
@@ -1555,8 +1571,7 @@ begin
   try
     while not MustDie do
     begin
-      Synchronize(
-      {$IFDEF OBJFPC}@{$ENDIF}CallEvent);
+      Synchronize({$IFDEF OBJFPC}@{$ENDIF}CallEvent);
     end;
   finally
     Terminate;
@@ -1572,13 +1587,16 @@ begin
   FBoardThread:=nil;
   FStarting:=False;
   FEndCommand:=true;
+  FCommandBuffer:='';
+  FCommandData:='';
+  FIndex:=1;
   FEnabled:=False;
   FOnBeforeOpen:=nil;
   FOnAfterClose:=nil;
   FOnBoardReady:=nil;
+  FOnDeviceDataAvailable:=nil;
   FOnSendDataToDevice:=nil;
   FOnGetDataFromDevice:=nil;
-  FOnDeviceDataAvailable:=nil;
   FOnQueryAllTask:=nil;
   FOnError:=nil;
   FOnBoardData:=nil;
@@ -1615,13 +1633,16 @@ end;
 
 procedure TBoard.SetSamplingInterval(Interval: integer);
 begin
+  if Interval=FSamplingInterval then
+    exit;
+  if Interval < 1 then
+    exit;
+  FSamplingInterval:=Interval;
   SendSamplingInterval(Interval);
 end;
 
 function TBoard.SendSamplingInterval(Interval: integer; write: Boolean=true): string;
 begin
-  if interval=FSamplingInterval then
-    exit;
   if write then
     FSamplingInterval:=Interval;
   if FEnabled then
@@ -1630,7 +1651,7 @@ end;
 
 procedure TBoard.setMaxTime(TimeToWait: Qword);  // milisec to wait for firmata
 begin
-  if Time < 1700 then  // min time to wait is about 1700 milisec
+  if TimeToWait < 1700 then  // min time to wait is about 1700 milisec
     exit
   else
     FMaxTime:=TimeToWait;
@@ -1657,14 +1678,16 @@ begin
 
   initBoardVariables;
 
-  FEndCommand:=true;
-  FStarting:=True;
-  FGotCapabilities:=False;
-  FGotFirmware:=False;
-  FGotVersion:=False;
+  FEnabled:=true;
 
   if Assigned(FOnBeforeOpen) then
      FOnBeforeOpen(self);
+
+  // init time measure for starting firmata
+  FInitTime:=TThread.GetTickCount64;  // milisec
+
+  if not FEnabled then
+    exit;
 
   if not Assigned(FOnSendDataToDevice) then
   begin
@@ -1676,7 +1699,7 @@ begin
      RaiseError(1028, 'Open');
      close;
   end;
- if not Assigned(OnDeviceDataAvailable) then
+  if not Assigned(OnDeviceDataAvailable) then
   begin
      RaiseError(1026, 'Open');
      close
@@ -1686,10 +1709,8 @@ begin
   FBoardThread := TBoardThread.Create(true);
   FBoardThread.Owner := Self;
   FBoardThread.MustDie := false;
-  FBoardThread.Start;
 
-  // init time measure for starting firmata
-  FInitTime:=TThread.GetTickCount64;  // milisec
+  FBoardThread.Start;
 end;
 
 procedure TBoard.InternalBoardReady;
@@ -1789,7 +1810,8 @@ begin
   FEnabled:=False;
 
   // stop running thread
-  if FBoardThread <> nil then begin
+  if FBoardThread <> nil then
+  begin
     FBoardThread.FreeOnTerminate:=false;
     FBoardThread.MustDie:= true;
 
@@ -1807,7 +1829,7 @@ end;
 
 function TBoard.askVersion(write: Boolean=true): string;
 begin
-  Result:=SendSysEx(chr(REPORT_VERSION), write);
+  Result:=SendCommand(chr(REPORT_VERSION), write);
 end;
 
 function TBoard.askFirmware(write: Boolean=true): string;
@@ -1835,6 +1857,7 @@ begin
   FGotVersion:=False;
   FGotFirmware:=False;
   FGotCapabilities:=False;
+  FStarting:=True;
 end;
 
 procedure TBoard.RaiseError(Error: integer; FunctionError: string; TextError: string='');
@@ -1864,118 +1887,99 @@ begin
    Open;
 end;
 
-//
-// This is a weird function because of the problem with TThread, threads only run when the program is in idle state, out of a Event
-//
-function TBoard.GetNextByte: Byte;
+procedure TBoard.ParseData;
 var
-  value: integer;
-  TimeOut: QWord;
+  i: integer;
 begin
-  Value:=-1;
-  TimeOut:=TThread.GetTickCount64;
+  if not FEndCommand then
+    exit;
 
-  while true do
-  begin
-    if Assigned(FOnGetDataFromDevice) then
-      Value:=FOnGetDataFromDevice(self);
-    if Value <> -1 then
-      break;
-    if not FStarting and ((TThread.GetTickCount64 - TimeOut) > 2000) then  // time out reading a byte
-    begin
-      RaiseError(1031, 'GetNextByte');
-      Close;
-    end;
-  end;
-  Result:=Value;
-   // Check if firmata has started to stop time out
-   if FStarting then
-   begin
-     FStartingTime:=TThread.GetTickCount64-FInitTime;   // Get milisec ticks
+  FEndCommand:=false;
 
-     if FStartingTime > FMaxTime then  // time out for firmata, default to 6 second
-     begin
-       RaiseError(1003, 'GetNextByte');
-       FStarting:=False;
-       Close;
-    end;
+  FCommandData:='';
+  case ord(FCommandBuffer[1]) of
+    START_SYSEX: begin  // 0xF0
+      for i:=2 to length(FCommandBuffer) do
+      begin
+        if ord(FCommandBuffer[i]) = END_SYSEX then
+        begin
+          FCommandData:=Copy(FCommandBuffer, 2, i);
+          FCommandBuffer:=Copy(FCommandBuffer, i+1, Length(FCommandBuffer) - i);
+          ParseSysExCommand(FCommandData); // not send START_SYSEX
+          break;
+        end;
+     end;
+   end;
+   $90 .. $9F, $E0 .. $EF, REPORT_VERSION : begin
+     FCommandData:=Copy(FCommandBuffer, 1, 3);
+     FCommandBuffer:=Copy(FCommandBuffer, 4, Length(FCommandBuffer) - 3);
+     ParseCommand(FCommandData);
+   end;
+   else  // bad data, remove it
+     FCommandBuffer:=Copy(FCommandBuffer, 2, Length(FCommandBuffer) - 1);
   end;
+  FEndCommand:=true;
 end;
 
-procedure TBoard.GetFirmataCommand(Sender: TObject);
+procedure TBoard.parseCommand(Data: string);
 var
-  ReadByte: byte;
   Pin: Byte;
   Value: integer;
   BitValue: integer;
   mask: Byte;
   Port: Byte;
 begin
-  if FEndCommand then    // last command has finished
-  begin
-    FEndCommand:=False;  // Start a new command
-    ReadByte:=GetNextByte;
+  case ord(Data[1]) of
+     {0  digital data, 0x90-0x9F, second nibble of byte 0 gives the port number (e.g. 0x92 is the third port, port 2)
+     1  digital pins 0-6 bitmask
+     2  digital pin 7-13 bitmask}
+    $90 .. $9F: begin  // digital I/O message
+      {port = Data[1]; port_data = data[self.LSB] + (data[self.MSB] << 7)
+      set all the pins for this reporting port get the first pin number for this report, pin = port * PorTBoardPins}
+      mask:=1;
+      Port:= ord(Data[1]) and $0F; // port number
+      Value:=(ord(Data[2]) and $7F) or ((ord(Data[3]) << 7) and $7F);   // get digital values
 
-    case ReadByte of
-      START_SYSEX: begin  // 0xF0
-        GetSysExCommandData(GetNextByte);
-      end;
-        {0  digital data, 0x90-0x9F, second nibble of byte 0 gives the port number (e.g. 0x92 is the third port, port 2)
-        1  digital pins 0-6 bitmask
-        2  digital pin 7-13 bitmask}
-      $90 .. $9F: begin  // digital I/O message
-        {port = Command; port_data = data[self.LSB] + (data[self.MSB] << 7)
-        set all the pins for this reporting port get the first pin number for this report, pin = port * PorTBoardPins}
-        mask:=1;
-        Port:= ReadByte and $0F; // port number
-        Value:=(GetNextByte and $7F) or ((GetNextByte << 7) and $7F);   // get digital values
-
-        for Pin:=Port * 8 to Port * 8 + 7 do
+      for Pin:=Port * 8 to Port * 8 + 7 do
+      begin
+        if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].Enabled and FPins[Pin].FReporting then  // report on pin is enabled
         begin
-          if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].Enabled and FPins[Pin].FReporting then  // report on pin is enabled
-          begin
-            BitValue:=ord((Value and mask) > 0);
-            FPins[Pin].FValue:=BitValue;
-            if Assigned(FPins[Pin].FOnPinValue) then  // Report has to be true
-              FPins[Pin].FOnPinValue(self, BitValue);
-          end;
-          mask:=mask << 1; // next pin mask
+          BitValue:=ord((Value and mask) > 0);
+          FPins[Pin].FValue:=BitValue;
+          if Assigned(FPins[Pin].FOnPinValue) then  // Report has to be true
+            FPins[Pin].FOnPinValue(self, BitValue);
         end;
-      end;
-      {0  analog pin, 0xE0-0xEF,
-      1  analog least significant 7 bits
-      2  analog most significant 7 bits}
-      $E0 .. $EF: begin  // analog I/O message ,    AnalogPin:= ReadByte and $0F; // Channel number
-        Pin:=GetPinFromAnalogPin(ReadByte and $0F);  // get pin from analogpin
-        Value:=GetNextByte or (GetNextByte << 7);
-        if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].FEnabled then
-          FPins[Pin].GetAnalogMessage(Value);
-      end;
-      {0  version report header (0xF9)
-      1  major version (0-127)
-      2  minor version (0-127)}
-      REPORT_VERSION: begin //
-        FBoardVersion[0]:=GetNextByte;
-        FBoardVersion[1]:=GetNextByte;
-        FGotVersion:=true;
+        mask:=mask << 1; // next pin mask
       end;
     end;
-    FEndCommand:=True;
+    {0  analog pin, 0xE0-0xEF,
+    1  analog least significant 7 bits
+    2  analog most significant 7 bits}
+    $E0 .. $EF: begin  // analog I/O message ,    AnalogPin:= ReadByte and $0F; // Channel number
+      Pin:=GetPinFromAnalogPin(ord(Data[1]) and $0F);  // get pin from analogpin
+      Value:=ord(Data[2]) or (ord(Data[3]) << 7);
+      if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].FEnabled then
+        FPins[Pin].GetAnalogMessage(Value);
+    end;
+    {0  version report header (0xF9)
+    1  major version (0-127)
+    2  minor version (0-127)}
+    REPORT_VERSION: begin //
+      FBoardVersion[0]:=ord(Data[2]);
+      FBoardVersion[1]:=ord(Data[3]);
+      FGotVersion:=true;
+    end;
   end;
 end;
 
-procedure TBoard.GetSysExCommandData(Command: byte);
+procedure TBoard.ParseSysExCommand(Data: string);
 var
-  ReadByte: Byte;
   Pin: byte;
   AnalogPin: byte;
   Value: integer;
   Mode: Byte;
   DataString: string;
-  Device: byte; // accelstepper device
-  // exended sysex
-  ID0: byte;
-  ID1: byte;
+  Device: byte;
   Port: Byte;
   i: integer;
   TaskID: Byte;
@@ -1983,7 +1987,7 @@ var
   EncoderData: string;
 begin
      DataString:='';
-     case Command of
+     case ord(Data[1]) of
           { 0  START_SYSEX       (0xF0)
           1 EXTENDED_SYSEX       (0x00)
           2 EXTENTED_ID_0         byte0
@@ -1992,17 +1996,9 @@ begin
           N  END_SYSEX           (0xF7)}
           EXTENDED_SYSEX: begin // 0x00  not yet supported
              // TODO more research
-             ID0:=GetNextByte; // ID_0
-             ID1:=GetNextByte; // ID_1
-             // now read until end command
-             ReadByte:=GetNextByte;
-             while ReadByte <> END_SYSEX do
-             begin
-               DataString:=DataString+chr(ReadByte);
-               ReadByte:=GetNextByte;
-             end;
+             DataString:=Copy(Data, 2, Length(Data) - 2); // excludes END_SYSEX
              if Assigned(FOnExtendedSysex) then
-               FOnExtendedSysex(self, ID0, ID1, DataString);
+               FOnExtendedSysex(self, DataString);
           end;
           {0  START_SYSEX       (0xF0)
           1  REPORT_VERSION     (0x79)
@@ -2015,22 +2011,17 @@ begin
           ... for as many bytes as it needs
           N  END_SYSEX         (0xF7)}
           REPORT_FIRMWARE: begin // 0x79
-             FBoardFirmware[0]:=GetNextByte;
-             FBoardFirmware[1]:=GetNextByte;
-             ReadByte:=GetNextByte;
-             while ReadByte <> END_SYSEX do  // Read Firmware string each char are 2 bytes (low byte, high byte)
-             begin
-               DataString:=DataString+Chr(ReadByte);
-               ReadByte:=GetNextByte;
-             end;
+             FBoardFirmware[0]:=ord(Data[2]);
+             FBoardFirmware[1]:=ord(Data[3]);
+             DataString:=Copy(Data, 4, Length(Data) - 4); // excludes END_SYSEX
              DataString:=Decode2BytesCharTo1(DataString);  // converts 2 bytes char to 1 byte char
              FBoardStringFirmware:=DataString+' firmware('+IntToStr(FBoardFirmware[0])+'.'+IntToStr(FBoardFirmware[1])+
                           ') version('+IntToStr(FBoardVersion[0])+'.'+IntToStr(FBoardVersion[1])+')';
              FGotFirmware:=True;
              if (FBoardFirmware[0] > FIRMWARE_MAJOR_VERSION) or (FBoardFirmware[1] < FIRMWARE_MINOR_VERSION) then
                 RaiseError(1035, 'GetSysExCommand');
-             if FStarting and not FGotCapabilities then
-                askBoardCapabilities; // because firmata does not send capabilities by default
+             if not FGotcapabilities then
+               askBoardCapabilities;
           end;
           {0  START_SYSEX              (0xF0)
           1  CAPABILITY_RESPONSE       (0x6C)
@@ -2044,11 +2035,11 @@ begin
           until all pins are defined.
           N  END_SYSEX                (0xF7)}
           CAPABILITY_RESPONSE: begin // 0x6C;
-             ReadByte:=GetNextByte;
+             i:=2;
              Pin:=0;
              AnalogPin:=0;
              SetLength(FBoardPins,0); // clear FBoardPins
-             while ReadByte <> END_SYSEX do  // for all pin modes
+             while ord(Data[i]) <> END_SYSEX do  // for all pin modes
              begin
                 // New pin element
                 Setlength(FBoardPins,Pin+1);  // increment size of array of pins
@@ -2056,26 +2047,26 @@ begin
                 FBoardPins[pin].AnalogMap:=PinModesToByte(PIN_MODE_IGNORE); // default no analog pin map
                 FBoardPins[pin].ActualMode:=PinModesToByte(PIN_MODE_OUTPUT);
 
-                if ReadByte = PinModesToByte(PIN_MODE_IGNORE) then
-                  FBoardPins[pin].ActualMode:=ReadByte // if first mode is PIN_MODE_IGNORE then pin must be ignored
+                if ord(Data[i]) = PinModesToByte(PIN_MODE_IGNORE) then
+                  FBoardPins[pin].ActualMode:=ord(Data[i]) // if first mode is PIN_MODE_IGNORE then pin must be ignored
                 else
-                  while ReadByte <> PinModesToByte(PIN_MODE_IGNORE) do
+                  while ord(Data[i]) <> PinModesToByte(PIN_MODE_IGNORE) do
                   begin
                      // New pin capability
                      SetLength(FBoardPins[pin].Capabilities, Length(FBoardPins[Pin].Capabilities) + 1);
-                     FBoardPins[Pin].Capabilities[Length(FBoardPins[Pin].Capabilities) - 1].mode:=ReadByte;
-                     if ReadByte = PinModesToByte(PIN_MODE_ANALOG) then  // new analog pin discovered
+                     FBoardPins[Pin].Capabilities[Length(FBoardPins[Pin].Capabilities) - 1].mode:=ord(Data[i]);
+                     if ord(Data[i]) = PinModesToByte(PIN_MODE_ANALOG) then  // new analog pin discovered
                      begin
                        FBoardPins[pin].AnalogMap:=AnalogPin;  // map analog Pin
                        inc(AnalogPin);
-                       FBoardPins[pin].ActualMode:=ReadByte; // default for anlog pin is analog mode
+                       FBoardPins[pin].ActualMode:=ord(Data[i]); // default for anlog pin is analog mode
                      end;
-                     ReadByte:=GetNextByte;  // read resolution for other than analogic mode
-                     FBoardPins[Pin].Capabilities[Length(FBoardPins[Pin].Capabilities) - 1].Resolution:=ReadByte; // store Resolution
-                     ReadByte:=GetNextByte; // read next capability
+                     inc(i);
+                     FBoardPins[Pin].Capabilities[Length(FBoardPins[Pin].Capabilities) - 1].Resolution:=ord(Data[i]); // store Resolution
+                     inc(i);
                   end; // end pin
                 inc(Pin);    // next pin number
-                ReadByte:=GetNextByte;
+                inc(i);
              end; // end all Pins
              FBoardPinsNumber:=Pin;  // discovered pins
              FAnalogPinsNumber:=AnalogPin;  // discovered analog pins
@@ -2098,19 +2089,16 @@ begin
           N  END_SYSEX                (0xF7)}
           ANALOG_MAPPING_RESPONSE: begin // $6A
             if FStarting then // avoid problems with some firmatas
-            begin
-              Repeat
-              until GetNextByte = END_SYSEX;
-            end
+              exit
             else // Firmata has already started, so normal behavior
             begin
-              ReadByte:=GetNextByte;
+              i:=2;
               Pin:=0;
-              while ReadByte <> END_SYSEX do
+              while ord(Data[i]) <> END_SYSEX do
               begin
-                FBoardPins[Pin].AnalogMap:=ReadByte;  // Pin map
+                FBoardPins[Pin].AnalogMap:=ord(Data[i]);  // Pin map
                 Inc(Pin);  // next pin
-                ReadByte:=GetNextByte;
+                inc(i);
               end;
             end;
           end;
@@ -2124,15 +2112,9 @@ begin
            ... additional optional bytes, as many as needed
            N  END_SYSEX                (0xF7)}
           PIN_STATE_RESPONSE: begin // $6E  max 64 bits
-                Pin:=GetNextByte;
-                Mode:=GetNextByte;
-                ReadByte:=GetNextByte;
-                while ReadByte <> END_SYSEX do
-                begin
-                  DataString:=DataString+chr(ReadByte);   // First Char is LSB
-                  ReadByte:=GetNextByte;
-                end;
-
+                Pin:=ord(Data[2]);
+                Mode:=ord(Data[3]);
+                DataString:=Copy(Data, 4, Length(Data) - 4); // excludes END_SYSEX
                 Value:=Decode32BitSignedInt(DataString);  // converts to int
 
                 if Assigned(FPins[Pin]) and FPins[Pin].Enabled then
@@ -2151,13 +2133,8 @@ begin
           ... additional bytes may be sent if more bits are needed
           N  END_SYSEX                (0xF7)}
           EXTENDED_ANALOG: begin //  $6F
-              Pin:=GetNextByte;
-              ReadByte:=GetNextByte;
-              while ReadByte <> END_SYSEX do
-              begin
-                DataString:=DataString+chr(ReadByte);   // First Char is LSB
-                ReadByte:=GetNextByte;
-              end;
+              Pin:=ord(Data[2]);
+              DataString:=Copy(Data, 3, Length(Data) - 3); // excludes END_SYSEX
               Value:=Decode32BitSignedInt(DataString);  // converts to int
 
               if Assigned(FPins[Pin]) and FPins[Pin].Enabled then
@@ -2176,18 +2153,13 @@ begin
           ... additional bytes up to half the buffer size - 3 (START_SYSEX, STRING_DATA, END_SYSEX)
           N  END_SYSEX          (0xF7)}
           STRING_DATA: begin //  $71
-             ReadByte:=GetNextByte;
-             while ReadByte <> END_SYSEX do
-             begin
-                DataString:=DataString+Char(ReadByte);
-                ReadByte:=GetNextByte;
-             end;
+             DataString:=Copy(Data, 2, Length(Data) - 2); // excludes END_SYSEX
              DataString:=Decode2BytesCharTo1(DataString);
              if Assigned(FOnBoardData) then
                   FOnBoardData(self, STRING_DATA, DataString);
           end;
           {0  START_SYSEX        (0xF0)
-          1  SERIAL_DATA        (0x60)
+          1  SERIAL_DATA       (0x60)
           2  SERIAL_REPLY       (0x40) // OR with port (0x41 = SERIAL_REPLY | HW_SERIAL1)
           3  data 0             (LSB)
           4  data 0             (MSB)
@@ -2195,15 +2167,9 @@ begin
           4  data 1             (MSB)
           ...                   //up to max buffer - 5
           n  END_SYSEX          (0xF7)}
-          SERIAL_MESSAGE: begin // $60
-            ReadByte:=GetNextByte;
-            Port:=ReadByte;  // get port
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+Char(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
+          SERIAL_DATA: begin // $60
+            Port:=ord(Data[2]);  // get port
+            DataString:=Copy(Data, 3, Length(Data) - 3); // excludes END_SYSEX
             DataString:=Decode2BytesCharTo1(DataString);
 
             if (Port and $FC) <> SERIAL_REPLY then // error
@@ -2236,20 +2202,13 @@ begin
            n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
            n+1  END_SYSEX              (0xF7) }
           SCHEDULER_DATA: begin // scheduler $7B
-            ReadByte:=GetNextByte;
-            case ord(ReadByte) of  // first byte is Error_task or query_task
+            case ord(Data[2]) of  // first byte is Error_task or query_task
               ERROR_FIRMATA_TASK, QUERY_TASK_REPLY: begin
-                DataString:=chr(ReadByte); // save command
-                ReadByte:=GetNextByte;
-                while ReadByte <> END_SYSEX do
-                begin
-                  DataString:=DataString+chr(ReadByte);
-                  ReadByte:=GetNextByte;
-                end;
+                DataString:=Copy(Data, 2, Length(Data) - 2); // include Data[2], excludes END_SYSEX
                 // get TaskID
-                TaskID:=ord(DataString[2]);
+                TaskID:=ord(Data[3]);
                 if Assigned(FTasks[TaskID]) and FTasks[TaskID].Enabled then
-                  FTasks[TaskID].GetFirmataCommand(Self, DataString);
+                  FTasks[TaskID].parsefirmatacommand(Self, DataString);
               end;
               {0  START_SYSEX          (0xF0)
                1  Scheduler Command    (0x7B)
@@ -2260,59 +2219,40 @@ begin
                n+1  END_SYSEX (0xF7)}
               QUERY_ALL_TASKS_REPLY: begin // query_all_tasks Reply Command (0x09)
                 SetLength(TaskIDs,0);
-                ReadByte:=GetNextByte;
-                while ReadByte <> END_SYSEX do
+                i:=2;
+                while ord(Data[i]) <> END_SYSEX do
                 begin
                   Setlength(TaskIDs,system.length(TaskIDs)+1);
-                  TaskIDs[system.length(TaskIDs)-1]:=ReadByte;
-                  ReadByte:=GetNextByte;
+                  TaskIDs[system.length(TaskIDs)-1]:=ord(Data[i]);
+                  inc(i);
                 end;
                 if Assigned(FOnQueryAllTask) then
                   FOnQueryAllTask(self, TaskIDs);
               end;
-              else
-              begin  // unknown Scheduler command, now read until end command
-                ReadByte:=GetNextByte;
-                while ReadByte <> END_SYSEX do
-                begin
-                  DataString:=DataString+chr(ReadByte);
-                  ReadByte:=GetNextByte;
-                end;
-                RaiseError(4, 'GetSchedulerCommands');
-              end;
             end;
           end;
           I2C_REPLY: begin // $77
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
+            DataString:=Copy(Data, 2, Length(Data) - 2); // excludes END_SYSEX
+
             if Assigned(FI2C) and FI2C.Enabled then
-              FI2C.GetFirmataCommand(Self, DataString);
+              FI2C.parsefirmatacommand(Self, DataString);
           end;
+          {0  START_SYSEX      (0xF0)
+           1  OneWire Command  (0x73)
+           2  search reply command (0x42|0x45) 0x42 normal search reply
+                                       0x45 reply to a SEARCH_ALARMS request
+           3  pin              (0-127)
+           n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
+           n+1  END_SYSEX      (0xF7)}
           ONEWIRE_DATA: begin //  $73;
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
-            // first byte is subcommand
-            Pin:=ord(DataString[2]);  // second byte
+            DataString:=Copy(Data, 2, Length(Data) - 2); // include Data[2], excludes END_SYSEX
+            Pin:=ord(Data[3]);  // get pin
             if Assigned(FOneWires[Pin]) and FOneWires[Pin].Enabled then
-              FOneWires[Pin].GetFirmataCommand(Self, DataString);
+              FOneWires[Pin].parsefirmatacommand(Self, DataString);
           end;
           ACCELSTEPPER_DATA: begin  // $62
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
-            // subcommand is first byte
-            case ord(DataString[1]) of
+            DataString:=Copy(Data, 2, Length(Data) - 2); // excludes END_SYSEX
+            case ord(Data[2]) of
               {0  START_SYSEX                             (0xF0)
                1  ACCELSTEPPER_DATA                       (0x62)
                2  ACCELSTEPPER_REPORT_POSITION and ACCELSTEPPER_MOVE_COMPLETED   (0x06) and (0x0b)
@@ -2324,10 +2264,9 @@ begin
                8  position, bits 28-31
                9  END_SYSEX                               (0xF7)}
                ACCELSTEPPER_REPORT_POSITION, ACCELSTEPPER_MOVE_COMPLETED: begin  // only one accelstepper
-                 // Device is second byte
-                 Device:=ord(DataString[2]);
+                 Device:=ord(Data[3]);
                  if Assigned(FAccelSteppers[Device]) and FAccelSteppers[Device].Enabled then
-                    FAccelSteppers[Device].GetFirmataCommand(Self, DataString);
+                    FAccelSteppers[Device].parsefirmatacommand(Self, DataString);
                end;
                {0  START_SYSEX                             (0xF0)
                1  ACCELSTEPPER_DATA                       (0x62)
@@ -2336,13 +2275,7 @@ begin
                4  END_SYSEX(0xF7)}
                ACCELSTEPPER_MULTI_MOVE_COMPLETED: begin  // group of accelstepper
                  if Assigned(FAccelStepperGroup) and FAccelStepperGroup.Enabled then
-                   FAccelStepperGroup.GetFirmataCommand(Self, DataString);
-              end
-              else  // subcommand unknown
-              begin
-                Repeat
-                until GetNextByte = END_SYSEX; // discart command
-                RaiseError(4, 'AccelStepper Unknown Command');
+                   FAccelStepperGroup.parsefirmatacommand(Self, DataString);
               end;
             end;
           end;
@@ -2358,39 +2291,25 @@ begin
           * ...
           * N END_SYSEX                  (0xF7) }
           ENCODER_DATA: begin   // $061
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
+            DataString:=Copy(Data, 2, Length(Data) - 2); // excludes END_SYSEX
             for i:=1 to (Length(DataString) - 1) div 5 do // length data less END SYSEX byte
             begin
               EncoderData:=Copy(DataString, (i - 1) * 5, 5);
               Device:=ord(EncoderData[1]) and ENCODER_MASK;  // first byte
 
               if Assigned(FEncoders[Device]) and FEncoders[Device].Enabled then
-                FEncoders[Device].GetFirmataCommand(Self, EncoderData);
+                FEncoders[Device].parsefirmatacommand(Self, EncoderData);
             end;
-            if ord(DataString[Length(DataString)]) <> END_SYSEX then
-              RaiseError(47, 'ENCODER_DATA'); // last Byte should be END_SYSEX
           end;
           {0  START_SYSEX      (0xF0)
           1  PS2MOUSE_DATA     Command (0x50)
           2  PS2MOUSE_command  (0x01)
           3  Mouse number      (0-2)}
           PS2MOUSE_DATA: begin // 0x50
-            // first byte subcommand
-            // second byte device
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
-            Device:=ord(DataString[2]);
+            DataString:=Copy(Data, 2, Length(Data) - 2); // excludes END_SYSEX
+            Device:=ord(Data[3]);
             if Assigned(FMice[Device]) and FMice[Device].Enabled then
-                FMice[Device].GetFirmataCommand(Self, DataString);
+                FMice[Device].parsefirmatacommand(Self, DataString);
           end;
            {0  START_SYSEX      (0xF0)
            1  NEOPIXELS_DATA    (0X51)
@@ -2398,25 +2317,14 @@ begin
            3  deviceNum (0-3)
            4  END_SYSEX        (0xF7) }
           NEOPIXELS_DATA: begin // 0x51
-            // first byte subcommand
-            // second byte device
-            if GetNextByte <> NEOPIXELS_FADE_RUN_PAUSE then
+            if ord(Data[2]) <> NEOPIXELS_FADE_RUN_PAUSE then
             begin
-              Repeat
-              until GetNextByte = END_SYSEX; // discart command
               RaiseError(4, 'Got an unknown SysEx neopixels command data');
               exit;
             end;
-            Device:=GetNextByte;
+            Device:=ord(Data[3]);
             if Assigned(FNeoPixels[Device]) and FNeoPixels[Device].Enabled then
-                FNeoPixels[Device].GetFirmataCommand(Self);
-          end;
-          else   // Sysex command unknown
-          begin
-            // now read until end command
-            Repeat
-            until GetNextByte = END_SYSEX; // discart command
-            RaiseError(4, 'Got an unknown SysEx command data');
+                FNeoPixels[Device].parsefirmatacommand(Self);
           end;
      end;
 end;
@@ -2551,7 +2459,7 @@ begin
     if Assigned(OnSendDataToDevice) then
     begin
       FOnSendDataToDevice(self, Result);
-      sleep(FSamplingInterval+length(Result));  // gives some time to Firmata
+//      sleep(FSamplingInterval+length(Result));  // gives some time to Firmata
     end
     else
       RaiseError(1001, 'SendSysEx');
@@ -2563,12 +2471,17 @@ end;
 function TBoard.SendCommand(Data: string; write: Boolean=True): string;
 begin
   Result:=Data;
+  if (not FEnabled) and (not FStarting) then
+  begin
+    RaiseError(2, 'SendCommand');
+    exit;
+  end;
   if write then
   begin
     if Assigned(OnSendDataToDevice) then
     begin
       FOnSendDataToDevice(self, Data);
-      sleep(FSamplingInterval+length(Result));  // gives some time to Firmata
+      //sleep(FSamplingInterval+length(Result));  // gives some time to Firmata
     end
     else
       RaiseError(1001, 'SendCommand');
@@ -2908,7 +2821,7 @@ begin
   if write then   // avoid change Fstate when it is not a real write
     FState:=TmpValue;
 
-  Result:=SendCommand(chr(SET_DIGITAL_PIN_VALUE)+chr(Pin)+chr(TmpValue), write); // $F5
+  Result:=SendCommand(chr(SET_DIGITAL_PIN_VALUE)+chr(FPin)+chr(TmpValue), write); // $F5
 end;
 {0  analog pin, 0xE0-0xEF, (MIDI Pitch Wheel)
 1  analog least significant 7 bits
@@ -3032,6 +2945,9 @@ begin
 end;
 
 procedure TTask.setEnabled(State: Boolean);
+var
+  i: integer;
+  Data7Bit: string;
 begin
   if not Assigned(FBoard) then
     exit;
@@ -3041,7 +2957,7 @@ begin
 
   if State then
   begin
-    if Assigned(FBoard) and FBoard.Enabled then
+    if FBoard.Enabled then
     begin
       if length(FDataTask) < 3 then // min command length
       begin
@@ -3066,7 +2982,18 @@ begin
         FBoard.FTasks[FTaskID]:=nil;
         exit;
       end;
-      AddToTask(Encode8To7Bit(FDataTask));  // Data Task has to be sent encoded
+      Data7Bit:=Encode8To7Bit(FDataTask);
+      if Length(Data7Bit) > 59 then  // can send only 59 bytes max in a message
+      begin
+        i:=0;
+        while i < Length(Data7Bit) do
+        begin
+          AddToTask(Copy(Data7Bit, i+1, 56));  // set pieces to 8 bit boundaries, 8 bytes * 7 bits = 8 bits * 7 bytes
+          inc(i, 56);
+        end;
+      end
+      else
+        AddToTask(Data7Bit);
       ScheduleTask;  // Run task
       if Assigned(FOnEnabled) then
         FOnEnabled(self);
@@ -3087,21 +3014,18 @@ begin
   end;
 end;
 
-procedure TTask.GetFirmataCommand(Sender: TObject; CommandData: String);
+procedure TTask.parsefirmatacommand(Sender: TObject; CommandData: String);
 var
   TaskID: byte;
   DataString: string;
   Time_ms: integer;
   Length: integer;
   Position: integer;
-  Command: Byte;
 begin
-  DataString:='';
   TaskID:=0;
   Time_ms:=0;
   Length:=0;
   Position:=0;
-  Command:=ord(CommandData[1]);   // subcommand is first byte
     {0  START_SYSEX              (0xF0)
     1  Scheduler Command        (0x7B)
     2  error_task Reply Command (0x08) or query_task Reply Command (0x0A)
@@ -3131,7 +3055,7 @@ begin
     DataString:=Copy(DataString,9,system.Length(DataString)-8);  // Task Data
   end;
 
-  if Command = QUERY_TASK_REPLY then
+  if ord(CommandData[1]) = QUERY_TASK_REPLY then
   begin
     if Assigned(FOnQueryTask) then
       FOnQueryTask(self, Time_ms, Length, Position, DataString);
@@ -3208,7 +3132,7 @@ end;
  8  END_SYSEX            (0xF7)}
 function TTask.DelayTask(write: Boolean=true): string;    // use for internal task
 begin
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(DELAY_TASK)+Encode32BitSignedInt(FTimeDelay), write);
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(DELAY_TASK)+Encode32BitUnSignedInt(FTimeDelay), write);
 end;
 {0  START_SYSEX              (0xF0)
  1  Scheduler Command        (0x7B)
@@ -3222,7 +3146,7 @@ end;
  9  END_SYSEX                (0xF7)}
 function TTask.ScheduleTask(write: Boolean=true): string;
 begin
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(SCHEDULE_TASK)+chr(FTaskID)+Encode32BitSignedInt(FRunDelay), write);
+  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(SCHEDULE_TASK)+chr(FTaskID)+Encode32BitUnSignedInt(FRunDelay), write);
 end;
 
 {0  START_SYSEX              (0xF0)
@@ -3340,28 +3264,14 @@ begin
   end;
 end;
 
-procedure TOneWire.GetFirmataCommand(Sender: TObject; CommandData: String);
+procedure TOneWire.parsefirmatacommand(Sender: TObject; CommandData: String);
 var
   Pin: byte;
   DataString: string;
   OneWireIDs: array of string;
   i: integer;
-  Command: Byte;
-  Index: integer;
-
-  function GetNextByte: Byte;
-  begin
-    if Index > system.Length(CommandData) then
-      Result:=END_SYSEX
-    else
-     Result:=ord(CommandData[Index]);
-    Inc(Index);
-  end;
 begin
-  Index:=1;
-  // first byte is subcommand
-  Command:=GetNextByte;
-  case Command of
+  case ord(CommandData[1]) of
        {0  START_SYSEX      (0xF0)
        1  OneWire Command  (0x73)
        2  search reply command (0x42|0x45) 0x42 normal search reply
@@ -3377,8 +3287,8 @@ begin
        n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
        n+1  END_SYSEX      (0xF7)}
        ONEWIRE_SEARCH_REPLY, ONEWIRE_SEARCH_ALARMS_REPLY: begin  // $42 $45
-          Pin:=GetNextByte;
-          DataString:=Copy(CommandData, Index, system.Length(CommandData));
+          Pin:=ord(CommandData[2]);
+          DataString:=Copy(CommandData, 3, system.Length(CommandData)-2);
           DataString:=Decode7To8bit(DataString);
 
           SetLength(OneWireIDs,Length(DataString) div 8);  // Calc size of discovered IDs array
@@ -3387,7 +3297,7 @@ begin
           if (Length(OneWireIDs) > 0) and (Length(OneWireIDs[0]) > 0) then
             FDevice:=OneWireIDs[0];   // deafult device to first OneWireID found
 
-          if Command = ONEWIRE_SEARCH_REPLY then
+          if ord(CommandData[1]) = ONEWIRE_SEARCH_REPLY then
           begin
             if Assigned(FOnSearch) then
               FOnSearch(self,OneWireIDs);
@@ -3408,17 +3318,12 @@ begin
        n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
        n+1  END_SYSEX          (0xF7)}
        ONEWIRE_READ_REPLY: begin //  $43;
-           Pin:=GetNextByte;
-           DataString:=Copy(CommandData, Index, system.Length(CommandData));
+           Pin:=ord(CommandData[2]);
+           DataString:=Copy(CommandData, 3, system.Length(CommandData)-2);
            DataString:=Decode7To8bit(DataString); // Data received from Onewire
            if Assigned(FOnOneWireData) then
-             // object, onewirepin, data (correlation and scratchpad)
+             // object, data (correlation and scratchpad)
              FOnOneWireData(self,DataString);
-       end
-       else   // Onwrire command unknown
-       begin   // unknown OneWire command
-         DataString:=Copy(CommandData, Index, system.Length(CommandData));
-         FBoard.RaiseError(4, 'Got an unknown OneWire commands');
        end;
    end;
 end;
@@ -3506,7 +3411,7 @@ n+1  END_SYSEX      (0xF7)
 15 data to write    (bits 8-15)            "
 16 data to write    (bits 16-23)           "
 n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)}
-function TOneWire.SendCommands(Command: Byte; Device: String; numBytesToRead: uint16;
+function TOneWire.SendCommands(Command: Byte; numBytesToRead: uint16;
                    correlationId: uint16; delay: integer; dataToWrite: String; write: Boolean=true): string;
 var
    Data8bit: string;
@@ -3515,85 +3420,84 @@ begin
   Result:='';
 
   Data8bit:='';
-  Subcommand:=Command;
+  Subcommand:=Command and $3F;  // bits 0 to 5
 
-  {if Device = '' then
+  if (Subcommand and ONEWIRE_SELECT_REQUEST_BIT) > 0 then
   begin
-    FBoard.RaiseError(46, 'SendCommand');
-    exit;
-  end; }
-  if Device <> '' then
-  begin
-    SubCommand:=Subcommand or ONEWIRE_SELECT_REQUEST_BIT;
     // Device
-    Data8bit:=Data8bit+leftStr(Device+'#0#0#0#0#0#0#0#0',8);  // set length to 8 and fill with #0
+    Data8bit:=leftStr(FDevice+'#0#0#0#0#0#0#0#0',8);  // set length to 8 and fill with #0
   end;
-  if (numBytesToRead <> 0) or (CorrelationId <> 0) then
+  if ((Subcommand and ONEWIRE_READ_REQUEST_BIT) > 0) or (numBytesToRead > 0) then
   begin
     SubCommand:=Subcommand or ONEWIRE_READ_REQUEST_BIT;
     Data8bit:=Data8bit+chr(numBytesToRead and $FF)+chr((numBytesToRead >> 8) and $FF);
     Data8bit:=Data8bit+chr(correlationId and $FF)+chr((correlationId >> 8) and $FF);
   end;
-  if delay <> 0 then
+  if ((Subcommand and ONEWIRE_DELAY_REQUEST_BIT) > 0 ) or (delay > 0) then
   begin
     SubCommand:=Subcommand or ONEWIRE_DELAY_REQUEST_BIT;
     Data8bit:=Data8bit+chr(delay and $FF)+chr((delay >> 8) and $FF)+chr((delay >> 16) and $FF)+chr((delay >> 24) and $FF);
   end;
+  if ((Subcommand and ONEWIRE_WRITE_REQUEST_BIT) > 0 ) or (dataToWrite <> '') then
+  begin
+    SubCommand:=Subcommand or ONEWIRE_WRITE_REQUEST_BIT;
+    Data8bit:=Data8bit+dataToWrite;
+  end;
 
-  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(Subcommand)+chr(FOneWirePin)+Encode8To7Bit(Data8Bit+dataToWrite), write);
+  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(Subcommand)+chr(FOneWirePin)+Encode8To7Bit(Data8Bit), write);
 end;
 
 function TOneWire.Reset(write: Boolean=true): string;
 begin
-  //Command,Device, numBytesToRead, correlationId, delay, dataToWrite, write
-  Result:=SendCommands(ONEWIRE_RESET_REQUEST_BIT, '', 0, 0, 0, '', write);
+  //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_RESET_REQUEST_BIT, 0, 0, 0, '', write);
 end;
 
 function TOneWire.Skip(write: Boolean=true): string;
 begin
-  //Command, Device, numBytesToRead, correlationId, delay, dataToWrite, write
-  Result:=SendCommands(ONEWIRE_SKIP_REQUEST_BIT, '', 0, 0, 0, '', write);
+  //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_SKIP_REQUEST_BIT, 0, 0, 0, '', write);
 end;
 
-function TOneWire.Select(Device: string; write: Boolean=true): string;
+function TOneWire.Select(write: Boolean=true): string;
 begin
-  //Command, Device, numBytesToRead, correlationId, delay, dataToWrite, write
-  Result:=SendCommands(ONEWIRE_SELECT_REQUEST_BIT, Device, 0, 0, 0, '', write);
+  //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_SELECT_REQUEST_BIT, 0, 0, 0, '', write);
 end;
 
-function TOneWire.ResetAndSelect(Device: string; write: Boolean=true): string;
+function TOneWire.ResetAndSelect(write: Boolean=true): string;
 begin
-  //Command, Device, numBytesToRead, correlationId, delay, dataToWrite, write
-  Result:=SendCommands(ONEWIRE_RESET_REQUEST_BIT or ONEWIRE_SELECT_REQUEST_BIT, Device, 0, 0, 0, '', write);
+  //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_RESET_REQUEST_BIT or ONEWIRE_SELECT_REQUEST_BIT, 0, 0, 0, '', write);
 end;
 
 function TOneWire.Read(BytestoRead: uint16; Correlation: uint16; write: Boolean=true): string;
 begin
-  //Command, Device, numBytesToRead, correlationId, delay, dataToWrite, write
-  Result:=SendCommands(ONEWIRE_READ_REQUEST_BIT, '', BytestoRead, correlation, 0, '', write);
+  //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_READ_REQUEST_BIT, BytestoRead, correlation, 0, '', write);
 end;
 
 function TOneWire.Write(Data: string; write: Boolean=true): string;
 begin
-  //Command, Device, numBytesToRead, correlationId, delay, dataToWrite, write
-  Result:=SendCommands(ONEWIRE_WRITE_REQUEST_BIT, '', 0, 0, 0, Data, write);
+  //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_WRITE_REQUEST_BIT, 0, 0, 0, Data, write);
 end;
 
 function TOneWire.Write(Delay: integer; Data: string; write: Boolean=true): string;  overload;
 begin
-  Result:=SendCommands(ONEWIRE_WRITE_REQUEST_BIT, '', 0, 0, Delay, Data, write);
+  Result:=SendCommands(ONEWIRE_WRITE_REQUEST_BIT, 0, 0, Delay, Data, write);
 end;
 
 function TOneWire.WriteAndRead(BytestoRead: uint16; Correlation: uint16; Data: string; write: Boolean=true): string;
 begin
-  //Command, Device, numBytesToRead, correlationId, delay, dataToWrite, write
-  Result:=SendCommands(ONEWIRE_WRITE_REQUEST_BIT or ONEWIRE_READ_REQUEST_BIT, '', BytestoRead, Correlation, 0, Data, write);
+  //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_WRITE_REQUEST_BIT or ONEWIRE_READ_REQUEST_BIT, BytestoRead, Correlation, 0, Data, write);
 end;
 
 function TOneWire.WriteAndRead(BytestoRead: uint16; Correlation: uint16; Delay: integer; Data: string; write: Boolean=true): string; overload;
 begin
-  //Command, Device, numBytesToRead, correlationId, delay, dataToWrite, write
-  Result:=SendCommands(ONEWIRE_WRITE_REQUEST_BIT or ONEWIRE_READ_REQUEST_BIT, '', BytestoRead, Correlation, Delay, Data, write);
+  //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_WRITE_REQUEST_BIT or ONEWIRE_READ_REQUEST_BIT, BytestoRead, Correlation, Delay, Data, write);
 end;
 
 
@@ -3715,23 +3619,12 @@ begin
   end;
 end;
 
-procedure TI2C.GetFirmataCommand(Sender: TObject; CommandData: String);
+procedure TI2C.parsefirmatacommand(Sender: TObject; CommandData: String);
 var
   DataString: string;
   Slave_Address : byte;
   I2C_Register: byte;
-  Index: integer;
-
-  function GetNextByte: Byte;
-  begin
-    if Index > system.Length(CommandData) then
-      Result:=END_SYSEX
-    else
-     Result:=ord(CommandData[Index]);
-    Inc(Index);
-  end;
 begin
-  Index:=1;
   {0  START_SYSEX (0xF0)
    1  I2C_REPLY (0x77)
    2  slave address (LSB)
@@ -3742,9 +3635,9 @@ begin
    7  data 0 (MSB)
    ...
    n  END_SYSEX (0XF7)}
-   Slave_Address:=GetNextByte or (GetNextByte << 7);
-   I2C_Register:=GetNextByte or (GetNextByte << 7);
-   DataString:=Copy(Commanddata, Index, system.Length(CommandData));
+   Slave_Address:=ord(CommandData[1]) or (ord(CommandData[2]) << 7);
+   I2C_Register:=ord(CommandData[3]) or (ord(CommandData[4]) << 7);
+   DataString:=Copy(Commanddata, 5, system.Length(CommandData)-4);
    DataString:=Decode2BytesCharTo1(DataString);
    if Assigned(FOnI2CData) then
       FOnI2CData(self, Slave_Address, I2C_Register, DataString);
@@ -3776,6 +3669,7 @@ begin
     I2CData:=chr(Delay and $7F)+chr(Delay >> 7);
 
   // Firmata defaults pins, set pin 18 y 19 (analog 4 and 5) to I2c Mode  SDA, SCL
+  // Default pins for esp8266 are SDApin=4 and SCLpin=5
   if write then
   begin
     FBoard.FBoardPins[FSDAPin].ActualMode:=PinModesToByte(PIN_MODE_I2C);
@@ -4287,28 +4181,15 @@ begin
 end;
 
 // get data from firmata
-procedure TAccelStepper.GetFirmataCommand(Sender: TObject; CommandData: String);
+procedure TAccelStepper.parsefirmatacommand(Sender: TObject; CommandData: String);
 var
   DataString: string;
   Position: integer;
-  Command: Byte;
   Device: Byte;
-  Index: integer;
-
-  function GetNextByte: Byte;
-  begin
-    if Index > system.Length(CommandData) then
-      Result:=END_SYSEX
-    else
-     Result:=ord(CommandData[Index]);
-    Inc(Index);
-  end;
 begin
-  Index:=1;
-  // command is first byte, Device is second byte
-  Command:=GetNextByte;
-  Device:=GetNextByte;
-  DataString:=Copy(Commanddata, Index, system.Length(CommandData));
+  //Command:=ord(CommandData[1]);
+  Device:=ord(CommandData[2]);
+  DataString:=Copy(CommandData, 3, system.Length(CommandData)-2);
   {0  START_SYSEX                             (0xF0)
   1  ACCELSTEPPER_DATA                       (0x62)
   2  ACCELSTEPPER_REPORT_POSITION and ACCELSTEPPER_MOVE_COMPLETED   (0x06) and (0x0a)
@@ -4320,7 +4201,7 @@ begin
   8  position, bits 28-31
   9  END_SYSEX        (0xF7)}
   Position:=Decode32BitSignedInt(DataString);
-  if Command = ACCELSTEPPER_REPORT_POSITION then
+  if ord(CommandData[1]) = ACCELSTEPPER_REPORT_POSITION then
     begin
       if Assigned(FBoard.FAccelSteppers[Device].FOnStepperPosition) then
           FBoard.FAccelSteppers[Device].FOnStepperPosition(self, Device, Position);
@@ -4725,21 +4606,8 @@ begin
 end;
 
 // get data from firmata
-procedure TAccelStepperGroup.GetFirmataCommand(Sender: TObject; CommandData: String);
-var
-  Index: integer;
-  group: Byte;
-
-  function GetNextByte: Byte;
-  begin
-    if Index > system.Length(CommandData) then
-      Result:=END_SYSEX
-    else
-      Result:=ord(CommandData[Index]);
-    Inc(Index);
-  end;
+procedure TAccelStepperGroup.parsefirmatacommand(Sender: TObject; CommandData: String);
 begin
-    Index:=1;
     {0  START_SYSEX                             (0xF0)
      1  ACCELSTEPPER_DATA                       (0x62)
      2  multi stepper move complete command     (0x24)
@@ -4747,10 +4615,9 @@ begin
      4  END_SYSEX(0xF7)}
 
      // first byte is subcommand and second byte is Group number
-    GetNextByte; // drop first byte
-    Group:=GetNextByte;
+    //Group:=ord(CommandData[2]);
     if Assigned(FOnAccelStepperMultiMoveCompleted) then
-           FOnAccelStepperMultiMoveCompleted(self, Group);
+           FOnAccelStepperMultiMoveCompleted(self, ord(CommandData[2]));
 end;
 {0  START_SYSEX                              (0xF0)
 1  ACCELSTEPPER_DATA                        (0x62)
@@ -5566,7 +5433,7 @@ direction = 1;
 encoder = 2;
 bytes[2] =  (direction << 6) | (encoder);
 }
-procedure TEncoder.GetFirmataCommand(Sender: TObject; CommandData: String);
+procedure TEncoder.parsefirmatacommand(Sender: TObject; CommandData: String);
 var
   Position: integer;
 begin
