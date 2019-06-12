@@ -101,6 +101,8 @@ begin
   if LazSerial1.active=false then
   begin
      Board1.Enabled:=False;
+     memo1.Append('Could not open port');
+     exit;
   end;
   Memo1.Clear;
   memo1.Append('Wait !!!, Firmata starting....');
@@ -131,6 +133,7 @@ begin
    exit;
   end;
   PS2Mouse1.QueryDeviceID;
+  Reporting.Enabled:=True;
 end;
 
 procedure TForm1.Memo1Click(Sender: TObject);

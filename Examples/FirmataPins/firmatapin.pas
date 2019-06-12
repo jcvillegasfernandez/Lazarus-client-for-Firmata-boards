@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
-  StdCtrls, ExtCtrls, firmataconstants, firmata, firmataboard,
+  StdCtrls, ExtCtrls, firmataconstants, firmata, firmataboard, LazSynaser,
   LazSerial;
 
 type
@@ -24,16 +24,17 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
+    Board1: TBoard;
     CreateTask: TButton;
     DeleteTask: TButton;
     Label7: TLabel;
     Pin13: TPin;
     Pin2: TPin;
-    Task1: TTask;
     Label5: TLabel;
     Label6: TLabel;
+    Task1: TTask;
+    Task2: TTask;
     TaskExe: TButton;
-    Board1: TBoard;
     LazSerial1: TLazSerial;
     ToggleReport: TToggleBox;
     Valuewrite: TEdit;
@@ -55,11 +56,11 @@ type
 
     procedure Board1AfterClose(sender: TObject);
     procedure Board1BeforeOpen(sender: TObject);
-    function Board1DeviceDataAvailable(sender: TObject): Boolean;
     procedure Board1Error(sender: TObject; Error: integer; TextError: string; Afected: integer);
     procedure Board1FirmataData(sender: TObject; Command: Byte; Data: string);
     procedure Board1FirmataReady(sender: TObject);
-    function Board1GetDataFromDevice(sender: TObject): integer;
+    function Board1DeviceDataAvailable(sender: TObject): Boolean;
+    function Board1GetDataFromDevice(sender: TObject): string;
     procedure Pin2PinValue(sender: TObject; Value: integer);
     procedure Task1QueryTask(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
     procedure Board1SendDataToDevice(sender: TObject; str: string);
@@ -80,6 +81,7 @@ type
     procedure ToggleReportChange(Sender: TObject);
     procedure TogglereportClick(Sender: TObject);
     procedure ValuewriteEditingDone(Sender: TObject);
+    procedure SerialStatusHandler(Sender: TObject; Reason: THookSerialReason; const Value: string);
 
   private
     { private declarations }
@@ -91,7 +93,6 @@ var
   Form1: TForm1;
   PinMode: Byte;
   PortValue: TPortValue;
-  Status: integer;
 
 implementation
 
@@ -103,8 +104,15 @@ procedure TForm1.OpenPortClick(Sender: TObject);
 begin
   PinMode:=$7F;
   PortValue.byte:=0;   // set all pins to 0
-  Status:=0;
   memo1.Clear;
+
+  LazSerial1.Device:=Puerto.Text;
+  LazSerial1.BaudRate:=br_57600;
+  LazSerial1.FlowControl:=fcNone;
+  LazSerial1.StopBits:=sbOne;
+  LazSerial1.DataBits:=db8bits;
+  LazSerial1.OnStatus:=nil;
+ // LazSerial1.OnStatus:=@SerialStatusHandler;
 
   // Enable Firmata
   Board1.Enabled:=true;
@@ -113,6 +121,22 @@ begin
   closeport.Enabled:=True;
   configure.Enabled:=false;
   Openport.Enabled:=False;
+end;
+
+procedure TForm1.SerialStatusHandler(Sender: TObject; Reason: THookSerialReason; const Value: string);
+var
+  Status: String;
+begin
+  case Reason of
+    HR_SerialClose : Status:='Port ' + Value + ' closed';
+    HR_Connect :   Status:='Port ' + Value + ' connected';
+    HR_CanRead :   Status:= 'CanRead : ' + Value ;
+    HR_CanWrite :  Status:= 'CanWrite : ' + Value ;
+    HR_ReadCount : Status:= 'ReadCount : ' + Value ;
+    HR_WriteCount : Status:= 'WriteCount : ' + Value ;
+    HR_Wait :  Status:= 'Wait : ' + Value ;
+  end ;
+  Memo1.Lines.add(Status);
 end;
 
 procedure TForm1.Board1AfterClose(sender: TObject);
@@ -124,13 +148,13 @@ end;
 procedure TForm1.Board1BeforeOpen(sender: TObject);
 begin
   // Open way of comunication
-  LazSerial1.Device:=Puerto.Text;
   LazSerial1.Open;
-  if LazSerial1.active=false then
+  if LazSerial1.active = false then
   begin
      Board1.Enabled:=False;
+     exit;
   end;
-  Memo1.Clear;
+
   memo1.Append('Wait !!!, Firmata starting....');
 end;
 
@@ -149,9 +173,8 @@ procedure TForm1.Board1FirmataReady(sender: TObject);
 var
   i: Integer;
 begin
-  memo1.clear;
   memo1.lines.add('Firmata started in, '+inttostr(Board1.StartingTime)+' milisec');
-  memo1.lines.add('Firmata Firmare:' + Board1.FirmataFirmware);
+  memo1.lines.add('Firmata Firmware:' + Board1.FirmataFirmware);
   ledon.Enabled:=True;
   ledoff.Enabled:=True;
   Board1.printPinInfo(Memo1);
@@ -182,12 +205,7 @@ begin
       //Valuewrite.Enabled:=True;
     Valuewrite.Visible:=True;
     CreateTask.Enabled:=True;
-    SetValue.Visible:=True;
-    Valuewrite.Visible:=True;;
-    CreateTask.Enabled:=True;
     ToggleReport.Visible:=false;
-    ValueWrite.Visible:=true;
-    SetValue.Visible:=True;
     Label3.Visible:=True;
     Label4.Visible:=True;
     Label6.Visible:=True;
@@ -213,16 +231,12 @@ procedure TForm1.FormCreate(Sender: TObject);
 begin
     memo1.Enabled:=true;
     Memo1.Clear;
-{$IFDEF LINUX}
-    Puerto.Text:='/dev/ttyUSB0';
-{$ELSE}
-    Puerto.Text:='COM1';
-{$ENDIF}
-  LazSerial1.Device:=Puerto.Text;
-  LazSerial1.BaudRate:=br_57600;
-  LazSerial1.FlowControl:=fcNone;
-  LazSerial1.StopBits:=sbOne;
-  LazSerial1.DataBits:=db8bits;
+    {$IFDEF LINUX}
+        Puerto.Text:='/dev/ttyUSB0';
+    {$ELSE}
+        Puerto.Text:='COM1';
+    {$ENDIF}
+
 end;
 
 procedure TForm1.configureClick(Sender: TObject);
@@ -299,9 +313,7 @@ end;
 procedure TForm1.CreateTaskClick(Sender: TObject);
 var
   TaskString: string;
-  valor: Boolean;
 begin
-  Valor:=Task1.Enabled;
   Task1.TaskID:=1;
   Task1.TimeDelay:=1500; // delay in delaytask
   Task1.RunDelay:=1; // delay before run task
@@ -319,9 +331,9 @@ end;
 
 procedure TForm1.TaskExeClick(Sender: TObject);
 begin
-  TaskExe.Enabled:=False;
   Task1.Enabled:=true;  // create and execute task
   Task1.QueryTask;
+  TaskExe.Enabled:=False;
 end;
 
 procedure TForm1.ToggleReportChange(Sender: TObject);
@@ -361,18 +373,18 @@ begin
      Label7.Visible:=false
    end;
 
-   if Pin2.Enabled then
-   begin
-     if Pin2.Reporting then  // disable report on pin before disable pin
-     begin
-       ToggleReport.Checked:=false;
-       Pin2.ReportPin(False);
-     end;
-     Pin2.Enabled:=false;
-   end;
-   Pin2.Mode:=ByteToPinModes(Modes.ItemIndex);  // new pin mode
-   Pin2.Enabled:=True;   // enable set new pin mode
-   ToggleReport.Checked:=Pin2.Reporting;
+   if Pin2.Mode <> ByteToPinModes(Modes.ItemIndex) then
+      begin
+        if Pin2.Enabled then
+        begin
+          Pin2.Enabled:=false;
+          ToggleReport.Checked:=false;
+        end;
+        Pin2.Mode:=ByteToPinModes(Modes.ItemIndex);  // new pin mode
+        Valuewrite.Text:='0';
+        Pin2.Enabled:=True;   // enable set new pin mode
+        ToggleReport.Checked:=Pin2.Reporting;
+      end;
 end;
 
 procedure TForm1.ValuewriteEditingDone(Sender: TObject);
@@ -412,22 +424,19 @@ end;
 
 procedure TForm1.Task1QueryTask(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
 begin
-  Memo1.Lines.add('TaskID='+inttostr(Task1.TaskID)+' time='+inttostr(time)+' longitud='+inttostr(length)+' Data='+StrToHexSep(TaskData));
+  Memo1.Lines.add('TaskID='+inttostr(Task1.TaskID)+' time='+inttostr(time)+' length='+inttostr(length)+' Data='+StrToHexSep(TaskData));
   if Length <> system.Length(TaskData) then
-    Memo1.Lines.Add('Longitud de tarea errónea');
+    Memo1.Lines.Add('Bad task length');
 end;
 
 function TForm1.Board1DeviceDataAvailable(sender: TObject): Boolean;
 begin
-  Result:=LazSerial1.DataAvailable;
+  Result:=LazSerial1.SynSer.CanReadEx(100);
 end;
 
-function TForm1.Board1GetDataFromDevice(sender: TObject): integer;
+function TForm1.Board1GetDataFromDevice(sender: TObject): string;
 begin
-  if LazSerial1.DataAvailable then
-    Result:=LazSerial1.SynSer.RecvByte(100)
-  else
-    Result:=-1; // error
+   Result:=LazSerial1.ReadData;
 end;
 
 procedure TForm1.Board1SendDataToDevice(sender: TObject; str: string);
@@ -437,7 +446,7 @@ end;
 
 procedure TForm1.Task1TaskError(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
 begin
-  Memo1.Lines.add('Error TaskID='+inttostr(Task1.TaskID)+' time='+inttostr(time)+' longitud='+inttostr(length)+'Lugar='+inttostr(Place)+' Data='+StrToHexSep(TaskData));
+  Memo1.Lines.add('Error TaskID='+inttostr(Task1.TaskID)+' time='+inttostr(time)+' length='+inttostr(length)+'Lugar='+inttostr(Place)+' Data='+StrToHexSep(TaskData));
 end;
 
 

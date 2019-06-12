@@ -7,7 +7,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, LazSerialPort, FirmataPin, firmataboard;
+  Forms, FirmataPin;
 
 {$R *.res}
 

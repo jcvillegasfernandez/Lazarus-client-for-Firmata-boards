@@ -24,10 +24,10 @@
     </RunParams>
     <RequiredPackages Count="3">
       <Item1>
-        <PackageName Value="LazSerialPort"/>
+        <PackageName Value="Firmata"/>
       </Item1>
       <Item2>
-        <PackageName Value="Firmata"/>
+        <PackageName Value="LazSerialPort"/>
       </Item2>
       <Item3>
         <PackageName Value="LCL"/>
@@ -55,7 +55,6 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="."/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Linking>
