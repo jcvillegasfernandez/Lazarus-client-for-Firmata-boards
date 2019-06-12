@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="11"/>
     <BuildModes Active="Default"/>
-    <Units Count="71">
+    <Units Count="73">
       <Unit0>
         <Filename Value="FirmataAccelStepper.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -20,11 +20,10 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="AccelStepper"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="163"/>
-        <CursorPos X="100" Y="183"/>
+        <TopLine Value="246"/>
+        <CursorPos X="43" Y="253"/>
         <UsageCount Value="203"/>
         <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="..\onewire.pas"/>
@@ -529,133 +528,145 @@
       <Unit70>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="1233"/>
-        <CursorPos Y="1296"/>
+        <TopLine Value="1831"/>
+        <CursorPos Y="1871"/>
         <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit70>
+      <Unit71>
+        <Filename Value="..\FirmataPins_Web\firmatapin_web.pas"/>
+        <UnitName Value="firmatapin_Web"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="154"/>
+        <CursorPos Y="182"/>
+        <UsageCount Value="10"/>
+      </Unit71>
+      <Unit72>
+        <Filename Value="..\..\..\..\MisComponentes\TLazSerial-master\lazserial.pas"/>
+        <UnitName Value="LazSerial"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="273"/>
+        <CursorPos Y="294"/>
+        <UsageCount Value="10"/>
+      </Unit72>
     </Units>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="29" HistoryIndex="28">
       <Position1>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="155" Column="17" TopLine="139"/>
+        <Caret Line="3813" TopLine="3801"/>
       </Position1>
       <Position2>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="1295" Column="21" TopLine="1280"/>
+        <Caret Line="3718" Column="21" TopLine="3714"/>
       </Position2>
       <Position3>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="1298" Column="23" TopLine="1282"/>
+        <Caret Line="3813" TopLine="3798"/>
       </Position3>
       <Position4>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="1328" Column="15" TopLine="1312"/>
+        <Caret Line="3814" TopLine="3798"/>
       </Position4>
       <Position5>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3812" TopLine="3801"/>
+        <Caret Line="3815" TopLine="3798"/>
       </Position5>
       <Position6>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3813" TopLine="3801"/>
+        <Caret Line="3816" TopLine="3798"/>
       </Position6>
       <Position7>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3718" Column="21" TopLine="3714"/>
+        <Caret Line="3813" TopLine="3798"/>
       </Position7>
       <Position8>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3813" TopLine="3798"/>
+        <Caret Line="3814" TopLine="3798"/>
       </Position8>
       <Position9>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3814" TopLine="3798"/>
+        <Caret Line="3815" TopLine="3798"/>
       </Position9>
       <Position10>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3815" TopLine="3798"/>
+        <Caret Line="3816" TopLine="3798"/>
       </Position10>
       <Position11>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3816" TopLine="3798"/>
+        <Caret Line="3817" TopLine="3798"/>
       </Position11>
       <Position12>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3813" TopLine="3798"/>
+        <Caret Line="3818" TopLine="3798"/>
       </Position12>
       <Position13>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3814" TopLine="3798"/>
+        <Caret Line="3820" TopLine="3798"/>
       </Position13>
       <Position14>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3815" TopLine="3798"/>
+        <Caret Line="3813" TopLine="3798"/>
       </Position14>
       <Position15>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3816" TopLine="3798"/>
+        <Caret Line="3820" TopLine="3798"/>
       </Position15>
       <Position16>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3817" TopLine="3798"/>
+        <Caret Line="3709" TopLine="3693"/>
       </Position16>
       <Position17>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3818" TopLine="3798"/>
+        <Caret Line="1690" Column="21" TopLine="1464"/>
       </Position17>
       <Position18>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3820" TopLine="3798"/>
+        <Caret Line="3796" TopLine="3781"/>
       </Position18>
       <Position19>
-        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3813" TopLine="3798"/>
+        <Filename Value="accelstepper.pas"/>
+        <Caret Line="197" TopLine="191"/>
       </Position19>
       <Position20>
-        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3820" TopLine="3798"/>
+        <Filename Value="accelstepper.pas"/>
+        <Caret Line="187" Column="69" TopLine="171"/>
       </Position20>
       <Position21>
-        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3709" TopLine="3693"/>
+        <Filename Value="accelstepper.pas"/>
+        <Caret Line="189" TopLine="173"/>
       </Position21>
       <Position22>
-        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="1690" Column="21" TopLine="1464"/>
+        <Filename Value="accelstepper.pas"/>
+        <Caret Line="190" TopLine="173"/>
       </Position22>
       <Position23>
-        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <Caret Line="3796" TopLine="3781"/>
+        <Filename Value="accelstepper.pas"/>
+        <Caret Line="191" Column="19" TopLine="175"/>
       </Position23>
       <Position24>
         <Filename Value="accelstepper.pas"/>
-        <Caret Line="197" TopLine="191"/>
+        <Caret Line="190" TopLine="175"/>
       </Position24>
       <Position25>
         <Filename Value="accelstepper.pas"/>
-        <Caret Line="187" Column="69" TopLine="171"/>
+        <Caret Line="191" TopLine="175"/>
       </Position25>
       <Position26>
         <Filename Value="accelstepper.pas"/>
-        <Caret Line="189" TopLine="173"/>
+        <Caret Line="257" TopLine="253"/>
       </Position26>
       <Position27>
         <Filename Value="accelstepper.pas"/>
-        <Caret Line="190" TopLine="173"/>
+        <Caret Line="92" Column="25" TopLine="92"/>
       </Position27>
       <Position28>
         <Filename Value="accelstepper.pas"/>
-        <Caret Line="191" Column="19" TopLine="175"/>
+        <Caret Line="275" Column="29" TopLine="225"/>
       </Position28>
       <Position29>
         <Filename Value="accelstepper.pas"/>
-        <Caret Line="190" TopLine="175"/>
+        <Caret Line="271" Column="3" TopLine="237"/>
       </Position29>
-      <Position30>
-        <Filename Value="accelstepper.pas"/>
-        <Caret Line="191" TopLine="175"/>
-      </Position30>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
