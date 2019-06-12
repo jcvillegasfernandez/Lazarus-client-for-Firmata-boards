@@ -1,4 +1,4 @@
-unit onewire;
+unit onewire_tcpclient;
 
 {$mode objfpc}{$H+}
 
@@ -6,8 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
-  StdCtrls, ExtCtrls, LazSerial, firmataconstants, firmataboard,
-  lazsynautil;
+  StdCtrls, ExtCtrls, firmataconstants, firmataboard, blcksock, synsock;
 
 type
 
@@ -17,17 +16,17 @@ type
     CreateTask: TButton;
     DeleteTask: TButton;
     Label5: TLabel;
+    Label6: TLabel;
     OneWire1: TOneWire;
+    Server: TEdit;
     Task1: TTask;
     Pins: TComboBox;
-    LazSerial1: TLazSerial;
     ShowTemp: TEdit;
     Readtemp: TButton;
     Search: TButton;
     Label3: TLabel;
     Label4: TLabel;
     Board1: TBoard;
-    configure: TButton;
     Label1: TLabel;
     Label2: TLabel;
     Memo1: TMemo;
@@ -54,7 +53,6 @@ type
     procedure Board1SendDataToDevice(sender: TObject; str: string);
     procedure Task1TaskError(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
     procedure FormCreate(Sender: TObject);
-    procedure configureClick(Sender: TObject);
     procedure Memo1Click(Sender: TObject);
     procedure OpenPortClick(Sender: TObject);
     procedure ClosePortClick(Sender: TObject);
@@ -63,7 +61,10 @@ type
     procedure ReadtempClick(Sender: TObject);
     procedure SearchClick(Sender: TObject);
     procedure TaskExeClick(Sender: TObject);
-
+    procedure SocketStatusHandler(Sender: TObject; Reason: THookSocketReason;
+                                             const Value: AnsiString);
+    procedure MonitorSocket(Sender: TObject; Writing: Boolean;
+            const Buffer: TMemory; Len: Integer);
   private
     { private declarations }
   public
@@ -72,6 +73,7 @@ type
 
 var
   Form1: TForm1;
+  client: TTCPBlockSocket;
   OneWireIDs: array of string;
   OneWireAlarmIDs: array of string;
   Correlation: integer;
@@ -84,19 +86,76 @@ implementation
 {$R *.lfm}
 
 { TForm1 }
+procedure TForm1.SocketStatusHandler(Sender: TObject; Reason: THookSocketReason;
+                                         const Value: AnsiString);
+var
+  Status: String;
+begin
+  case Reason of
+    HR_ResolvingBegin:
+      Status := 'ResolvingBegin';
+    HR_ResolvingEnd:
+      Status := 'ResolvingEnd';
+    HR_SocketCreate:
+      Status := 'SocketCreate';
+    HR_SocketClose:
+      Status := 'SocketClose';
+    HR_Connect:
+      Status := 'Connect';
+    HR_CanRead:
+      Status := 'CanRead';
+    HR_CanWrite:
+      Status := 'CanWrite';
+    HR_ReadCount:
+      Status := 'ReadCount';
+    HR_WriteCount:
+      Status := 'WriteCount';
+    HR_Wait:
+      Status := 'Wait';
+    HR_Error: begin
+      Status := 'Error';
+      client.OnStatus:=nil;
+    end;
+
+  end;
+  Memo1.Lines.add(Status+ ', ' + Value);
+end;
+
+procedure TForm1.MonitorSocket(Sender: TObject; Writing: Boolean;
+        const Buffer: TMemory; Len: Integer);
+var
+  i: integer;
+  s: string;
+begin
+  setstring(s, Buffer, Len);
+
+  if writing then // writing to device
+  begin
+    i:=memo1.lines.Add('Written: ');
+  end
+  else
+  begin
+    i:=memo1.lines.Add('Read: ');
+  end;
+  Memo1.Lines[i]:=Memo1.Lines[i]+StrToHexSep(s);
+end;
 
 procedure TForm1.OpenPortClick(Sender: TObject);
 begin
   memo1.Clear;
-  TaskCreated:=False;
-  // Enable Firmata
 
+  client:=TTCPBlockSocket.Create;
+  //client.OnStatus:=@SocketStatusHandler;
+  //client.OnMonitor:=@MonitorSocket;
+
+  // Enable Firmata
   Board1.Enabled:=true;
 
   Puerto.Enabled:=false;
+  Server.Enabled:=false;
   closeport.Enabled:=True;
-  configure.Enabled:=false;
   Openport.Enabled:=False;
+
   search.enabled:=True;
   Pins.Enabled:=true;
   TaskCreated:=False;
@@ -106,18 +165,16 @@ procedure TForm1.FormCreate(Sender: TObject);
 begin
     memo1.Enabled:=true;
     Memo1.Clear;
-{$IFDEF LINUX}
-    Puerto.Text:='/dev/ttyUSB0';
-{$ELSE}
-    Puerto.Text:='COM1';
-{$ENDIF}
-  LazSerial1.Device:=Puerto.Text;
-  LazSerial1.BaudRate:=br_57600;
-  LazSerial1.FlowControl:=fcNone;
-  LazSerial1.StopBits:=sbOne;
-  LazSerial1.DataBits:=db8bits;
-  LazSerial1.Parity:=pNone;
+    memo1.Enabled:=true;
+    Memo1.Clear;
 
+    Puerto.Text:='3030';
+    Server.Text:='192.168.10.11';
+end;
+
+procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+begin
+  ClosePortClick(self);
 end;
 
 procedure TForm1.DeleteTaskClick(Sender: TObject);
@@ -139,18 +196,21 @@ begin
   // The last "false" value in functions means not write in board, only get command string
   Pin:=TPin.Create(self);
   Pin.Board:=Board1;
-  Pin.Pin:=13;  // board led
+  Pin.Pin:=2;  // board led
   Pin.Mode:=PIN_MODE_OUTPUT;    // it is not necessary to enable Pin to use it in tasks
+  Pin.Enabled:=True; // set pin mode to output
+  Pin.Enabled:=false;
 
   PartialTask[1]:=OneWire1.ResetAndSelect(false); // Reset and select device[0]
   // Resolution has already been set to 9
-  PartialTask[2]:=OneWire1.Write(100, chr($44), false);  // convert temperature command and delay 100ms
-  PartialTask[3]:=Pin.SetDigitalPinValue(1, false); // set pin 13 on, LED ON
-  Task1.TimeDelay:=800; // set new Delay Task time
+  PartialTask[2]:=OneWire1.Write(chr($44), false);  // convert temperature command and delay 100ms
+  PartialTask[3]:=Pin.SetDigitalPinValue(0, false); // set pin 2 on, LED ON
+  Task1.TimeDelay:=1000; // set new Delay Task time
   PartialTask[4]:=Task1.DelayTask(false);    // delay task
   PartialTask[5]:=OneWire1.ResetAndSelect(false); // Reset and select device[0]
-  PartialTask[6]:=OneWire1.WriteAndRead(9, 2, 200, chr($BE), false); // Delay 200ms, $BE Send command to read Scratchpad 8 bytes + CRC
-  PartialTask[7]:=Pin.SetDigitalPinValue(0, false); // set pin 13 off, LED OFF
+  PartialTask[6]:=OneWire1.WriteAndRead(9, 2, chr($BE), false); // Delay 200ms, $BE Send command to read Scratchpad 8 bytes + CRC
+  PartialTask[7]:=Pin.SetDigitalPinValue(1, false); // set pin 2 off, LED OFF
+
   Pin.Destroy;  // Pin is not necessary yet
   Task1.TimeDelay:=1000; // set new Delay Task time
  // PartialTask[8]:=Task1.DelayTask(false);    // delay task 1, this delay keeps task 1 running
@@ -178,12 +238,6 @@ begin
   TaskExe.Enabled:=False;
 end;
 
-procedure TForm1.configureClick(Sender: TObject);
-begin
-  LazSerial1.ShowSetupDialog;
-  Puerto.text:=LazSerial1.Device;
-end;
-
 procedure TForm1.Memo1Click(Sender: TObject);
 begin
    If Board1.Enabled then
@@ -198,6 +252,8 @@ var
   i: integer;
 begin
   memo1.clear;
+  //client.OnStatus:=nil;
+  //client.OnMonitor:=nil;
   memo1.lines.add('Firmata started in, '+inttostr(Board1.StartingTime)+' milisec');
   memo1.lines.add('Firmata Firmare:' + Board1.FirmataFirmware);
 
@@ -230,7 +286,7 @@ begin
 
   search.enabled:=true;
   openPort.Enabled:=false;
-  configure.enabled:=false;
+  Server.Enabled:=false;
   Puerto.Enabled:=false;
   Closeport.Enabled:=true;
 end;
@@ -240,7 +296,7 @@ begin
     puerto.Enabled:=true;
     closeport.Enabled:=False;
     Openport.Enabled:=True;
-    configure.Enabled:=True;
+    Server.Enabled:=true;
     Pins.Enabled:=false;
     Pins.Clear;
     ReadTemp.enabled:=False;
@@ -379,34 +435,28 @@ end;
 
 function TForm1.Board1DeviceDataAvailable(sender: TObject): Boolean;
 begin
-  Result:=LazSerial1.SynSer.CanReadEx(100);
+  Result:=client.CanReadEx(10);
 end;
 
 procedure TForm1.Board1SendDataToDevice(sender: TObject; str: string);
 begin
-  LazSerial1.WriteData(str);
+  client.SendString(str);
 end;
 
 function TForm1.Board1GetDataFromDevice(sender: TObject): string;
 begin
-    Result:=LazSerial1.ReadData;
-end;
-
-procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
-begin
-  ClosePortClick(self);
+  Result:=client.RecvPacket(0);
 end;
 
 procedure TForm1.Board1BeforeOpen(sender: TObject);
 begin
   // Open way of comunication
-  LazSerial1.Device:=Puerto.Text;
-  LazSerial1.Open;
-  if LazSerial1.active=false then
+  Client.Connect(server.text, puerto.text);
+
+  if client.LastError <> 0 then
   begin
-     Board1.Enabled:=False;
-     memo1.Append('Could not open port');
-     exit;
+    Board1.Enabled:=False;
+    board1.RaiseError(1002,'Could not open connection');
   end;
   Memo1.Clear;
   memo1.Append('Wait !!!, Firmata starting....');
@@ -425,8 +475,7 @@ end;
 
 procedure TForm1.Board1AfterClose(sender: TObject);
 begin
-  if LazSerial1.Active then
-    LazSerial1.Close;
+  client.CloseSocket;
 end;
 
 procedure TForm1.SearchClick(Sender: TObject);
@@ -444,7 +493,7 @@ end;
 
 procedure TForm1.Task1TaskError(sender: TObject; Time: integer; Length: integer; Place: integer; TaskData: String);
 begin
-  Memo1.Lines.add('Error TaskID='+inttostr(Task1.Taskid)+' time='+inttostr(time)+' length='+inttostr(length)+'Position='+inttostr(Place)+' Data='+StrToHex(TaskData));
+  Memo1.Lines.add('Error TaskID='+inttostr(Task1.Taskid)+' time='+inttostr(time)+' longitud='+inttostr(length)+'Lugar='+inttostr(Place)+' Data='+StrToHex(TaskData));
 end;
 
 

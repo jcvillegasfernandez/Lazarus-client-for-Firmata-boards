@@ -1,20 +1,20 @@
 object Form1: TForm1
-  Left = 555
+  Left = 107
   Height = 758
-  Top = 186
+  Top = 136
   Width = 1123
   BorderStyle = bsDialog
   Caption = 'Form1'
-  ClientHeight = 758
-  ClientWidth = 1123
+  ClientHeight = 0
+  ClientWidth = 0
   Font.Height = -13
   OnClose = FormClose
   OnCreate = FormCreate
   LCLVersion = '2.0.2.0'
   object OpenPort: TButton
-    Left = 175
+    Left = 180
     Height = 27
-    Top = 9
+    Top = 94
     Width = 82
     Caption = 'open'
     Default = True
@@ -24,9 +24,9 @@ object Form1: TForm1
     TabOrder = 0
   end
   object ClosePort: TButton
-    Left = 175
+    Left = 180
     Height = 27
-    Top = 44
+    Top = 129
     Width = 82
     Caption = 'close'
     Enabled = False
@@ -36,18 +36,19 @@ object Form1: TForm1
     TabOrder = 1
   end
   object Puerto: TEdit
-    Left = 70
+    Left = 77
     Height = 25
-    Top = 9
+    Top = 129
     Width = 87
     Font.Height = -13
     ParentFont = False
     TabOrder = 2
+    Text = '3030'
   end
   object Label1: TLabel
-    Left = 35
+    Left = 40
     Height = 17
-    Top = 17
+    Top = 129
     Width = 27
     Caption = 'Port:'
     Font.Height = -13
@@ -60,7 +61,7 @@ object Form1: TForm1
     Top = 201
     Width = 1087
     Enabled = False
-    Font.Height = -14
+    Font.Height = -12
     Lines.Strings = (
       'Memo1'
     )
@@ -79,17 +80,6 @@ object Form1: TForm1
     Font.Height = -13
     ParentColor = False
     ParentFont = False
-  end
-  object configure: TButton
-    Left = 9
-    Height = 27
-    Top = 44
-    Width = 143
-    Caption = 'configure serial port'
-    Font.Height = -13
-    OnClick = configureClick
-    ParentFont = False
-    TabOrder = 4
   end
   object Label3: TLabel
     Left = 376
@@ -120,7 +110,7 @@ object Form1: TForm1
     Font.Height = -13
     ParentFont = False
     ReadOnly = True
-    TabOrder = 5
+    TabOrder = 4
   end
   object Search: TButton
     Left = 568
@@ -132,7 +122,7 @@ object Form1: TForm1
     Font.Height = -13
     OnClick = SearchClick
     ParentFont = False
-    TabOrder = 6
+    TabOrder = 5
   end
   object Readtemp: TButton
     Left = 831
@@ -144,7 +134,7 @@ object Form1: TForm1
     Font.Height = -13
     OnClick = ReadtempClick
     ParentFont = False
-    TabOrder = 7
+    TabOrder = 6
   end
   object ShowTemp: TEdit
     Left = 1014
@@ -154,7 +144,7 @@ object Form1: TForm1
     Font.Height = -13
     ParentFont = False
     ReadOnly = True
-    TabOrder = 8
+    TabOrder = 7
   end
   object Pins: TComboBox
     Left = 455
@@ -165,7 +155,7 @@ object Form1: TForm1
     ItemHeight = 17
     OnChange = PinsChange
     ParentFont = False
-    TabOrder = 9
+    TabOrder = 8
   end
   object CreateTask: TButton
     Left = 831
@@ -177,7 +167,7 @@ object Form1: TForm1
     Font.Height = -13
     OnClick = CreateTaskClick
     ParentFont = False
-    TabOrder = 10
+    TabOrder = 9
   end
   object TaskExe: TButton
     Left = 831
@@ -189,7 +179,7 @@ object Form1: TForm1
     Font.Height = -13
     OnClick = TaskExeClick
     ParentFont = False
-    TabOrder = 11
+    TabOrder = 10
   end
   object DeleteTask: TButton
     Left = 953
@@ -201,7 +191,7 @@ object Form1: TForm1
     Font.Height = -13
     OnClick = DeleteTaskClick
     ParentFont = False
-    TabOrder = 12
+    TabOrder = 11
   end
   object Label5: TLabel
     Left = 360
@@ -211,6 +201,26 @@ object Form1: TForm1
     Alignment = taCenter
     Caption = 'One Wire'#10'Digital Temperature Sensor - DS18B20'
     Font.Height = -20
+    ParentColor = False
+    ParentFont = False
+  end
+  object Server: TEdit
+    Left = 77
+    Height = 25
+    Top = 96
+    Width = 87
+    Font.Height = -13
+    ParentFont = False
+    TabOrder = 12
+    Text = '192.168.10.11'
+  end
+  object Label6: TLabel
+    Left = 32
+    Height = 17
+    Top = 104
+    Width = 40
+    Caption = 'Server:'
+    Font.Height = -13
     ParentColor = False
     ParentFont = False
   end
@@ -226,23 +236,11 @@ object Form1: TForm1
     OnGetDataFromDevice = Board1GetDataFromDevice
     OnError = Board1Error
     OnBoardData = Board1BoardData
-    left = 426
-    top = 400
-  end
-  object LazSerial1: TLazSerial
-    Active = False
-    BaudRate = br_57600
-    DataBits = db8bits
-    Parity = pNone
-    FlowControl = fcNone
-    StopBits = sbOne
-    Device = 'COM1'
-    RcvLineCRLF = False
-    left = 487
+    left = 432
     top = 400
   end
   object OneWire1: TOneWire
-    OneWirePin = 2
+    OneWirePin = 4
     Board = Board1
     OnOneWireData = OneWire1WireData
     OnSearch = OneWire1Search
