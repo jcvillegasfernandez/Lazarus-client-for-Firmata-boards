@@ -38,7 +38,7 @@ type
     procedure Board1Error(sender: TObject; Error: integer; TextError: string; Afected: integer);
     procedure Board1FirmataData(sender: TObject; Command: Byte; Data: string);
     procedure Board1FirmataReady(sender: TObject);
-    function Board1GetDataFromDevice(sender: TObject): integer;
+    function Board1GetDataFromDevice(sender: TObject): string;
     procedure Board1SendDataToDevice(sender: TObject; str: string);
     procedure configureClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -255,12 +255,9 @@ begin
   Result:=LazSerial1.DataAvailable;
 end;
 
-function TForm1.Board1GetDataFromDevice(sender: TObject): integer;
+function TForm1.Board1GetDataFromDevice(sender: TObject): string;
 begin
-  if LazSerial1.DataAvailable then
-    Result:=LazSerial1.SynSer.RecvByte(100)
-  else
-    Result:=-1; // error
+  Result:=LazSerial1.SynSer.RecvPacket(0);
 end;
 
 procedure TForm1.Board1SendDataToDevice(sender: TObject; str: string);

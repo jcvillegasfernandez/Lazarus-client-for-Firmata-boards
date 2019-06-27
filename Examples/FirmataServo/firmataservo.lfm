@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 663
+  Left = 218
   Height = 771
-  Top = 286
+  Top = 143
   Width = 1218
   ActiveControl = Puerto
   Anchors = [akTop]
@@ -15,11 +15,11 @@ object Form1: TForm1
   Font.Pitch = fpVariable
   Font.Quality = fqDraft
   OnCreate = FormCreate
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.2.0'
   object OpenPort: TButton
-    Left = 248
+    Left = 238
     Height = 38
-    Top = 13
+    Top = 72
     Width = 116
     Caption = 'open'
     Font.CharSet = ANSI_CHARSET
@@ -32,9 +32,9 @@ object Form1: TForm1
     TabOrder = 0
   end
   object ClosePort: TButton
-    Left = 248
+    Left = 238
     Height = 38
-    Top = 62
+    Top = 129
     Width = 116
     Caption = 'close'
     Enabled = False
@@ -48,9 +48,9 @@ object Form1: TForm1
     TabOrder = 1
   end
   object Puerto: TEdit
-    Left = 99
+    Left = 89
     Height = 26
-    Top = 13
+    Top = 80
     Width = 123
     Font.CharSet = ANSI_CHARSET
     Font.Height = -16
@@ -62,9 +62,9 @@ object Form1: TForm1
     Text = 'COM1'
   end
   object Label1: TLabel
-    Left = 48
+    Left = 38
     Height = 18
-    Top = 21
+    Top = 88
     Width = 33
     Caption = 'Port:'
     Font.CharSet = ANSI_CHARSET
@@ -109,10 +109,10 @@ object Form1: TForm1
     ParentFont = False
   end
   object configure: TButton
-    Left = 13
+    Left = 37
     Height = 38
-    Top = 62
-    Width = 202
+    Top = 127
+    Width = 175
     Caption = 'configure serial port'
     Font.CharSet = ANSI_CHARSET
     Font.Height = -16
@@ -231,8 +231,8 @@ object Form1: TForm1
     StopBits = sbOne
     Device = 'COM1'
     RcvLineCRLF = False
-    left = 25
-    top = 123
+    left = 200
+    top = 344
   end
   object Board1: TBoard
     SamplingInterval = 19
@@ -241,13 +241,13 @@ object Form1: TForm1
     OnBeforeOpen = Board1BeforeOpen
     OnAfterClose = Board1AfterClose
     OnBoardReady = Board1FirmataReady
+    OnDeviceDataAvailable = Board1DeviceDataAvailable
     OnSendDataToDevice = Board1SendDataToDevice
     OnGetDataFromDevice = Board1GetDataFromDevice
-    OnDeviceDataAvailable = Board1DeviceDataAvailable
     OnError = Board1Error
     OnBoardData = Board1FirmataData
-    left = 25
-    top = 199
+    left = 248
+    top = 256
   end
   object Servo1: TServo
     Board = Board1
@@ -255,7 +255,7 @@ object Form1: TForm1
     MinPulse = 544
     MaxPulse = 2130
     Value = 0
-    left = 352
-    top = 144
+    left = 328
+    top = 280
   end
 end
