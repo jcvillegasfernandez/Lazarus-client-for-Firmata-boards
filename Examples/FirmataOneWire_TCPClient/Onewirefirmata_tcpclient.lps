@@ -18,9 +18,10 @@
         <ComponentName Value="Form1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <TopLine Value="471"/>
-        <CursorPos X="27" Y="197"/>
-        <UsageCount Value="21"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="332"/>
+        <CursorPos X="32" Y="337"/>
+        <UsageCount Value="23"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit1>
@@ -495,11 +496,10 @@
       </Unit65>
       <Unit66>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="3034"/>
-        <CursorPos Y="3051"/>
-        <UsageCount Value="18"/>
+        <TopLine Value="3351"/>
+        <CursorPos Y="3365"/>
+        <UsageCount Value="19"/>
         <Loaded Value="True"/>
       </Unit66>
       <Unit67>
@@ -507,7 +507,7 @@
         <UnitName Value="FirmataConstants"/>
         <EditorIndex Value="2"/>
         <TopLine Value="103"/>
-        <UsageCount Value="18"/>
+        <UsageCount Value="19"/>
         <Loaded Value="True"/>
       </Unit67>
       <Unit68>
@@ -538,7 +538,7 @@
         <UsageCount Value="10"/>
       </Unit71>
     </Units>
-    <JumpHistory Count="10" HistoryIndex="9">
+    <JumpHistory Count="24" HistoryIndex="23">
       <Position1>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
         <Caret Line="3022" TopLine="3006"/>
@@ -579,6 +579,62 @@
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
         <Caret Line="3053" TopLine="3031"/>
       </Position10>
+      <Position11>
+        <Filename Value="onewire_tcpclient.pas"/>
+        <Caret Line="197" Column="27" TopLine="300"/>
+      </Position11>
+      <Position12>
+        <Filename Value="onewire_tcpclient.pas"/>
+        <Caret Line="253" Column="6" TopLine="355"/>
+      </Position12>
+      <Position13>
+        <Filename Value="onewire_tcpclient.pas"/>
+        <Caret Line="334" Column="15" TopLine="83"/>
+      </Position13>
+      <Position14>
+        <Filename Value="onewire_tcpclient.pas"/>
+        <Caret Line="477" TopLine="467"/>
+      </Position14>
+      <Position15>
+        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="3365" TopLine="3351"/>
+      </Position15>
+      <Position16>
+        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="3366" TopLine="3351"/>
+      </Position16>
+      <Position17>
+        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="3331" TopLine="3317"/>
+      </Position17>
+      <Position18>
+        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="3332" TopLine="3317"/>
+      </Position18>
+      <Position19>
+        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="3333" TopLine="3317"/>
+      </Position19>
+      <Position20>
+        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="3336" TopLine="3317"/>
+      </Position20>
+      <Position21>
+        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="3331" TopLine="3317"/>
+      </Position21>
+      <Position22>
+        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="3337" TopLine="3317"/>
+      </Position22>
+      <Position23>
+        <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <Caret Line="3365" TopLine="3351"/>
+      </Position23>
+      <Position24>
+        <Filename Value="onewire_tcpclient.pas"/>
+        <Caret Line="479" Column="28" TopLine="347"/>
+      </Position24>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
@@ -631,7 +687,7 @@
         <Expression Value="Resolution"/>
       </Item14>
       <Item15 RepeatCount="30">
-        <Expression Value="taskString[0]"/>
+        <Expression Value="FOnewirepin"/>
       </Item15>
       <Item16 RepeatCount="9">
         <Expression Value="TaskString1[-8]"/>

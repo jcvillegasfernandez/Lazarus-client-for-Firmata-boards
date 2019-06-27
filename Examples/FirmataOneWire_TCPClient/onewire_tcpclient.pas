@@ -56,7 +56,6 @@ type
     procedure Memo1Click(Sender: TObject);
     procedure OpenPortClick(Sender: TObject);
     procedure ClosePortClick(Sender: TObject);
-    procedure PinOnewireChange(Sender: TObject);
     procedure PinsChange(Sender: TObject);
     procedure ReadtempClick(Sender: TObject);
     procedure SearchClick(Sender: TObject);
@@ -251,7 +250,6 @@ procedure TForm1.Board1FirmataReady(sender: TObject);
 var
   i: integer;
 begin
-  memo1.clear;
   //client.OnStatus:=nil;
   //client.OnMonitor:=nil;
   memo1.lines.add('Firmata started in, '+inttostr(Board1.StartingTime)+' milisec');
@@ -313,11 +311,6 @@ begin
     CreateTask.Enabled:=False;
 end;
 
-procedure TForm1.PinOnewireChange(Sender: TObject);
-begin
-   ReadTemp.enabled:=False;
-end;
-
 procedure TForm1.PinsChange(Sender: TObject);
 begin
      if OneWire1.OneWirePin = strtoint(Pins.Text) then   // same pin
@@ -341,7 +334,7 @@ begin
   OneWire1.ResetAndSelect;
   OneWire1.Write(chr($44));  // convert temperature command
   Correlation:=2;
-  sleep(100 << (Resolution - 9));  // need a delay, 800 ms for high resolution
+  sleep(110 << (Resolution - 9));  // need a delay, 800 ms for high resolution
   OneWire1.ResetAndSelect;
   OneWire1.WriteAndRead(9, correlation, chr($BE)); // $BE Send command to read Scratchpad 8 bytes + CRC
 end;

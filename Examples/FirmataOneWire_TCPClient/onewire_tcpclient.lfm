@@ -5,8 +5,8 @@ object Form1: TForm1
   Width = 1123
   BorderStyle = bsDialog
   Caption = 'Form1'
-  ClientHeight = 0
-  ClientWidth = 0
+  ClientHeight = 758
+  ClientWidth = 1123
   Font.Height = -13
   OnClose = FormClose
   OnCreate = FormCreate
