@@ -19,9 +19,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="i2c_TCPClient"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="703"/>
-        <CursorPos X="28" Y="340"/>
+        <TopLine Value="258"/>
+        <CursorPos X="29" Y="279"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -391,7 +390,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="104"/>
         <CursorPos X="28" Y="412"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="10"/>
       </Unit51>
       <Unit52>
         <Filename Value="..\..\MisComponentes\TLazSerial-master\lazserial.pas"/>
@@ -551,6 +550,7 @@
       </Unit72>
       <Unit73>
         <Filename Value="..\..\FirmataBoard\firmataboard.pas"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <TopLine Value="1849"/>
         <CursorPos Y="1871"/>
