@@ -206,7 +206,10 @@ begin
   if Copy(Move.Caption, 1, 4) <> 'Move' then
   begin
     if FastStop.Visible or (Move.Caption <> 'Stop') then // motor has been stopped
+    begin
+      AccelStepper1.MotorEnable(false);  // disable power
       Memo1.Lines.Add('Motor has been stopped');
+    end;
     if ToggleBox1.Checked then
       Move.Caption:='Move to'
     else
@@ -326,7 +329,7 @@ end;
 
 function TForm1.Board1DeviceDataAvailable(sender: TObject): Boolean;
 begin
-  Result:=client.CanReadEx(5);
+  Result:=client.CanReadEx(50);
 end;
 
 procedure TForm1.Board1Error(sender: TObject; Error: integer;

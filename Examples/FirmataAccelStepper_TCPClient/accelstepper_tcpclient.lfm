@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 31
+  Left = 115
   Height = 855
-  Top = 127
+  Top = 123
   Width = 1181
   Caption = 'Form1'
   ClientHeight = 855
@@ -140,7 +140,7 @@ object Form1: TForm1
     Height = 84
     Top = 64
     Width = 382
-    Caption = 'Motor Pins (on esp8266)'#13#10#13#10'motorpin 1 (pin 1) to In 1        motorpin 2 (pin 2) to In 2'#13#10'motorpin 3 (pin 3) to In 3        motorpin 4 (pin 4) to In 4'
+    Caption = 'Motor Pins (on esp8266)'#13#10#13#10'motorpin 1 (pin 1) to In 1        motorpin 2 (pin 2) to In 3'#13#10'motorpin 3 (pin 3) to In 2        motorpin 4 (pin 4) to In 4'
     Font.Height = -16
     ParentColor = False
     ParentFont = False

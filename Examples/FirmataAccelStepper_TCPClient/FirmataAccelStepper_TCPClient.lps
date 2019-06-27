@@ -19,8 +19,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="187"/>
-        <CursorPos Y="206"/>
+        <TopLine Value="319"/>
+        <CursorPos X="30" Y="332"/>
         <UsageCount Value="203"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -664,15 +664,6 @@
     </RunParams>
   </ProjectSession>
   <Debugging>
-    <BreakPoints Count="1">
-      <Item1>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="accelstepper_tcpclient.pas"/>
-        <Line Value="206"/>
-      </Item1>
-    </BreakPoints>
     <Watches Count="14">
       <Item1 RepeatCount="10">
         <Expression Value="data7bit[0]"/>
