@@ -285,7 +285,7 @@ begin
   OneWire1.ResetAndSelect;
   OneWire1.Write(chr($44));  // convert temperature command
   Correlation:=2;
-  sleep(100 << (Resolution - 9));  // need a delay, 800 ms for high resolution
+  sleep(110 << (Resolution - 9));  // need a delay, 800 ms for high resolution
   OneWire1.ResetAndSelect;
   OneWire1.WriteAndRead(9, correlation, chr($BE)); // $BE Send command to read Scratchpad 8 bytes + CRC
 end;
