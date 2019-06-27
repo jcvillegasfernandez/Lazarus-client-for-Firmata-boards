@@ -24,6 +24,8 @@ type
     Label4: TLabel;
     Label5: TLabel;
     Label6: TLabel;
+    Label7: TLabel;
+    Label8: TLabel;
     Reporting: TToggleBox;
     x_Edit: TEdit;
     Label3: TLabel;
@@ -44,7 +46,7 @@ type
     procedure Board1Error(sender: TObject; Error: integer; TextError: string; Afected: integer);
     procedure Board1FirmataData(sender: TObject; Command: Byte; Data: string);
     procedure Board1FirmataReady(sender: TObject);
-    function Board1GetDataFromDevice(sender: TObject): integer;
+    function Board1GetDataFromDevice(sender: TObject): string;
     procedure Board1SendDataToDevice(sender: TObject; str: string);
     procedure FormCreate(Sender: TObject);
     procedure configureClick(Sender: TObject);
@@ -54,8 +56,7 @@ type
     procedure ClosePortClick(Sender: TObject);
     procedure PS2Mouse1MouseData(sender: TObject; MouseData: TPS2MouseData);
     procedure PS2Mouse1MouseDeviceID(sender: TObject; MouseType: TMouseType);
-    procedure PS2Mouse1MouseStatus(sender: TObject; MouseStatus: TPS2MouseStatus);
-    procedure ReportingClick(Sender: TObject);
+    procedure ReportingChange(Sender: TObject);
   private
     { private declarations }
   public
@@ -267,18 +268,13 @@ begin
    end;
 end;
 
-procedure TForm1.PS2Mouse1MouseStatus(sender: TObject; MouseStatus: TPS2MouseStatus);
-begin
-  ;
-end;
-
-procedure TForm1.ReportingClick(Sender: TObject);
+procedure TForm1.ReportingChange(Sender: TObject);
 begin
   if Reporting.Checked then
   begin
-     Reporting.Caption:='Reporting On';
-     PS2Mouse1.Reporting:=True;
-     GetMouseData.Enabled:=False;
+    Reporting.Caption:='Reporting On';
+    PS2Mouse1.Reporting:=True;
+    GetMouseData.Enabled:=False;
   end
   else
   begin
@@ -290,15 +286,12 @@ end;
 
 function TForm1.Board1DeviceDataAvailable(sender: TObject): Boolean;
 begin
-  Result:=LazSerial1.DataAvailable;
+  Result:=LazSerial1.SynSer.CanReadEx(100);
 end;
 
-function TForm1.Board1GetDataFromDevice(sender: TObject): integer;
+function TForm1.Board1GetDataFromDevice(sender: TObject): string;
 begin
-  if LazSerial1.DataAvailable then
-    Result:=LazSerial1.SynSer.RecvByte(100)
-  else
-    Result:=-1; // error
+    Result:=LazSerial1.ReadData;
 end;
 
 procedure TForm1.Board1SendDataToDevice(sender: TObject; str: string);
