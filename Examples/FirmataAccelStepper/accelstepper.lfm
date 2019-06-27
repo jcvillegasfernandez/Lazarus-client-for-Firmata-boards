@@ -1,11 +1,11 @@
 object Form1: TForm1
-  Left = 17
+  Left = 18
   Height = 855
-  Top = 120
+  Top = 113
   Width = 1193
   Caption = 'Form1'
-  ClientHeight = 855
-  ClientWidth = 1193
+  ClientHeight = 0
+  ClientWidth = 0
   Font.Height = -17
   OnCreate = FormCreate
   LCLVersion = '2.0.2.0'
@@ -147,8 +147,8 @@ object Form1: TForm1
     Left = 383
     Height = 84
     Top = 64
-    Width = 395
-    Caption = 'Motor Pins:'#13#10#13#10'motorpin 1 (pin 8)  to In 1        motorpin 2 (pin 10) to In 2'#13#10'motorpin 3 (pin 9)  to In 3        motorpin 4 (pin 11) to In 4'
+    Width = 400
+    Caption = 'Motor Pins:'#13#10#13#10'motorpin 1 (pin 8)   to In 1        motorpin 2 (pin 9)   to In 3'#13#10'motorpin 3 (pin10)  to In 2        motorpin 4 (pin 11) to In 4'
     Font.Height = -16
     ParentColor = False
     ParentFont = False
@@ -224,10 +224,10 @@ object Form1: TForm1
   object AccelStepper1: TAccelStepper
     Board = Board1
     Device = 0
-    MotorPin1_or_DriverStep = 5
-    MotorPin2_or_DriverDirection = 7
-    MotorPin3 = 6
-    MotorPin4 = 8
+    MotorPin1_or_DriverStep = 8
+    MotorPin2_or_DriverDirection = 9
+    MotorPin3 = 10
+    MotorPin4 = 11
     MotorEnablePin = 127
     InvertMotorPin1 = False
     InvertMotorPin2 = False

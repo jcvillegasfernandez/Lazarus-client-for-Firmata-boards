@@ -45,7 +45,7 @@ type
     procedure Board1Error(sender: TObject; Error: integer; TextError: string; Afected: integer);
     procedure Board1FirmataData(sender: TObject; Command: Byte; Data: string);
     procedure Board1FirmataReady(sender: TObject);
-    function Board1GetDataFromDevice(sender: TObject): integer;
+    function Board1GetDataFromDevice(sender: TObject): string;
     procedure Board1SendDataToDevice(sender: TObject; str: string);
     procedure FastStopClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -138,7 +138,10 @@ begin
   if Copy(Move.Caption, 1, 4) <> 'Move' then
   begin
     if FastStop.Visible or (Move.Caption <> 'Stop') then // motor has been stopped
+    begin
+      AccelStepper1.MotorEnable(false); // disable power for motor
       Memo1.Lines.Add('Motor has been stopped');
+    end;
     if ToggleBox1.Checked then
       Move.Caption:='Move to'
     else
@@ -247,12 +250,9 @@ begin
   LazSerial1.WriteData(str);
 end;
 
-function TForm1.Board1GetDataFromDevice(sender: TObject): integer;
+function TForm1.Board1GetDataFromDevice(sender: TObject): string;
 begin
-  if LazSerial1.SynSer.CanReadEx(0) then
-    Result:=LazSerial1.SynSer.RecvByte(100)
-  else
-    Result:=-1;
+  Result:=LazSerial1.ReadData;
 end;
 
 procedure TForm1.Board1BeforeOpen(sender: TObject);
@@ -273,7 +273,7 @@ end;
 
 function TForm1.Board1DeviceDataAvailable(sender: TObject): Boolean;
 begin
-  Result:=LazSerial1.Synser.CanReadEx(0);
+  Result:=LazSerial1.Synser.CanReadEx(100);
 end;
 
 procedure TForm1.Board1Error(sender: TObject; Error: integer;
