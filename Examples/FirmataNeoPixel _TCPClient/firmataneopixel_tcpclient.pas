@@ -370,7 +370,7 @@ end;
 
 function TFormNeo1.Board1DeviceDataAvailable(sender: TObject): Boolean;
 begin
-  Result:=client.CanReadEx(10);
+  Result:=client.CanReadEx(5);
 end;
 
 function TFormNeo1.Board1GetDataFromDevice(sender: TObject): string;

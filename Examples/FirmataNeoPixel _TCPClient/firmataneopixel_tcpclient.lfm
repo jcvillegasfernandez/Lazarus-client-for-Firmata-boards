@@ -1,14 +1,14 @@
 object FormNeo1: TFormNeo1
-  Left = 47
+  Left = 353
   Height = 771
-  Top = 113
-  Width = 1151
+  Top = 218
+  Width = 1149
   ActiveControl = Server
   Anchors = [akTop]
   BorderStyle = bsDialog
   Caption = 'FormNeo1'
   ClientHeight = 771
-  ClientWidth = 1151
+  ClientWidth = 1149
   Font.CharSet = ANSI_CHARSET
   Font.Height = -13
   Font.Name = 'Arial'
@@ -20,7 +20,7 @@ object FormNeo1: TFormNeo1
   object OpenPort: TButton
     Left = 208
     Height = 26
-    Top = 32
+    Top = 78
     Width = 116
     Caption = 'open'
     Font.CharSet = ANSI_CHARSET
@@ -35,7 +35,7 @@ object FormNeo1: TFormNeo1
   object ClosePort: TButton
     Left = 208
     Height = 26
-    Top = 72
+    Top = 118
     Width = 116
     Caption = 'close'
     Enabled = False
@@ -51,7 +51,7 @@ object FormNeo1: TFormNeo1
   object Server: TEdit
     Left = 71
     Height = 24
-    Top = 32
+    Top = 78
     Width = 123
     Font.CharSet = ANSI_CHARSET
     Font.Height = -13
@@ -65,7 +65,7 @@ object FormNeo1: TFormNeo1
   object Label1: TLabel
     Left = 16
     Height = 16
-    Top = 40
+    Top = 86
     Width = 40
     Caption = 'Server:'
     Font.CharSet = ANSI_CHARSET
@@ -83,7 +83,7 @@ object FormNeo1: TFormNeo1
     Width = 1120
     Enabled = False
     Font.CharSet = ANSI_CHARSET
-    Font.Height = -12
+    Font.Height = -11
     Font.Name = 'Arial'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
@@ -110,9 +110,9 @@ object FormNeo1: TFormNeo1
     ParentFont = False
   end
   object Pins: TComboBox
-    Left = 205
+    Left = 221
     Height = 25
-    Top = 120
+    Top = 151
     Width = 79
     Enabled = False
     Font.Height = -13
@@ -121,9 +121,9 @@ object FormNeo1: TFormNeo1
     TabOrder = 4
   end
   object Label3: TLabel
-    Left = 160
+    Left = 176
     Height = 16
-    Top = 127
+    Top = 158
     Width = 23
     Caption = 'Pin:'
     Font.CharSet = ANSI_CHARSET
@@ -399,7 +399,7 @@ object FormNeo1: TFormNeo1
   object Port: TEdit
     Left = 71
     Height = 24
-    Top = 72
+    Top = 118
     Width = 62
     Font.CharSet = ANSI_CHARSET
     Font.Height = -13
@@ -413,7 +413,7 @@ object FormNeo1: TFormNeo1
   object Label6: TLabel
     Left = 16
     Height = 16
-    Top = 77
+    Top = 123
     Width = 28
     Caption = 'Port:'
     Font.CharSet = ANSI_CHARSET
