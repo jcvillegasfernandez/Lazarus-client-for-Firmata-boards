@@ -373,18 +373,15 @@ begin
      Label7.Visible:=false
    end;
 
-   if Pin2.Mode <> ByteToPinModes(Modes.ItemIndex) then
-      begin
-        if Pin2.Enabled then
-        begin
-          Pin2.Enabled:=false;
-          ToggleReport.Checked:=false;
-        end;
-        Pin2.Mode:=ByteToPinModes(Modes.ItemIndex);  // new pin mode
-        Valuewrite.Text:='0';
-        Pin2.Enabled:=True;   // enable set new pin mode
-        ToggleReport.Checked:=Pin2.Reporting;
-      end;
+   if Pin2.Enabled then
+   begin
+     Pin2.Enabled:=false;
+     ToggleReport.Checked:=false;
+   end;
+   Pin2.Mode:=ByteToPinModes(Modes.ItemIndex);  // new pin mode
+   Valuewrite.Text:='0';
+   Pin2.Enabled:=True;   // enable set new pin mode
+   ToggleReport.Checked:=Pin2.Reporting;
 end;
 
 procedure TForm1.ValuewriteEditingDone(Sender: TObject);

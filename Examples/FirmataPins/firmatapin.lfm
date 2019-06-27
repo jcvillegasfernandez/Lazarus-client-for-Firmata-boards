@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 110
+  Left = 48
   Height = 722
-  Top = 270
+  Top = 173
   Width = 1187
   ActiveControl = Puerto
   Anchors = [akTop]

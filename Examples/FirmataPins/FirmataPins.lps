@@ -7,7 +7,7 @@
       <Unit0>
         <Filename Value="FirmataPins.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="3"/>
         <CursorPos X="10" Y="10"/>
         <UsageCount Value="164"/>
         <Loaded Value="True"/>
@@ -19,8 +19,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Firmatapin"/>
-        <TopLine Value="425"/>
-        <CursorPos X="90" Y="449"/>
+        <TopLine Value="363"/>
+        <CursorPos Y="376"/>
         <UsageCount Value="164"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -267,8 +267,8 @@
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="3033"/>
-        <CursorPos Y="3054"/>
+        <TopLine Value="2792"/>
+        <CursorPos X="15" Y="2857"/>
         <UsageCount Value="38"/>
         <Loaded Value="True"/>
       </Unit34>
@@ -291,10 +291,11 @@
       <Unit37>
         <Filename Value="../../FirmataBoard/firmataconstants.pas"/>
         <UnitName Value="FirmataConstants"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="125"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="35"/>
         <CursorPos X="19" Y="159"/>
         <UsageCount Value="39"/>
+        <Loaded Value="True"/>
       </Unit37>
       <Unit38>
         <Filename Value="/usr/share/lazarus/2.0.0/lcl/include/control.inc"/>
@@ -405,59 +406,127 @@
         <UsageCount Value="10"/>
       </Unit52>
     </Units>
-    <JumpHistory Count="13" HistoryIndex="12">
+    <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="firmatapin.pas"/>
-        <Caret Line="433" Column="28" TopLine="424"/>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2393" TopLine="2373"/>
       </Position1>
       <Position2>
-        <Filename Value="firmatapin.pas"/>
-        <Caret Line="143" Column="3" TopLine="141"/>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2394" TopLine="2373"/>
       </Position2>
       <Position3>
-        <Filename Value="firmatapin.pas"/>
-        <Caret Line="143" Column="3"/>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2396" TopLine="2373"/>
       </Position3>
       <Position4>
-        <Filename Value="firmatapin.pas"/>
-        <Caret Line="9" Column="50"/>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2398" TopLine="2375"/>
       </Position4>
       <Position5>
-        <Filename Value="firmatapin.pas"/>
-        <Caret Line="87" Column="36"/>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2400" TopLine="2377"/>
       </Position5>
       <Position6>
-        <Filename Value="firmatapin.pas"/>
-        <Caret Line="9" Column="50"/>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2398" TopLine="2377"/>
       </Position6>
       <Position7>
-        <Filename Value="FirmataPins.lpr"/>
-        <Caret Line="10" Column="10"/>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2400" TopLine="2377"/>
       </Position7>
       <Position8>
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
-        <Caret Line="3047" TopLine="3036"/>
+        <Caret Line="2398" TopLine="2377"/>
       </Position8>
       <Position9>
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
-        <Caret Line="3048" TopLine="3033"/>
+        <Caret Line="2400" TopLine="2377"/>
       </Position9>
       <Position10>
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
-        <Caret Line="3049" TopLine="3033"/>
+        <Caret Line="2398" TopLine="2377"/>
       </Position10>
       <Position11>
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
-        <Caret Line="3051" TopLine="3033"/>
+        <Caret Line="2400" TopLine="2377"/>
       </Position11>
       <Position12>
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
-        <Caret Line="3052" TopLine="3033"/>
+        <Caret Line="2402" TopLine="2379"/>
       </Position12>
       <Position13>
         <Filename Value="../../FirmataBoard/firmataboard.pas"/>
-        <Caret Line="3053" TopLine="3033"/>
+        <Caret Line="2403" TopLine="2380"/>
       </Position13>
+      <Position14>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2393" TopLine="2380"/>
+      </Position14>
+      <Position15>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2394" TopLine="2380"/>
+      </Position15>
+      <Position16>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2396" TopLine="2380"/>
+      </Position16>
+      <Position17>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2398" TopLine="2380"/>
+      </Position17>
+      <Position18>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2400" TopLine="2380"/>
+      </Position18>
+      <Position19>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2398" TopLine="2380"/>
+      </Position19>
+      <Position20>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2400" TopLine="2380"/>
+      </Position20>
+      <Position21>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2398" TopLine="2380"/>
+      </Position21>
+      <Position22>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2400" TopLine="2380"/>
+      </Position22>
+      <Position23>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2398" TopLine="2380"/>
+      </Position23>
+      <Position24>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2400" TopLine="2380"/>
+      </Position24>
+      <Position25>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2402" TopLine="2380"/>
+      </Position25>
+      <Position26>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2403" TopLine="2380"/>
+      </Position26>
+      <Position27>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2404" TopLine="2381"/>
+      </Position27>
+      <Position28>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2393" TopLine="2381"/>
+      </Position28>
+      <Position29>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2408" Column="37" TopLine="2385"/>
+      </Position29>
+      <Position30>
+        <Filename Value="../../FirmataBoard/firmataboard.pas"/>
+        <Caret Line="2787" Column="48" TopLine="2770"/>
+      </Position30>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
@@ -465,15 +534,6 @@
     </RunParams>
   </ProjectSession>
   <Debugging>
-    <BreakPoints Count="1">
-      <Item1>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../FirmataBoard/firmataboard.pas"/>
-        <Line Value="3047"/>
-      </Item1>
-    </BreakPoints>
     <Watches Count="19">
       <Item1 RepeatCount="50">
         <Expression Value="FDatatask[-8]"/>
