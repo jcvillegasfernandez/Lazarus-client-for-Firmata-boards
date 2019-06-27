@@ -14,10 +14,10 @@ type
     DeviceID: Byte;
     Address_Size: Byte;
     Name: String;
-    As_Sel: Byte;
+    Hw_Sel: Byte;
     Size: integer;
     PageSize: Byte;
-    Actual_Address: Integer;
+    Current_Address: Integer;
   end;
 
   TBlockValues = record
@@ -61,7 +61,8 @@ type
     procedure Board1Error(sender: TObject; Error: integer; TextError: string; Afected: integer);
     procedure Board1FirmataData(sender: TObject; Command: Byte; Data: string);
     procedure Board1FirmataReady(sender: TObject);
-    function Board1GetDataFromDevice(sender: TObject): integer;
+    function Board1GetDataFromDevice(sender: TObject): string;
+    function Board1DeviceDataAvailable(sender: TObject): Boolean;
     procedure I2C1I2CData(sender: TObject; Slave: Byte; Reg_Number: Byte; Data: string);
     procedure Board1SendDataToDevice(sender: TObject; str: string);
     procedure FormCreate(Sender: TObject);
@@ -71,7 +72,7 @@ type
     procedure OpenPortClick(Sender: TObject);
     procedure ClosePortClick(Sender: TObject);
     procedure ReadDataClick(Sender: TObject);
-    procedure AsignValuesToChip(var Chip: TChip; TypeID: Byte; As_Sel: Byte);
+    procedure AsignValuesToChip(var Chip: TChip; TypeID: Byte; Hw_Sel: Byte);
     procedure AddressEditingDone(Sender: TObject);
     function SetAddress(Chip: TChip): TBlocKValues; // integer 0 is BlockNumber, integer 1 is address in Block
     procedure WriteBytesToDevice(Chip: TChip; Data: String; Display: Boolean);
@@ -134,10 +135,10 @@ begin
   FBytesLeft:=0;
 end;
 
-procedure TForm1.AsignValuesToChip(var Chip: TChip; TypeID: Byte; As_Sel: Byte);
+procedure TForm1.AsignValuesToChip(var Chip: TChip; TypeID: Byte; Hw_Sel: Byte);
 begin
      Chip.TypeID:=TypeID;
-     Chip.Actual_Address:=0;
+     Chip.Current_Address:=0;
      Chip.DeviceID:=%01010000; // 7 bits, no read write bit
 
      case TypeID of
@@ -145,67 +146,67 @@ begin
              Chip.Name:='2401';
              Chip.Size:=128;
              Chip.PageSize:=8;
-             Chip.As_Sel:=As_Sel and %111;  // values of A0, A1, A2
+             Chip.Hw_Sel:=Hw_Sel and %111;  // values of A0, A1, A2
              Chip.Address_Size:=1;
         end;
         1: begin
              Chip.Name:='2402';
              Chip.Size:=256;
              Chip.PageSize:=8;
-             Chip.As_Sel:=As_Sel and %111;  // values of A0, A1, A2
+             Chip.Hw_Sel:=Hw_Sel and %111;  // values of A0, A1, A2
              Chip.Address_Size:=1;
         end;
         2: begin
              Chip.Name:='2404';
              Chip.Size:=512;
              Chip.PageSize:=16;
-             Chip.As_Sel:=(As_Sel and %11) << 1;  // values of A1, A2
+             Chip.Hw_Sel:=(Hw_Sel and %11) << 1;  // values of A1, A2
              Chip.Address_Size:=1;
         end;
         3: begin
              Chip.Name:='2408';
              Chip.Size:=1024;
              Chip.PageSize:=16;
-             Chip.As_Sel:=(As_Sel and %1) << 2;  // value of A2
+             Chip.Hw_Sel:=(Hw_Sel and %1) << 2;  // value of A2
              Chip.Address_Size:=1;
         end;
         4: begin
              Chip.Name:='2416';
              Chip.Size:=2048;
              Chip.PageSize:=16;
-             Chip.As_Sel:=0;  // Not exist
+             Chip.Hw_Sel:=0;  // Not exist
              Chip.Address_Size:=1;
         end;
         5: begin
              Chip.Name:='2432';
              Chip.Size:=4096;
              Chip.PageSize:=32;
-             Chip.As_Sel:=As_Sel and %111;  // values of A0, A1, A2
+             Chip.Hw_Sel:=Hw_Sel and %111;  // values of A0, A1, A2
              Chip.Address_Size:=2;
         end;
         6: begin
              Chip.Name:='2464';
              Chip.Size:=8192;
              Chip.PageSize:=32;
-             Chip.As_Sel:=As_Sel and %111;  // values of A0, A1, A2
+             Chip.Hw_Sel:=Hw_Sel and %111;  // values of A0, A1, A2
              Chip.Address_Size:=2;
         end;
         7: begin
              Chip.Name:='24128';
              Chip.Size:=16384;
              Chip.PageSize:=64;
-             Chip.As_Sel:=As_Sel and %011;  // values of A0, A1
+             Chip.Hw_Sel:=Hw_Sel and %011;  // values of A0, A1
              Chip.Address_Size:=2;
         end;
         8: begin
              Chip.Name:='24256';
              Chip.Size:=32768;
              Chip.PageSize:=64;
-             Chip.As_Sel:=As_Sel and %011;  // values of A0, A1
+             Chip.Hw_Sel:=Hw_Sel and %011;  // values of A0, A1
              Chip.Address_Size:=2;
         end;
      end;
-     Chip.DeviceID:=Chip.DeviceID or Chip.As_Sel;
+     Chip.DeviceID:=Chip.DeviceID or Chip.Hw_Sel;
 end;
 
 procedure TForm1.configureClick(Sender: TObject);
@@ -219,12 +220,14 @@ begin
   LazSerial1.WriteData(str);
 end;
 
-function TForm1.Board1GetDataFromDevice(sender: TObject): integer;
+function TForm1.Board1DeviceDataAvailable(sender: TObject): Boolean;
 begin
-  if LazSerial1.DataAvailable then
-    Result:=LazSerial1.SynSer.RecvByte(100)
-  else
-    Result:=-1;
+  Result:=LazSerial1.SynSer.CanReadEx(150);
+end;
+
+function TForm1.Board1GetDataFromDevice(sender: TObject): string;
+begin
+  Result:=LazSerial1.ReadData;
 end;
 
 procedure TForm1.ClosePortClick(Sender: TObject);
@@ -250,8 +253,8 @@ procedure TForm1.WriteStringClick(Sender: TObject);
 begin
   if StringToWrite.Text = '' then
     exit;
-  // slow method write max of 8 bytes, start addres of writting is Chip.Actual_Address
-  Chip.Actual_Address:=strtoint(Address.Text);
+  // slow method write max of 8 bytes, start addres of writting is Chip.Current_Address
+  Chip.Current_Address:=strtoint(Address.Text);
   WriteBytesToDevice(Chip, StringToWrite.Text, True);
 end;
 
@@ -263,14 +266,15 @@ begin
 
   DataString:='';  // global variable needed because we read by an event;
 
-  // start address of reading is Chip.Actual_Address
-  Chip.Actual_Address:=strtoint(Address.Text);
+  // start address of reading is Chip.Current_Address
+  Chip.Current_Address:=strtoint(Address.Text);
   ReadBytesFromDevice(Chip, FBytesLeft);
 end;
 
 procedure TForm1.I2C1I2CData(sender: TObject; Slave: Byte; Reg_Number: Byte; Data: string);
 var
   StrData: string;
+  i: integer;
 begin
   DataString:=DataString+Data;
   FBytesLeft:=FBytesLeft - Length(Data);
@@ -278,19 +282,19 @@ begin
     exit;
 
   StrData:='';
-  Memo1.Lines.Add('I2C, Slave ('+inttoStr(Slave)+') Data('+IntToStr(Length(DataString) - FBytesLeft)+')='+StrToHexSep(DataString));
-  {For i:=1 to Length(DataString) do
+  Memo1.Lines.Add('I2C, Slave ('+inttoStr(Slave)+') Data('+IntToStr(Length(DataString))+')='+StrToHexSep(DataString));
+  For i:=1 to Length(DataString) do
   begin
     if (DataString[i] >= ' ') and (DataString[i] <= '~') then
       StrData:=StrData+DataString[i]
     else
       StrData:=StrData+' ';
   end;
-  Memo1.Lines.Add('I2C, String('+inttoStr(FBytesRead)+')='+StrData);
-  }
+  Memo1.Lines.Add('I2C ='+StrData);
+
 end;
 
-// slow method write max of 8 bytes, start addres of writting is Chip.Actual_Address
+// slow method write max of 8 bytes, start addres of writting is Chip.Current_Address
 procedure TForm1.WriteBytesToDevice(Chip: TChip; Data: String; Display: Boolean);
 var
   Full_Pages: integer;  // number of full 8, 16 or 64 bytes pages
@@ -307,8 +311,8 @@ begin
     PageSize:=Chip.PageSize;
   // set page size to 16 bytes max instead Chip.pagesize to avoid to run out of firmata
   // max bytes to write, from actual address until chipsize or Data length
-  if (Chip.Actual_Address+Length(Data)) > Chip.Size then  // Start with address 0 to ChipSize-1
-    BytesToWrite:=Chip.Size-Chip.Actual_Address-Length(Data)
+  if (Chip.Current_Address+Length(Data)) > Chip.Size then  // Start with address 0 to ChipSize-1
+    BytesToWrite:=Chip.Size-Chip.Current_Address-Length(Data)
   else
     BytesToWrite:=Length(Data);
 
@@ -317,7 +321,7 @@ begin
   // not the first byte in the next page
 
   // So compute new start page of PageSize
-  First_Page:=Chip.Actual_Address mod PageSize; // position for byte to write in first incomplete page
+  First_Page:=Chip.Current_Address mod PageSize; // position for byte to write in first incomplete page
   // so we have to write (PageSize - position) bytes in the first incomplete page
   First_Page:=PageSize-First_Page;  // First_Page are now bytes to write in first incomplete page
 
@@ -348,7 +352,7 @@ begin
   if Display then
       Memo1.Lines.Add('Written on first page: '+Copy(Data, DataIndex, First_Page));
 
-  Inc(Chip.Actual_Address, First_Page); // new actual address
+  Inc(Chip.Current_Address, First_Page); // new actual address
 
   // new data index
   Inc(DataIndex, First_Page);
@@ -366,7 +370,7 @@ begin
     if Display then
         Memo1.Lines.Add('Written on page '+IntToStr(i)+' : '+Copy(Data, DataIndex, PageSize));
 
-    inc(Chip.Actual_Address, PageSize); // new actual address
+    inc(Chip.Current_Address, PageSize); // new actual address
     // new data index
 
     Inc(DataIndex, PageSize);
@@ -383,7 +387,7 @@ begin
     if Display then
         Memo1.Lines.Add('Written on last page: '+Copy(Data, DataIndex, Last_Page));
 
-    Chip.Actual_Address:=Chip.Actual_Address+Last_Page; // new actual address
+    Chip.Current_Address:=Chip.Current_Address+Last_Page; // new actual address
   end;
 end;
 
@@ -431,7 +435,7 @@ begin
   // Bits 2, 1 = A1 A0 ID Select
 
   // Bit 0 1=R, 0=W
-  Result.AddressInBlock:=Chip.Actual_Address and (Chip.Size-1);
+  Result.AddressInBlock:=Chip.Current_Address and (Chip.Size-1);
   if Chip.Size > 2048 then  // 24XXX
   begin
     Result.BlockNumber:=0
@@ -441,38 +445,40 @@ begin
     Result.BlockNumber:=((Result.AddressInBlock >> 8) and $FF) shl 1;   // get block number, will be 0 for 2401 and 2402
     Result.AddressInBlock:=(Result.AddressInBlock mod 256) and $FF;   // get address inside a block
   end;
-  Result.BlockNumber:=Result.BlockNumber or Chip.As_Sel;  // hardware select
+  Result.BlockNumber:=Result.BlockNumber or Chip.Hw_Sel;  // hardware select
 end;
 
-// Address to read is last Address accesed, is Chip.Actual_Address
+// Address to read is last Address accesed, is Chip.Current_Address
 procedure TForm1.ReadBytesFromDevice(Chip: TChip; BytesToRead: integer);
 var
-  i: integer;
   readbytes: integer;
   slice: byte;
 begin
-  slice:=28; // max continuous bytes read because of firmta
+  slice:=28; // max continuous bytes read because of firmata
   readbytes:=0;
-  for i:=1 to BytesToRead div slice do
+
+  // Calculate BlockNumber and address in block
+  BlockValue:=SetAddress(Chip);
+  // select address on device
+  I2C1.WriteData(Chip.DeviceID or BlockValue.BlockNumber, BlockValue.AddressInBlock, Chip.Address_Size,'');
+
+  while (BytesToRead - ReadBytes) >= slice do
   begin
     // Calculate BlockNumber and address in block
     BlockValue:=SetAddress(Chip);
-
-    I2C1.WriteData(Chip.DeviceID or BlockValue.BlockNumber, BlockValue.AddressInBlock, Chip.Address_Size,''); // select address on device
     I2C1.Read(Chip.DeviceID or BlockValue.BlockNumber, -1, slice, False);
-
-    inc(Chip.Actual_Address, slice);
     inc(readbytes, slice);
+    // set new address
+    inc(Chip.Current_Address, Slice);
   end;
-  i:=BytesToRead - readBytes;
-  if i > 0 then
+  if (BytesToRead - readBytes) > 0 then
   begin
+    // Calculate BlockNumber and address in block
     BlockValue:=SetAddress(Chip);
-    I2C1.WriteData(Chip.DeviceID or BlockValue.BlockNumber, BlockValue.AddressInBlock, Chip.Address_Size,''); // select address on device
-    I2C1.Read(Chip.DeviceID or BlockValue.BlockNumber, -1, i, False);
-    inc(Chip.Actual_Address, i);
+    I2C1.Read(Chip.DeviceID or BlockValue.BlockNumber, -1, BytesToRead - readBytes, False);
   end;
-
+  // set new address
+  inc(Chip.Current_Address, BytesToRead);
 end;
 
 function Tform1.StringToMemo(Data: string): string;
@@ -569,7 +575,7 @@ begin
       s[i]:='0';
   end;
   TEdit(Sender).Text:=s;
-  Chip.As_Sel:=BinToInt(s);
+  Chip.Hw_Sel:=BinToInt(s);
 end;
 
 procedure TForm1.Board1AfterClose(sender: TObject);
