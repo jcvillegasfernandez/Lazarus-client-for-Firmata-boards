@@ -272,7 +272,7 @@ ErrorsArray: array [1..53] of String = (
    //                                 XXXXXX0 = no enable pin
    //                                 XXXXXX1 = has enable pin)
    //
-   MAX_SERVOS =               12; // max sevos devices
+   MAX_SERVOS =               12; // max servos devices
    //
    MAX_ENCODERS =             5; // max encoders devices
    ENCODER_ATTACH =           $00;  // config

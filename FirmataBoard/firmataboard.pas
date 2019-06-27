@@ -342,7 +342,7 @@ uses
       {:Check if pin is reporting}
       function CheckReportPort(Pin: Byte): Boolean;
       {:get resolution for this pin mode}
-      function GetPinResolution(Pin: Byte; Mode: TPinModes): Integer;
+      function GetPinResolution(Pin: Byte; Mode: TPinModes): longword;
       {:fill a memo with pins capability}
       procedure printPinInfo(Memo: TMemo);
       {: array of Board Pins}
@@ -415,10 +415,10 @@ uses
       {: same as DigitalWrite}
       function SetDigitalPinValue(Value: Byte; write: Boolean=true): string;
       // Analog pins
-      {: write analog value, PWM, servo, etc.}
+      {: write analog value, PWM, servo, etc.. max 14 bits resolution}
       function AnalogWrite(Value: integer; write: Boolean=true): string;
       {: write extended analog value, PWM, servo, etc.}
-      function AnalogWriteExtended(Value: integer; write: Boolean=true): string;
+      function AnalogWriteExtended(Value: longword; write: Boolean=true): string;
       {: Enable/disable analog reporting}
       function AnalogReport(enabled: boolean; write: Boolean=true): string;
       // get command
@@ -433,7 +433,7 @@ uses
       {: enable/disable report for digital pin or analog pin}
       function ReportPin(Enabled: boolean; write: Boolean=true): string;
       {: write analog or digital pin value}
-      function WriteValue(Value: integer; write: Boolean=True): string;
+      function WriteValue(Value: longword; write: Boolean=True): string;
 
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
@@ -858,9 +858,8 @@ uses
       procedure setMaxPulse(Pulse: integer);
       procedure setBoard(Board: TBoard);
       procedure setValue(Value: integer);
-    public
       function WriteValue(write: Boolean=true): string;
-
+    public
       function SendCommand(Data: string; write: Boolean=True): string;
       function SendSysEx(data7bit: string; write: Boolean=true): string;
 
@@ -2385,7 +2384,7 @@ begin
     end;
 end;
 // get resolution of pin
-function TBoard.GetPinResolution(Pin: Byte; Mode: TPinModes): Integer;
+function TBoard.GetPinResolution(Pin: Byte; Mode: TPinModes): longword;
 var
   i: integer;
   NotFound: Boolean;
@@ -2776,18 +2775,13 @@ begin
   Result:=SendCommand(chr(DIGITAL_MESSAGE or Port)+chr(Value and $7F)+chr((value >> 7) and $7F), write);
 end;
 // Write pin value, for digital or analog pin
-function TPin.WriteValue(Value: integer; write: Boolean=True): string;
-var
-  ValueTmp: integer;
+function TPin.WriteValue(Value: longword; write: Boolean=True): string;
 begin
   if FMode = PIN_MODE_OUTPUT then
     Result:=SetDigitalPinValue(Value, write)
   else if FMode in [PIN_MODE_PWM, PIN_MODE_SERVO, PIN_MODE_SHIFT] then
   begin
-    // search for resolution
-    ValueTmp:=Value and FBoard.GetPinResolution(FPin, FMode);
-
-    if (ValueTmp > $3FFF) or (FPin > 15) then
+    if (FBoard.GetPinResolution(FPin, FMode) > $3FFF) or (FPin > 15) then
       Result:=AnalogWriteExtended(Value, write)
     else
       Result:=Analogwrite(Value, write);
@@ -2837,7 +2831,7 @@ begin
     FBoard.RaiseError(11, 'AnalogWrite');
     exit;
   end;
-  // search for resolution
+  // adjust to resolution
   ValueTmp:=Value and FBoard.GetPinResolution(FPin, FMode);
 
   if write then
@@ -2852,15 +2846,15 @@ end;
 4  bits 7-13                (most significant byte)
 ... additional bytes may be sent if more bits are needed
 N  END_SYSEX                (0xF7)}
-function TPin.AnalogWriteExtended(Value: integer; write: Boolean=True): string; // analog write (PWM, Servo, etc) to any pin
+function TPin.AnalogWriteExtended(Value: longword; write: Boolean=True): string; // analog write (PWM, Servo, etc) to any pin
 var
   i: integer;
-  Valuetmp: integer;
+  Valuetmp: longword;
   data: String;
 begin
   data:='';
 
-  // search for resolution
+  // adjust to resolution
   ValueTmp:=Value and FBoard.GetPinResolution(FPin, FMode);
 
   for i:=0 to sizeof(Valuetmp) do
@@ -3705,7 +3699,7 @@ begin
   Mode:=command and I2C_READ_WRITE_MODE_MASK; // only keeps bits 4 and 3
   if mode10bit then
   begin
-     Mode:=Mode or ((Slave >> 7) and 7); // takes bits 7,8 and 9 from slave ¿?
+     Mode:=Mode or ((Slave >> 8) and 7); // takes bits 7,8 and 9 from slave ¿?
      Mode:=Mode or I2C_10BIT_ADDRESS_MODE_MASK;  // set 10 bit mode, bit 5 on
   end;
 
@@ -5130,7 +5124,7 @@ end;
 7  END_SYSEX            (0xF7) }
 function TServo.config(write: Boolean=true): string;
 begin
-  Result:=SendSysEx(chr(SERVO_CONFIG)+chr(FPin)+chr(FMinPulse and $7F)+chr((FMinPulse >> 7) and $7F)+chr(FMaxPulse and $7F)+chr((FMaxPulse << 7) and $7F), write);
+  Result:=SendSysEx(chr(SERVO_CONFIG)+chr(FPin)+chr(FMinPulse and $7F)+chr((FMinPulse >> 7) and $7F)+chr(FMaxPulse and $7F)+chr((FMaxPulse >> 7) and $7F), write);
   if write then
     FBoard.FBoardPins[FPin].ActualMode:=PinModesToByte(PIN_MODE_SERVO);
 end;
@@ -5154,28 +5148,28 @@ N  END_SYSEX     (0xF7)}
 function TServo.AnalogWriteExtended(Value: integer; write: Boolean=true): string;
 var
   i: integer;
-  Valuetmp: integer;
+  tmpValue: integer;
   data: String;
 begin
   data:='';
 
   // search for resolution
-  ValueTmp:=Value and FBoard.GetPinResolution(FPin, PIN_MODE_SERVO);
+  TmpValue:=Value and FBoard.GetPinResolution(FPin, PIN_MODE_SERVO);
 
-  for i:=0 to sizeof(Valuetmp) do
+  for i:=0 to sizeof(tmpValue) do
   begin
-    data:=chr(Valuetmp and $FF)+data;  // LSB byte ,MSB byte
-    Valuetmp:=Valuetmp>>8; // get new byte
-    if Valuetmp = 0 then  // no more data to send
+    data:=data+chr(tmpValue and $FF);  // LSB byte ,MSB byte
+    tmpValue:=tmpValue>>8; // get new byte
+    if tmpValue = 0 then  // no more data to send
       break;
   end;
   if write then
-    FValue:=ValueTmp;
+    FValue:=tmpValue;
 
   Result:=SendSysEx(chr(EXTENDED_ANALOG)+chr(FPin)+Encode8To7Bit(data), write);
 end;
 {Write to servo, servo write is performed if the pin mode is SERVO
-if value > $3FFF (14 bits) or Pin > 15 then extended analog write else Analog Write }
+if value > $3FFF (14 bits) or Fin > 15 then extended analog write else Analog Write }
 function TServo.WriteValue(write: Boolean=true): string;
 begin
   if (FValue > $3FFF) or (FPin > 15) then
@@ -5183,6 +5177,7 @@ begin
   else
     Result:=AnalogWrite(FValue, write);
 end;
+
 //
 //
 //

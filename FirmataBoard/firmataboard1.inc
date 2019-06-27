@@ -134,7 +134,7 @@ begin
       FEnabled:=false; // firmataboard not enabled
       FBoard.RaiseError(36, 'setEnabled');
     end;
-    if FDevice = PinModesToByte(PIN_MODE_IGNORE) then // There isn't a free mouse
+    if FEnabled and (FDevice = PinModesToByte(PIN_MODE_IGNORE)) then // There isn't a free mouse
     begin
       FEnabled:=False;
       FBoard.RaiseError(44, 'setEnabled');
@@ -590,7 +590,7 @@ begin
       FEnabled:=false; // firmataboard not enabled
       FBoard.RaiseError(36, 'setEnabled');
     end;
-    if FDevice = PinModesToByte(PIN_MODE_IGNORE) then // There isn't a free mouse
+    if FDevice = PinModesToByte(PIN_MODE_IGNORE) then // There isn't any free
     begin
       FEnabled:=False;
       FBoard.RaiseError(44, 'setEnabled');
