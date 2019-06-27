@@ -48,7 +48,8 @@ type
     procedure Board1Error(sender: TObject; Error: integer; TextError: string; Afected: integer);
     procedure Board1FirmataData(sender: TObject; Command: Byte; Data: string);
     procedure Board1FirmataReady(sender: TObject);
-    function Board1GetDataFromDevice(sender: TObject): integer;
+    function Board1GetDataFromDevice(sender: TObject): string;
+    function Board1DeviceDataAvailable(sender: TObject): Boolean;
     procedure Board1SendDataToDevice(sender: TObject; str: string);
     procedure configureClick(Sender: TObject);
     procedure fadeconfigClick(Sender: TObject);
@@ -315,12 +316,14 @@ begin
   NeoPixel1.ShiftRun(NeoPixel1.ShiftType and $FE);  // shift left
 end;
 
-function TForm1.Board1GetDataFromDevice(sender: TObject): integer;
+function TForm1.Board1DeviceDataAvailable(sender: TObject): Boolean;
 begin
-  if LazSerial1.DataAvailable then
-    Result:=LazSerial1.SynSer.RecvByte(100)
-  else
-    Result:=-1; // error
+  Result:=LazSerial1.SynSer.CanReadEx(100);
+end;
+
+function TForm1.Board1GetDataFromDevice(sender: TObject): string;
+begin
+    Result:=LazSerial1.ReadData;
 end;
 
 procedure TForm1.Board1SendDataToDevice(sender: TObject; str: string);
