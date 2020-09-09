@@ -9,12 +9,11 @@
       <Version Value="11"/>
       <PathDelim Value="\"/>
       <SearchPaths>
-        <OtherUnitFiles Value="."/>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
     </CompilerOptions>
-    <Version Minor="9"/>
-    <Files Count="4">
+    <Version Minor="8"/>
+    <Files Count="3">
       <Item1>
         <Filename Value="firmataboard.pas"/>
         <HasRegisterProc Value="True"/>
@@ -28,10 +27,6 @@
         <Filename Value="firmataboard.lrs"/>
         <Type Value="LRS"/>
       </Item3>
-      <Item4>
-        <Filename Value="firmataboard1.inc"/>
-        <Type Value="Include"/>
-      </Item4>
     </Files>
     <RequiredPkgs Count="2">
       <Item1>
