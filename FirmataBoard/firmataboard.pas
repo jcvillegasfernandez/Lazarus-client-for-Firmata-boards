@@ -4490,8 +4490,8 @@ begin
   if write then
     FRunning:=True;
 
-  if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
-    Result:=MotorEnable(True, write);
+  {if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
+    Result:=MotorEnable(True, write); }
   Result:=Result+SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_STEP)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
 end;
 {0  START_SYSEX                            (0xF0)
@@ -4510,8 +4510,8 @@ begin
   if write then
     FRunning:=True;
 
-  if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
-    Result:=MotorEnable(True, write);
+  {if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
+    Result:=MotorEnable(True, write); }
   Result:=Result+SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_TO)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
 end;
 {0  START_SYSEX                             (0xF0)
@@ -4535,7 +4535,7 @@ begin
 end;
 function TAccelStepper.FastStop(write: Boolean=True): string;
 begin
-  // set Acceleration posible
+  // set Max Acceleration posible
   Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_SET_ACCELERATION)+chr(FDevice)+EncodeAccelFloat(1000000), write);
   Result:=Result+Stop(write);   // stop with max acceleration
   // recover Acceleration
