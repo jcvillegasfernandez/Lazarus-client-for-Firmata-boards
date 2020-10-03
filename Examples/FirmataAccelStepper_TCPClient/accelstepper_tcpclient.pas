@@ -254,8 +254,9 @@ begin
   begin
     memo1.Lines.add('');
     memo1.Lines.add('AccelStepper module is not installed or there aren''t any free supported pins in ConfigurableFirmata');
-   exit;
+    exit;
   end;
+  move.Enabled:=True;  
 end;
 
 procedure TForm1.ClosePortClick(Sender: TObject);
@@ -269,6 +270,7 @@ begin
       Move.Caption:='Move to'
     else
       Move.Caption:='Move';
+    move.Enabled:=False;  
     memo1.Clear;
     //client.OnStatus:=@SocketStatusHandler;
     //client.OnMonitor:=@MonitorSocket;
