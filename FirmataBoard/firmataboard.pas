@@ -4366,8 +4366,8 @@ begin
     else
     begin
       FRunning:=False; // stepper has stopped
-      if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
-        MotorEnable(False);
+      //if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
+      //  MotorEnable(False);
       if Assigned(FBoard.FAccelSteppers[Device].FOnStepperMoveCompleted) then
           FBoard.FAccelSteppers[Device].FOnStepperMoveCompleted(self, Device, Position);
     end;
@@ -4463,6 +4463,7 @@ begin
     end;
     if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
       FBoard.FBoardPins[FMotorEnablePin].ActualMode:=PinModesToByte(PIN_MODE_STEPPER);
+      // Arduino sets Pin FMotorEnablePin as OUTPUT HIGH if not inverted
   end;
 end;
 {0  START_SYSEX                            (0xF0)
@@ -4522,7 +4523,8 @@ end;
 5  END_SYSEX                               (0xF7)}
 function TAccelStepper.MotorEnable(State: Boolean; write: Boolean=True): string;
 begin
-  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_ENABLE)+chr(FDevice)+chr(ord(State)), write);
+  if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
+    Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_ENABLE)+chr(FDevice)+chr(ord(State)), write);
 end;
 {0  START_SYSEX                             (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
