@@ -111,7 +111,7 @@ end;
 
 procedure TForm1.MoveClick(Sender: TObject);
 begin
-  AccelStepper1.MotorEnable(True);  // enable motor
+  //AccelStepper1.MotorEnable(True);  // enable motor
   if Copy(Move.Caption, 1, 4) = 'Move' then
   begin
     AccelStepper1.Steps:=strtoint(steps.text);
@@ -137,7 +137,7 @@ end;
 
 procedure TForm1.AccelStepper1StepperMoveCompleted(sender: TObject; Device: byte; Position: integer);
 begin
-  AccelStepper1.MotorEnable(False);  // disable motor
+  //AccelStepper1.MotorEnable(False);  // disable motor
   if Copy(Move.Caption, 1, 4) <> 'Move' then
   begin
     if FastStop.Visible or (Move.Caption <> 'Stop') then // motor has been stopped
@@ -183,7 +183,7 @@ begin
     exit;
   end;
   move.Enabled:=True;
-  AccelStepper1.MotorEnable(False);  // disable motor
+  AccelStepper1.MotorEnable(True);  // enable motor
 end;
 
 procedure TForm1.ClosePortClick(Sender: TObject);
@@ -191,7 +191,6 @@ begin
     if AccelStepper1.Running then
     begin
       AccelStepper1.Enabled:=false;
-      //sleep(round(AccelStepper1.Speed/AccelStepper1.Acceleration*1000)); // max wait for smooth stop
     end;
     if ToggleBox1.Checked then
       Move.Caption:='Move to'

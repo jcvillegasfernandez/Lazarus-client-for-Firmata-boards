@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 615
+  Left = 470
   Height = 855
-  Top = 80
+  Top = 69
   Width = 1065
   Caption = 'Form1'
   ClientHeight = 855
@@ -33,7 +33,7 @@ object Form1: TForm1
   end
   object Puerto: TEdit
     Left = 97
-    Height = 29
+    Height = 26
     Top = 19
     Width = 113
     ParentFont = False
@@ -41,7 +41,7 @@ object Form1: TForm1
   end
   object Steps: TEdit
     Left = 918
-    Height = 29
+    Height = 26
     Top = 8
     Width = 108
     OnEditingDone = StepsEditingDone
@@ -51,18 +51,18 @@ object Form1: TForm1
   end
   object Label6: TLabel
     Left = 865
-    Height = 16
+    Height = 13
     Top = 18
-    Width = 31
+    Width = 38
     Caption = 'Steps:'
     ParentColor = False
     ParentFont = False
   end
   object Label1: TLabel
     Left = 52
-    Height = 16
+    Height = 13
     Top = 29
-    Width = 25
+    Width = 28
     Caption = 'Port:'
     ParentColor = False
     ParentFont = False
@@ -85,9 +85,9 @@ object Form1: TForm1
   end
   object Label2: TLabel
     Left = 25
-    Height = 16
+    Height = 13
     Top = 179
-    Width = 295
+    Width = 342
     Caption = 'Pins (click in memo to show pin modes and capabilities):'
     ParentColor = False
     ParentFont = False
@@ -104,16 +104,16 @@ object Form1: TForm1
   end
   object Label4: TLabel
     Left = 720
-    Height = 16
+    Height = 13
     Top = 18
-    Width = 37
+    Width = 44
     Caption = 'Device:'
     ParentColor = False
     ParentFont = False
   end
   object MotorDevice: TEdit
     Left = 777
-    Height = 29
+    Height = 26
     Top = 8
     Width = 73
     Enabled = False
@@ -135,9 +135,9 @@ object Form1: TForm1
   end
   object Label3: TLabel
     Left = 472
-    Height = 22
+    Height = 23
     Top = 8
-    Width = 121
+    Width = 178
     Caption = 'Driver drv8825'
     Font.Height = -21
     Font.Style = [fsBold]
@@ -148,7 +148,7 @@ object Form1: TForm1
     Left = 376
     Height = 85
     Top = 32
-    Width = 202
+    Width = 262
     Caption = 'drv8825 Pins:'#13#10#10'Step  (pin 6)    Enable  (pin 13)    '#10'Dir    (pin 5)    '#13#10'    '
     Font.Height = -16
     ParentColor = False
@@ -166,9 +166,9 @@ object Form1: TForm1
   end
   object Label7: TLabel
     Left = 720
-    Height = 16
+    Height = 13
     Top = 57
-    Width = 56
+    Width = 66
     Caption = 'Move type:'
     ParentColor = False
     ParentFont = False
@@ -237,7 +237,7 @@ object Form1: TForm1
     InvertEnablePin = True
     InterfaceType = ACCEL_INTERFACE_DRIVER
     StepSize = WHOLE_STEP
-    Speed = 700
+    Speed = 500
     Steps = 0
     Acceleration = 0
     OnStepperPosition = AccelStepper1StepperPosition
