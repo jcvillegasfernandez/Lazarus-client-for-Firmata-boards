@@ -118,6 +118,7 @@ ErrorsArray: array [1..53] of String = (
    PS2MOUSE_DATA =           $50; // user defined command PS2 mouse
    NEOPIXELS_DATA =          $51; // user defined command Neopixels
    SERIAL_DATA =             $60; // SERIAL DATA
+   SERIAL_MESSAGE =          $60; // SERIAL DATA
    ENCODER_DATA =            $61; // reply with encoders current positions
    ACCELSTEPPER_DATA =       $62; // Accelerated stepper data
    SERVO_CONFIG =            $70; // set max angle, minPulse, maxPulse, freq

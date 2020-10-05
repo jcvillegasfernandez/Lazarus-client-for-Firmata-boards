@@ -2191,7 +2191,7 @@ begin
                   FOnBoardData(self, STRING_DATA, DataString);
           end;
           {0  START_SYSEX        (0xF0)
-          1  SERIAL_DATA        (0x60)
+          1  SERIAL_DATA      (0x60)
           2  SERIAL_REPLY       (0x40) // OR with port (0x41 = SERIAL_REPLY | HW_SERIAL1)
           3  data 0             (LSB)
           4  data 0             (MSB)
@@ -2199,7 +2199,7 @@ begin
           4  data 1             (MSB)
           ...                   //up to max buffer - 5
           n  END_SYSEX          (0xF7)}
-          SERIAL_MESSAGE: begin // $60
+          SERIAL_DATA: begin // $60
             ReadByte:=GetNextByte;
             Port:=ReadByte;  // get port
             ReadByte:=GetNextByte;
