@@ -1,0 +1,38 @@
+Cosas que deberían estar ya corregidas en ConfigurableFirmata.
+
+Primero arreglar el problema de compatibilidad de FirmataScheduler y OnewireFirmata con dispositivos distintos de Arduino Uno, como ESP8266, ESP32 y probablemente otros debido a los diferentes tamaños de pointer, Int y long, copiar los ficheros "FirmataScheduler.cpp" y "OneWireFirmata.cpp" desde "Copy to ConfigurableFirmata source" a "scr" en la biblioteca "ConfiguableFirmata" .
+
+Corregir un error (difícil de detectar) cuando el tamaño de la orden SYSEX a enviar es de 64 (tamaño del búfer), se pierde el último byte, funciona bien con cualquier otro valor.
+cambiar
+...
+else {
+      //normal data byte - add to buffer
+      storedInputData[sysexBytesRead] = inputData;
+      sysexBytesRead++;
+	  if (sysexBytesRead == MAX_DATA_BYTES)
+	  {
+		  Firmata.sendString(F("Discarding input message, out of buffer"));
+		  parsingSysex = false;
+		  sysexBytesRead = 0;
+        waitForData = 0;
+      }
+ }
+...
+Por
+...
+else {
+	if (sysexBytesRead == MAX_DATA_BYTES)
+	{
+	  Firmata.sendString(F("Discarding input message, out of buffer"));
+	  parsingSysex = false;
+	  sysexBytesRead = 0;
+          waitForData = 0;
+        }
+	else {
+          //normal data byte - add to buffer
+          storedInputData[sysexBytesRead] = inputData;
+          sysexBytesRead++;
+        }
+    }
+...
+O copiar "ConfiguableFirmata.cpp" desde "Copy to ConfigurableFirmata source" a "scr" en la biblioteca "ConfiguableFirmata" . 
