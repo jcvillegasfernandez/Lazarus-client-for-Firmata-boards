@@ -1,14 +1,14 @@
-# Lazarus client for Firmata boards
-Components working with Configurable Firmata boards on Lazarus (free Pascal)
+# Lazarus (Pascal) client, package for Firmata, ConfigurableFirmata, etc, boards
+A set of components running on Lazarus (free Pascal) for devices with Firmata, designed under ConfigurableFirmata. (Probably easy to port to Delphi.)
 
-I have built some pieces to work with Lazarus (I think it will be easy to port to Delphi).
+First of all, is to install the FirmataBoard.lpk package, it is in the FirmataBoard directory. Once installed, it will create a tab in the component palette called 'Firmata'.
+At the moment supported protocol version is 2.6 firmware 2.12, but it could work with other versions, especially with other ConfigurableFirmata.
 
-To install the components, install FirmataBoard.lpk package, in FirmataBoard directory.
-There are simple docs, Spanish and English (I hope you understand them) in order to look how they work.
-The core component is TBoard where you can link different modules TPin, TI2C, TTask, TOneWire, TAccelStepper, TServo, TPS2Mouse, TNeoPixel, etc. You can manage some boards (with their own modules) at the same time.
+The main component is TBoard and it is independent of the data source. Different TPin, TTasks (Scheduler), TOneWire, TI2C (currently only one), TAccelStepper, TAccelStepperGroup, TSerial, TServo, TEncoder, TDht, TFrequency modules can be linked to TBoard, if there are enough free pins.
+There are also two more modules TPS2Mouse and TNeoPixel, they are not standard ConfigurableFirmata modules so you have to make small changes in the ConfigurableFirmata code to make them work.
 
-PS2Mouse and NeoPixel are not ConfigurableFirmata standard modules. Some changes in ConfigurableFirmata code to make it work on an esp8266.
+More important is to modify the code of ConfiguableFirmata so that Scheduler and Onewire work correctly on an ESP8266, ESP32 and other types of devices, since as they are they only work with Arduino.
 
-Take a look to the examples. I made all my tests on Arduino Uno board and NodeMCU ver 1.0 (ESP-12E module).
+Some usage examples are shown. The examples of use by serial port were done on Arduino Uno, ESP8266 and ESP32. An example of use through TCP is also attached. This test was carried out with ESP32.
 
-At this moment it is a beta version 0.13, I made a few examples, if there is not an example for a module it means not tested.
+It is still a beta version of the 2.6 protocol, the modules that do not have an example they have not been tested but should work.
