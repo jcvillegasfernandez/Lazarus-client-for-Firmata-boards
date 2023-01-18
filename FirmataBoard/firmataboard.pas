@@ -48,15 +48,12 @@ interface
 
 uses
 {$IFDEF LINUX}
-  Classes,
 {$IFDEF UseCThreads}
   cthreads,
 {$ENDIF}
-{$ELSE}
-  Classes, //registry,
 {$ENDIF}
- ExtCtrls, sysUtils, forms, firmataconstants,
-  StdCtrls, dialogs,  LResources, LclIntf, math, graphics;
+  Classes, LclType, ExtCtrls, sysUtils, forms, firmataconstants,
+  StdCtrls, dialogs,  LResources, LclIntf, math, graphics, typinfo;
 
  type
   // Digital Pin register type
@@ -70,7 +67,14 @@ uses
   {:Possible pin modes}
   TPinModes = (PIN_MODE_INPUT, PIN_MODE_OUTPUT, PIN_MODE_ANALOG, PIN_MODE_PWM, PIN_MODE_SERVO,
            PIN_MODE_SHIFT, PIN_MODE_I2C, PIN_MODE_ONEWIRE, PIN_MODE_STEPPER, PIN_MODE_ENCODER,
-           PIN_MODE_SERIAL, PIN_MODE_PULLUP, PIN_MODE_PS2MOUSE, PIN_MODE_NEOPIXELS, PIN_MODE_IGNORE);
+           PIN_MODE_SERIAL, PIN_MODE_PULLUP, PIN_MODE_SPI, PIN_MODE_SONAR, PIN_MODE_TONE,
+           PIN_MODE_DHT, PIN_MODE_FREQUENCY, PIN_MODE_PS2MOUSE, PIN_MODE_NEOPIXEL,
+           PIN_MODE_IGNORE);
+
+  TBitOrder = (LSB_FIRST = 0, MSB_FIRST = 1);
+  TDHTSensorType = (DHT_11, DHT_12, DHT_21, DHT_22, AM2301);
+
+ type
 
   {:Possible serial port values}
   TSerialPorts = (HW_SERIAL0, HW_SERIAL1, HW_SERIAL2, HW_SERIAL3,
@@ -84,12 +88,13 @@ uses
   TBoardPin = record
        ActualMode: Byte;
        Busy: Boolean;      // if busy then is assigned to a module
-       AnalogMap: Byte;     // analog pin mapping
+       AnalogMap: Byte;    // analog pin mapping
        Capabilities: TCapabilities; // supported modes and resolutions
   end;
 
   {:Array of board pins}
   TBoardPins = Array of TBoardPin;   // array of pins
+
 
   {:Mouse postition record}
   TPosition = record
@@ -116,28 +121,26 @@ uses
 
   TFadeType= (STRIP, PIXEL);
 
+  {:Event thread timer}
+  TOnTimer = procedure(sender: TObject) of Object;
   {:Event run just before enable the object}
   TOnBeforeOpen = procedure(sender: TObject) of Object;
   {:Event run just after close disable the object}
   TOnAfterClose = procedure(sender: TObject) of Object;
   {:Procedure to send data to the board}
   TOnSendDataToDevice = procedure(sender: TObject; str: string) of Object;
-  {:Procedure to get data from the board}
-  TOnDeviceDataAvailable = function(sender: TObject): Boolean of object;
-  {:Procedure to check if data available on device}
-  TOnGetDataFromDevice = function(sender: TObject): integer of object;
   {:Event run when an error occur}
   TOnError = procedure(sender: TObject; Error: integer; TextError: string) of Object;
   {:Event run when board is initialized and got their cpabilities}
   TOnBoardReady = procedure(sender: TObject) of Object;
-  {:Event run when the board send error data, etc not command data}
+  {:Event run when the board send a message data, etc not command data}
   TOnBoardData = procedure(sender: TObject; Command: Byte; Data: string) of object;
   {:Event run when received pin value data from board}
   TOnPinValue = procedure(sender: TObject; Value: integer) of object;
   {:Event run when received pin value state from board, pin mode and last written value}
   TOnPinState = procedure(sender: TObject; Mode: TPinModes; State: integer) of object;
   {:Procedure to get an extended sysex command}
-  TOnExtendedSysex = procedure(sender: TObject; ID0: byte; ID1: byte; Data: String) of Object;
+  TOnExtendedSysex = procedure(sender: TObject; Data: String) of Object;
   {:Event run when a module is enabled}
   TOnEnabled = procedure(sender: TObject) of Object;
   {:Event run when a module is disabled}
@@ -155,7 +158,9 @@ uses
   {:Data event from One Wire device}
   TOnOneWireData = procedure(sender: TObject; Data: string) of Object;
   {:Data event from I2C device}
-  TOnI2CData = procedure(sender: TObject; Slave: Byte; Reg_Number: Byte; Data: string) of Object;
+  TOnI2CData = procedure(sender: TObject; Slave: Word; Reg_Number: Byte; Sequence: Byte; Data: string) of Object;
+  {:Data event from SPI device}
+  TOnSPIData = procedure(sender: TObject; DeviceID: Byte; Channel: byte; RequestID: byte; Data: string; NumBytes: integer) of Object;
   {:Event reporting information about a stepper position or move completed}
   TOnStepperPosition = procedure(sender: TObject; Device: byte; Position: integer) of Object;
   {:Event reporting information about a stepper group move completed}
@@ -164,6 +169,10 @@ uses
   TOnSerialMessage = procedure(sender: TObject; Data: string) of Object;
   {:Event reporting information about a encode position}
   TOnEncoderPosition = procedure(sender: TObject; Direction: integer; Position: integer) of Object;
+  {:Event reporting information about a Frequency data}
+  TOnFrequencyData = procedure(sender: TObject; Pin: Byte; Time: integer; Ticks: integer) of Object;
+  {:Event reporting Temperature and Humidity}
+  TOnDHTData = procedure(sender: TObject; Pin: Byte; Temperature: single; Humidity: single) of Object;
   {:Event reporting position and buttons data of a mouse}
   TOnMouseData = procedure(sender: TObject; MouseData: TPS2MouseData) of Object;
   {:Event reporting data status of a mouse}
@@ -171,22 +180,50 @@ uses
   {:Information about a mouse type}
   TOnMouseDeviceID = procedure(sender: TObject; MouseType: TMouseType) of Object;
   {:Event reporting fade end}
-  TOnFadeEnd = procedure(sender: TObject) of Object;
+  TOnFadeEnd = procedure(sender: TObject; Device: Byte) of Object;
 
 
   TBoard = class;
 
   {:Thread to get data from a board}
   TBoardThread = class(TThread)
-   public
-     MustDie: boolean;
-     Owner: TBoard;
-   protected
-     procedure CallEvent;
-     procedure Execute; override;
-   published
-     property Terminated;
-   end;
+  private
+    FOwner: TBoard;
+    FInitTime: QWord;
+    FTime: QWord;
+    FMaxTime: QWord;
+    FByteTimeOut: QWord;
+    FStarting: Boolean;
+    FFirstTry: Boolean;
+    FInterval: Cardinal;
+    FCommandData: string;
+    FCommandBuffer: string;
+    FOnTimer: TOnTimer;
+    FEnabled: Boolean;
+    FEndLastCommand: Boolean;
+    procedure DoOnTimer;
+    procedure askProtocol;
+    procedure TimeOut;
+    procedure TimeOutByte;
+    procedure UpdateVars;
+    procedure ParseSysExCommand;
+    procedure ParseCommand;
+    procedure GetCommand;
+
+    protected
+      procedure Execute; override;
+    public
+      constructor Create(CreateSuspended: Boolean);
+      destructor Destroy; override;
+      property OnTimer: TOnTimer read FOnTimer write FOnTimer;
+      property MaxTime: QWord read FMaxTime write FMaxTime;
+      property Interval: Cardinal read FInterval write FInterval;
+      procedure StopTimer;
+      procedure StartTimer;
+      Property Owner: TBoard read FOwner write FOwner;
+
+  end;
+
 
   TPin = class;
   TTask = class;
@@ -197,8 +234,12 @@ uses
   TSerial = class;
   TServo = class;
   TEncoder = class;
+  TSPI = Class;
+  TFrequency = Class;
+  TDHT = Class;
   TPS2Mouse = class;
   TNeoPixel = class;
+
 
   {:Array of pin modules, max number is board pins}
   TPins = array of TPin;
@@ -208,12 +249,17 @@ uses
   TAccelSteppers = array [0..MAX_ACCELSTEPPER_DEVICES - 1] of TAccelStepper;
   {:Array of OneWire modules}
   TOneWires = array of TOneWire;
+  {:Array of SPIs modules}
+  TSPIs = array [0..MAX_SPI_DEVICES - 1] of TSPI;
   {:Array of Serial modules}
   TSerials = array [TSerialPorts] of TSerial; // max 8 serial ports
   {:Array of Servos modules}
   TServos = array [0..MAX_SERVOS - 1] of TServo;
-  {:Array of Serial modules}
+  {:Array of Encoders modules}
   TEncoders = array [0..MAX_ENCODERS - 1] of TEncoder;
+  {:Array of Frequencies modules}
+  TFrequencies = array [0..MAX_FREQUENCIES - 1] of TFrequency;
+  TDHTs = array of TDHT;
   {:Array of Mouse modules}
   TMice = array [0..MAX_MICE - 1] of TPS2Mouse;
   {:Array of Neopixels modules}
@@ -222,49 +268,45 @@ uses
   TBoard = class (TComponent)
     private
       FBoardThread: TBoardThread;
+      FCommandBuffer: string;
       FEnabled: Boolean;
       FStarting: Boolean;
       FGotCapabilities: Boolean;
       FGotFirmware: Boolean;
-      FGotVersion: Boolean;
+      FGotProtocol: Boolean;
       FSamplingInterval: integer;
-
       FOnBoardData: TOnBoardData; // only when there are firmata data and no other event
       FOnPinValue: TOnPinValue;
       FOnPinState:   TOnPinState;
       FOnBeforeOpen: TOnBeforeOpen;
       FOnAfterClose: TOnAfterClose;
       FOnError: TOnError;
-      FOnDeviceDataAvailable: TOnDeviceDataAvailable;
+      FOnTimer: TOnTimer;
+      FTimerInterval: Integer;
       FOnSendDataToDevice: TOnSendDataToDevice;
-      FOnGetDataFromDevice: TOnGetDataFromDevice;
       FOnExtendedSysex: TOnExtendedSysex;
 
     private
-      {:Store last error number.}
-      FLastError: integer;
-
       {:array of board pins capbilities, values, mode, etc}
       FBoardPins: TBoardPins;
       {:Total board pins}
       FBoardPinsNumber: integer;
       {:Total board analog pins}
       FAnalogPinsNumber: integer;
-      {:Software version received from board}
-      FBoardVersion: array [0..1] of byte;
-      {:String showing board firmware and version}
+      {: Type of board, standard firmata, configurable firmata ...}
+      FBoardType: string;
+      {:String showing board firmware version}
+      FBoardStringProtocol: string;
+      {:String showing board protocol version}
       FBoardStringFirmware: string;
-      {:Firmaware version received from board}
-      FBoardFirmware: array [0..1] of byte;
 
       FOnBoardReady: TOnBoardReady;
       FOnQueryAllTask: TOnQueryAllTask;
-      {:Board command is ended}
-      FEndCommand: Boolean;
-      {:Init starting time for initialize board}
-      FInitTime: QWord;
+
       {:Max time to wait for board to start}
       FMaxTime: QWord;
+      FInitTime: QWord;
+      FByteTimeOut: QWord;
       {:Time taken to initialize the board}
       FStartingTime: QWord;
       // modules
@@ -272,11 +314,14 @@ uses
       FTasks: TTasks;
       FOneWires: TOneWires;
       FI2C: TI2C;
+      FSPIs: TSPIs;
       FAccelSteppers: TAccelSteppers;
       FAccelStepperGroup: TAccelStepperGroup;
       FSerials: TSerials;
       FServos: TServos;
       FEncoders: TEncoders;
+      FFrequencies: TFrequencies;
+      FDHTs: TDHTs;
       FMice: TMice;
       FNeoPixels: TNeoPixels;
 
@@ -296,29 +341,33 @@ uses
       {:set board sampling interval, min value is 19 milisecs}
       procedure SetSamplingInterval(Interval: integer);
     public
+      {:Store last error number.}
+      FLastError: integer;
       {:procedure error, need more work}
-      procedure RaiseError(Error: integer; FunctionError: string; TextError: string='');
-      {:get next byte from board}
-      function GetNextByte: Byte;
+      procedure RaiseError(Error: integer; FunctionError: string);
       {:get command or sysex command from board}
-      procedure parsefirmatacommand(Sender: TObject);
+      procedure parseCommand(Data: string);
+      {:get command from data}
+      procedure ParseData(Data: string);
+      procedure parseSysExCommand(Data:string); // string includes END_SYSEX byte
 
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
 
+      procedure CloseApp;
+
       // Firmata comands
       // All firmata functions for commands return the string command sent, they have a write parameter, if write is True the data is sent to the external device
       // if write is false then is not sent to device
-      {:send reset to board}
-      function BoardReset(write: Boolean=true): string;
+
       {:ask board for version}
-      function askVersion(write: Boolean=true): string;
+      function askProtocol(write: Boolean=true): string;
       {:ask board for firmware}
       function askFirmware(write: Boolean=true): string;
       {:ask board capabilities}
       function askBoardCapabilities(write: Boolean=true): string;
       {:set sampling interval but return data command for tasks}
-      function SendSamplingInterval(Interval: integer; write: Boolean=true): string;
+      function SendSamplingInterval(write: Boolean=true): string;
       {:perhaps this function should be on TTask module}
       function QueryAllTasks(write: Boolean=true): string;
       {:Reset all tasks, perhaps this function should be on TTask module}
@@ -326,11 +375,9 @@ uses
       {:send command to board}
       function SendCommand(Data: string; write: Boolean=True): string;
       {:send sysex command to board}
-      function SendSysEx(data7bit: string; write: Boolean=true): string;
+      function SendSysEx(data: string; write: Boolean=true): string;
 
-      {:procedure to send sysex commands to modules}
-      procedure GetSysExCommandData(Command: Byte);
-      {:reset board and client}
+      {:reset board}
       procedure Reset;
       {:enable board}
       procedure Open;
@@ -344,33 +391,36 @@ uses
       function CheckReportPort(Pin: Byte): Boolean;
       {:get resolution for this pin mode}
       function GetPinResolution(Pin: Byte; Mode: TPinModes): Integer;
-      {:fill a memo with pins capability}
-      procedure printPinInfo(Memo: TMemo);
+      {:fill a TStrings with pins capability}
+      procedure printPinInfo(Info: TStrings);
       {: array of Board Pins}
       property BoardPins[Index:Integer]: TBoardPin read GetBoardPin write SetBoardPin;
       property Enabled: Boolean read FEnabled write SetEnabled;
-    published
-      {: Sampling interval for board default 19 milisec}
-      property SamplingInterval: integer read FSamplingInterval write SetSamplingInterval;
+      property BoardType: string read FBoardType;
       property LastError: integer read FLastError write FLastError;
+      {: Firmware version of firmata board}
+      property FirmataFirmware: string read FBoardStringFirmware;
+      {: Firmware version of protocol}
+      property FirmataProtocol: string read FBoardStringProtocol;
       {: number of pins in board}
       property PinsNumber: integer read FBoardPinsNumber;
       {: number of analog pins in board}
       property AnalogPinsNumber: integer read FAnalogPinsNumber;
-      {: max time to wait for starting board}
-      property MaxTime: Qword read FMaxTime write setMaxTime;
       {: time spend starting firmata}
       property StartingTime: Qword read FStartingTime;
-      {: Firmware version of firmata board}
-      property FirmataFirmware: string read FBoardStringFirmware;
+    published
+      {: Sampling interval for board default 19 milisec}
+      property SamplingInterval: integer read FSamplingInterval write SetSamplingInterval;
+      Property TimerInterval: integer read FTimerInterval write FTimerInterval;
+      {: max time to wait for starting board}
+      property MaxTime: Qword read FMaxTime write setMaxTime;
       property OnBeforeOpen: TOnBeforeOpen read FOnBeforeOpen write FOnBeforeOpen;
       property OnAfterClose: TOnAfterClose read FOnAfterClose write FOnAfterClose;
       {: when firmata board became ready}
       property OnBoardReady: TOnBoardReady read FOnBoardReady write FOnBoardReady;
-      property OnDeviceDataAvailable: TOnDeviceDataAvailable read FOnDeviceDataAvailable write FOnDeviceDataAvailable;
       property OnSendDataToDevice: TOnSendDataToDevice read FOnSendDataToDevice write FOnSendDataToDevice;
-      property OnGetDataFromDevice: TOnGetDataFromDevice read FOnGetDataFromDevice write FOnGetDataFromDevice;
       property OnError: TOnError read FOnError write FOnError;
+      property OnTimer: TOnTimer read FOnTimer write FOnTimer;
       {: when the board send data, but is not a command}
       property OnBoardData: TOnBoardData read FOnBoardData write FOnBoardData;
       {: Response to QueryAllTask command}
@@ -399,27 +449,24 @@ uses
       procedure setMode(Mode: TPinModes);
       procedure setPin(pin: Byte);
       procedure setBoard(Board: TBoard);
+      function AnalogWrite(Value: word; write: Boolean=true): string;
+      function AnalogWriteExtended(Value: uint32; write: Boolean=true): string;
     public
-      // digital ports
+      {: write digital pin value}
+      function SetDigitalPinValue(Value: Byte; write: Boolean=true): string;
+      {: same as setPinDigitalPinValue}
+      function DigitalWrite(Value: Byte; write: Boolean=true): string;
       {: write digital values in all pins of port}
       function DigitalWritePort(Port: byte; Value: integer; write: Boolean=true): string;
       // pins general
       {: ask pin state command}
       function askPinState(write: Boolean=true): string;
-      {: set pin mode command}
+      {: set pin mode command of pin definided in TPIn}
       function SetPinMode(write: Boolean=true): string;
       {: Enable/disable digital reporting, be carefull with digital pins}
       function DigitalReport(enabled: boolean; write: Boolean=true): string;
       // digital pins
-      {: write digital value of pin}
-      function DigitalWrite(Value: Byte; write: Boolean=true): string;
-      {: same as DigitalWrite}
-      function SetDigitalPinValue(Value: Byte; write: Boolean=true): string;
       // Analog pins
-      {: write analog value, PWM, servo, etc.}
-      function AnalogWrite(Value: integer; write: Boolean=true): string;
-      {: write extended analog value, PWM, servo, etc.}
-      function AnalogWriteExtended(Value: integer; write: Boolean=true): string;
       {: Enable/disable analog reporting}
       function AnalogReport(enabled: boolean; write: Boolean=true): string;
       // get command
@@ -429,18 +476,19 @@ uses
       {: send a command, not sysex}
       function SendCommand(Data: string; write: Boolean=True): string;
       {: send a sysex command}
-      function SendSysEx(data7bit: string; write: Boolean=true): string;
+      function SendSysEx(data: string; write: Boolean=true): string;
 
       {: enable/disable report for digital pin or analog pin}
       function ReportPin(Enabled: boolean; write: Boolean=true): string;
       {: write analog or digital pin value}
-      function WriteValue(Value: integer; write: Boolean=True): string;
+      function WriteValue(Value: uint32; write: Boolean=True): string;
 
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
 
       property Enabled: Boolean read FEnabled write SetEnabled;
     published
+      property Name;
       {: board owned pin}
       property Board: TBoard read FBoard write setBoard;
       {: pin number in board}
@@ -468,10 +516,10 @@ uses
       FTaskID: Byte;  // Task ID
 
       FDataTask: String;
+      FDataTaskRunOnce: string;
       FRunOnce: Boolean;
       FTimeDelay: Integer;
       FRunDelay: Integer;
-
       FOnEnabled: TOnEnabled;
       FOnDisabled: TOnDisabled;
 
@@ -484,7 +532,7 @@ uses
       procedure setTimeDelay(Delay: integer);
       procedure setRunDelay(Delay: integer);
 
-      function SendSysEx(data7bit: string; write: Boolean=true): string;
+      function SendSysEx(data: string; write: Boolean=true): string;
       {: internal run task}
       function ScheduleTask(write: Boolean=true): string;
     public
@@ -495,8 +543,8 @@ uses
       function CreateTask(write: Boolean=true): string;
       {: stop and delte task}
       function DeleteTask(write: Boolean=true): string;
-      {: add data to task}
-      function AddToTask(Data7Bit: String; write: Boolean=true): string;
+      {: add data to task, max 51 bytes every call}
+      function AddToTask(Data: String; write: Boolean=true): string;
       {: ask query data task}
       function QueryTask(write: Boolean=true): string;
       {: delay a running task}
@@ -507,7 +555,7 @@ uses
       {: ID of task, 0..127}
       property TaskID: Byte read FTaskID write setTask;
       {: Task data string}
-      property DataTask: string read FDataTask write FDataTask;
+      property DataTask: string read FDataTaskRunOnce write FDataTaskRunOnce;
       {: if false and automatic end delay is assigned, to run it again}
       property RunOnce: Boolean read FRunOnce write FRunOnce;  // task is only run once
       {: time delay after task end, used for automatic run again}
@@ -526,7 +574,7 @@ uses
     private
       FBoard: TBoard;
       FEnabled: Boolean;
-      FOneWirePin: Byte;
+      FPin: Byte;
       FDevice: string;
       FParasitisticPower: Boolean;
 
@@ -536,11 +584,11 @@ uses
       FOnSearch: TOnSearch;
       FOnOneWireAlarm: TOnOneWireAlarm;
 
-      procedure setOneWirePin(Pin: Byte);
+      procedure setPin(Pin: Byte);
       procedure setBoard(Board: TBoard);
       procedure setEnabled(State: Boolean);
 
-      function SendSysEx(data7bit: string; write: Boolean=true): string;
+      function SendSysEx(data: string; write: Boolean=true): string;
     public
       procedure parsefirmatacommand(Sender: TObject; CommandData: String);
       constructor Create(AOwner: TComponent); override;
@@ -563,6 +611,10 @@ uses
       {: select device on bus}
       function Select(write: Boolean=true): string;
       function ResetAndSelect(write: Boolean=true): string;
+      function ResetAndSelectAndWrite(DataOut: string; write: Boolean=true): string;
+      function ResetAndSelectAndWrite(Delay: integer; DataOut: string; write: Boolean=true): string; overload;
+      function ResetAndSelectAndWriteAndRead(BytestoRead: uint16; Correlation: uint16;
+                                       Delay: integer; DataOut: string; write: Boolean=true): string;
       function Read(BytestoRead: uint16; Correlation: uint16; write: Boolean=true): string;
       function Write(Data: string; write: Boolean=true): string;
       function Write(Delay: integer; Data: string; write: Boolean=true): string; overload;
@@ -575,7 +627,7 @@ uses
       property Enabled: Boolean read FEnabled write SetEnabled;
     published
       {: one wire bus pin}
-      property OneWirePin: Byte read FOneWirePin write setOneWirePin;
+      property Pin: Byte read FPin write setPin;
       property Board: TBoard read FBoard write setBoard;
       property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
       Property Device: string read FDevice write FDevice;
@@ -599,20 +651,21 @@ uses
       FI2CQueries: Byte;
       FSDApin: Byte;
       FSCLpin: Byte;
-
+      FSequence: byte;  // 0-7
+      F10bits: Boolean;
       FContinuously: array of byte; // store slaves in read continuosly
-      FContinuously10Bits: array of byte; // store slaves in read continuosly
 
       FOnEnabled: TOnEnabled;
       FOnDisabled: TOnDisabled;
       FOnI2CData: TOnI2CData;
 
-      procedure setSDAPin(SDApin: Byte); // set SDA pin
-      procedure setSCLPin(SCLpin: Byte); // set SCL pin
+      procedure setSDAPin(pin: Byte); // set SDA pin
+      procedure setSCLPin(pin: Byte); // set SCL pin
       procedure setBoard(Board: TBoard);
       procedure setEnabled(State: Boolean);
+      procedure setSequence(Value: Byte);
 
-      function SendSysEx(data7bit: string; write: Boolean=true): string;
+      function SendSysEx(data: string; write: Boolean=true): string;
 
     public
       procedure parsefirmatacommand(Sender: TObject; CommandData: String);
@@ -625,23 +678,18 @@ uses
       // I2c commands
       function Config(write: Boolean=true): string;   // delay
       function Config(Delay: byte; write: Boolean=True): string; overload;  // delay
-      function Request(Slave: word; command: byte; data: string; restart: Boolean=false; mode10bit: boolean=false; write: Boolean=True): string;
-      function WriteData(Slave: Byte; Address: integer; AddressSize: Byte; Data: String; restart: Boolean=false; write: Boolean=True): string;
-      function Read(Slave: Byte; regID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=true): string;
-      function RandomRead(Slave: Byte; Address: word; AddressSize: Byte; BytesToRead: byte; restart: Boolean=false; write: Boolean=True): string;
-      function ReadContinuously(Slave: Byte; RegID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=true): string;
-      function StopReading(Slave: Byte; write: Boolean=true): string;
-      // i2c 10 bits functions, not implemented yet on Firmata
-      function WriteData10Bits(Slave: uint16; Address: integer; AddressSize: Byte; Data: String; restart: Boolean=false; write: Boolean=True): string;
-      function Read10bits(Slave: uint16; regID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=true): string;
-      function RandomRead10bits(Slave: Byte; Address: word; AddressSize: Byte; BytesToRead: byte; restart: Boolean=false; write: Boolean=True): string;
-      function Read10bitsContinuously(Slave: uint16; RegID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=true): string;
-      function StopReading10Bits(Slave: uint16; write: Boolean=True): string;
+      function Request(Slave: word; command: byte; data: string; restart: Boolean=false; write: Boolean=True): string;
+      function WriteData(Slave: word; Address: integer; AddressSize: Byte; Data: String; restart: Boolean=false; write: Boolean=True): string;
+      function Read(Slave: word; regID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=true): string;
+      function ReadContinuously(Slave: word; RegID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=true): string;
+      function StopReading(Slave: word; write: Boolean=true): string;
       // not published
       property Enabled: Boolean read FEnabled write SetEnabled;
-      property SDApin: Byte read FSDApin write setSDApin; // for now is read only,  write setSDAPin;  // fixed pin in arduino
-      property SCLpin: Byte read FSCLpin write setSCLpin; // for now is read only,  write setSCLPin;  // fixed pin in arduino
+      property Type10Bits: Boolean read F10bits write F10bits;   // not supported yet
     published
+      property Sequence: byte read FSequence write setSequence;
+      property SDApin: Byte read FSDApin write setSDApin; // depends on board chip
+      property SCLpin: Byte read FSCLpin write setSCLpin; // depends on board chip
       property Delay: Byte read FDelay write FDelay;
       property Board: TBoard read FBoard write setBoard;
       property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
@@ -675,6 +723,7 @@ uses
        FSpeed: single;
        FAcceleration: single;
        FRunning: Boolean;
+       FFastStop: Boolean;  // if it stops fast
 
        FOnEnabled: TOnEnabled;
        FOnDisabled: TOnDisabled;
@@ -694,7 +743,7 @@ uses
        procedure setSpeed(Speed: single);
        procedure setAcceleration(Value: single);
 
-       function SendSysEx(data7bit: string; write: Boolean=true): string;
+       function SendSysEx(data: string; write: Boolean=true): string;
      public
        procedure parsefirmatacommand(Sender: TObject; CommandData: String);
        constructor Create(AOwner: TComponent); override;
@@ -713,6 +762,7 @@ uses
        function FastStop(write: Boolean=True): string;
        function ReportPosition(write: Boolean=True): string;
        function MotorAcceleration(write: Boolean=True): string;
+       function MotorAcceleration(Acceleration: single; write: Boolean=True): string; overload;
        function MotorSpeed(write: Boolean=True): string;
        // not published
        property Enabled: Boolean read FEnabled write SetEnabled;
@@ -761,7 +811,7 @@ uses
       function getMember(Index: integer): TMember;
       procedure setGroup(Group: Byte);
 
-      function SendSysEx(data7bit: string; write: Boolean=true): string;
+      function SendSysEx(data: string; write: Boolean=true): string;
 
     public
       procedure parsefirmatacommand(Sender: TObject; commandData: String);
@@ -810,7 +860,7 @@ uses
         procedure setTxPin(Pin: Byte);
         procedure setBaudRate(BaudRate: integer);
 
-        function SendSysEx(data7bit: string; write: Boolean=true): string;
+        function SendSysEx(data: string; write: Boolean=true): string;
       public
         constructor Create(AOwner: TComponent); override;
         destructor Destroy; override;
@@ -846,13 +896,13 @@ uses
       FPin: Byte;
       FMinPulse: integer;
       FMaxPulse: integer;
-      FValue: integer;
+      FValue: integer;    // value to send servo
 
       FOnEnabled: TOnEnabled;
       FOnDisabled: TOnDisabled;
 
-      function AnalogWrite(Value: integer; write: Boolean=true): string;
-      function AnalogWriteExtended(Value: integer; write: Boolean=true): string;
+      function AnalogWrite(Value: word; write: Boolean=true): string;
+      function AnalogWriteExtended(Value: uint32; write: Boolean=true): string;
       procedure setEnabled(State: Boolean);
       procedure setPin(pin: Byte);
       procedure setMinPulse(Pulse: integer);
@@ -863,7 +913,7 @@ uses
       function WriteValue(write: Boolean=true): string;
 
       function SendCommand(Data: string; write: Boolean=True): string;
-      function SendSysEx(data7bit: string; write: Boolean=true): string;
+      function SendSysEx(data: string; write: Boolean=true): string;
 
       constructor Create(AOwner: TComponent); override;
       destructor Destroy; override;
@@ -872,11 +922,13 @@ uses
       property Enabled: Boolean read FEnabled write SetEnabled;
     published
       Property Device: Byte read FDevice;
-      property Board: TBoard read FBoard write setBoard;
       property Pin: byte read FPin write setPin;
+      property Board: TBoard read FBoard write setBoard;
       property MinPulse: integer read FMinPulse write setMinPulse;
       Property MaxPulse: integer read FMaxPulse write setMaxPulse;
       property Value: integer read FValue write setValue;
+      property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
+      property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
   end;
 
   TEncoder = class (TComponent)
@@ -897,7 +949,7 @@ uses
       procedure setBoard(Board: TBoard);
       procedure setEnabled(State: Boolean);
 
-      function SendSysEx(data7bit: string; write: Boolean=true): string;
+      function SendSysEx(data: string; write: Boolean=true): string;
 
     public
       procedure parsefirmatacommand(Sender: TObject; CommandData: String);
@@ -924,6 +976,193 @@ uses
       property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
       property OnEncoderPosition: TOnEncoderPosition read FOnEncoderPosition write FOnEncoderPosition;
   end;
+
+  TInterruptModes = (INTERRUPT_MODE_DISABLE,INTERRUPT_MODE_LOW, INTERRUPT_MODE_HIGH,
+                     INTERRUPT_MODE_RISING, INTERRUPT_MODE_FALLING, INTERRUPT_MODE_CHANGE);
+
+  TFrequency = class (TComponent)
+    private
+      FBoard: TBoard;
+      FEnabled: Boolean;
+      FPin: Byte;
+      FDevice: Byte;        //only 2 pins are available on AVR based boards (2 and 3)
+      FInterruptMode: TInterruptModes;
+      FSamplingInterval: integer;
+
+      FOnEnabled: TOnEnabled;
+      FOnDisabled: TOnDisabled;
+      FOnFrequencyData:  TOnFrequencyData;
+
+      procedure setBoard(Board: TBoard);
+      procedure setEnabled(State: Boolean);
+      procedure setPin(Value: Byte);
+      procedure setSamplingInterval(Interval: integer);
+      procedure setInterruptMode(Mode: TInterruptModes);
+
+      function DisableReporting(write: Boolean=true): string;
+      function Attach(write: Boolean=true): string;
+      function SendSysEx(data: string; write: Boolean=true): string;
+    public
+      procedure parsefirmatacommand(Sender: TObject; CommandData: String);
+      constructor Create(AOwner: TComponent); override;
+      destructor Destroy; override;
+
+      // Firmata comands
+      // All firmata functions for commands return the string command sent, they have a write parameter, if write is True the data is sent to the external device
+      // if write is false then is not sent to device
+      // Frequency functions
+
+      property Enabled: Boolean read FEnabled write SetEnabled;
+    published
+      {: one wire bus pin}
+      property SamplingInterval: integer read FSamplingInterval write setSamplingInterval;
+      property InterruptMode: TInterruptModes read FInterruptMode write setInterruptMode;
+      property Pin: Byte read FPin write setPin;
+      property Board: TBoard read FBoard write setBoard;
+      property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
+      Property Device: byte read FDevice;
+      property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
+      {: get data response event}
+      property OnFrequencyData: TOnFrequencyData read FOnFrequencyData write FOnFrequencyData;
+  end;
+
+//
+//
+//
+{ TSPI }
+//
+//
+//
+TSPI = class (TComponent)
+    private
+      FBoard: TBoard;
+      FEnabled: Boolean;
+      FDeviceID: byte;
+      FMOSIpin: byte;
+      FMISOpin: byte;
+      FCLKpin: byte;
+      FCSpin: Byte;
+      FSpeed: integer;
+      FWordSize: byte;   // Only word size of 8 bits in this moment
+      FMode: byte;
+      FCSControl: boolean;
+      FCSActiveLow: Boolean;
+      FBitOrder: TBitOrder;
+      FChannel: byte;   // only channel 0 in this moment
+      FPacketData7Bit: Boolean;
+
+      FOnEnabled: TOnEnabled;
+      FOnDisabled: TOnDisabled;
+      FOnSPIData: TOnSPIData;
+
+      procedure setMOSIPin(pin: Byte); // set MOSI pin
+      procedure setMISOPin(pin: Byte); // set MISO pin
+      procedure setCLKPin(pin: Byte); // set CLK pin
+      procedure setCSPin(pin: Byte); // set CS pin, select pin
+      procedure setMode(Mode: byte);
+      procedure setChannel(Value: Byte);   // HW SPIs
+      procedure setBoard(Board: TBoard);
+      procedure setEnabled(State: Boolean);
+      procedure setDeviceID(Value: byte);
+      procedure setWordSize(Value: byte);
+      procedure setSpeed(Value: integer);
+      procedure setCSControl(Value: Boolean);
+      procedure setBitOrder(value: TBitOrder);
+      procedure setPacketData7Bit(Value: boolean);
+
+      function SendSysEx(data: string; write: Boolean=true): string;
+    public
+      procedure parsefirmatacommand(Sender: TObject; CommandData: String);
+      constructor Create(AOwner: TComponent); override;
+      destructor Destroy; override;
+
+      // Firmata comands
+      // All firmata functions for commands return the string command sent, they have a write parameter, if write is True the data is sent to the external device
+      // if write is false then is not sent to device
+      // SPI commands
+      function SPIBegin(write: Boolean=true): string;
+      function Config(write: Boolean=true): string;
+      function Transfer(RequestID: byte; Data: string; DeselectCSPin: Boolean=True; write: Boolean=true): string;
+      function Write(RequestID: byte; Data: string; DeselectCSPin: Boolean=True; write: Boolean=true): string;
+      function WriteAck(RequestID: byte; Data: string; DeselectCSPin: Boolean=True; write: Boolean=true): string;
+      function Read(RequestID: byte; NumData: byte; DeselectCSPin: Boolean=True; write: Boolean=true): string;
+      function SPIEnd(write: Boolean=true): string;
+      function setCSPinValue(Value: Byte; write: Boolean=true): string;
+
+      // not published
+      property Enabled: Boolean read FEnabled write SetEnabled;
+      property DeviceID: Byte read FDeviceID write setDeviceID;
+      property WordSize: byte read FWordSize write setWordSize;
+      property Channel: byte read FChannel write setChannel;
+
+    published
+      property PacketData7Bit: Boolean read FPacketData7Bit write setPacketData7Bit;
+      property MISOPin: Byte read FMISOpin write setMISOpin;
+      property MOSIPin: Byte read FMOSIpin write setMOSIpin;
+      property CLKPin: Byte read FCLKpin write setCLKpin;
+      property CSPin: Byte read FCSpin write setCSpin;
+      property Speed: integer read FSpeed write setSpeed;
+      property Mode: byte read FMode write setMode;
+      property BitOrder: TBitOrder read FBitOrder write setBitOrder;
+      property CSControl: Boolean read FCSControl write setCSControl;
+      property CSActiveLow: Boolean read FCSActiveLow write FCSActiveLow;
+      property Board: TBoard read FBoard write setBoard;
+      property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
+      property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
+      property OnSPIData: TOnSPIData read FOnSPIData write FOnSPIdata;
+  end;
+//
+//
+// TDHT
+//
+//
+
+TDHT = class (TComponent)
+private
+  FBoard: TBoard;
+  FEnabled: Boolean;
+  FPin: Byte;
+  FBlockingReads: Boolean;
+  FSamplingInterval: integer;  // default and minimun is 500ms
+  FSensorType: TDHTSensorType;  // type of sensor DHT11 or DHT12
+
+  FOnEnabled: TOnEnabled;
+  FOnDisabled: TOnDisabled;
+  FOnDHTData: TOnDHTData;
+
+  procedure setBoard(Board: TBoard);
+  procedure setEnabled(State: Boolean);
+  procedure setPin(pin: Byte); // set pin
+  procedure setSensorType(Value: TDHTSensorType);
+  procedure setBlockingReads(value: Boolean);
+  procedure setSamplingInterval(Value: integer);
+
+  function SendSysEx(data: string; write: Boolean=true): string;
+public
+  procedure parsefirmatacommand(Sender: TObject; CommandData: String);
+  constructor Create(AOwner: TComponent); override;
+  destructor Destroy; override;
+
+  // Firmata comands
+  // All firmata functions for commands return the string command sent, they have a write parameter, if write is True the data is sent to the external device
+  // if write is false then is not sent to device
+  // DHT commands
+  function Attach(write: Boolean=true): string;
+  function Detach(write: Boolean=true): string;
+
+  // not published
+  property Enabled: Boolean read FEnabled write SetEnabled;
+  // not use at the momment
+  property BlockingReads: Boolean read FBlockingReads write setBlockingReads;   // not used
+  property SamplingInterval: integer read FSamplingInterval write setSamplingInterval;  // not used
+published
+  property Pin: Byte read FPin write setPin;
+  property SensorType: TDHTSensorType read FSensorType write FSensorType;
+  property Board: TBoard read FBoard write setBoard;
+  property OnEnabled: TOnEnabled read FOnEnabled write FOnEnabled;
+  property OnDisabled: TOnDisabled read FOnDisabled write FOnDisabled;
+  property OnDHTData: TOnDHTData read FOnDHTData write FOnDHTData;
+end;
 
  { TWheelBits = bitpacked record
     two_bits: 0..3;
@@ -989,7 +1228,7 @@ uses
         procedure setSampleRate(SampleRate: TMouseSampleRate);
         procedure setResolution(Resolution: TMouseResolution);
 
-        function SendSysEx(data7bit: string; write: Boolean=true): string;
+        function SendSysEx(data: string; write: Boolean=true): string;
       public
         procedure parsefirmatacommand(Sender: TObject; CommandData: String);
         constructor Create(AOwner: TComponent); override;
@@ -1069,12 +1308,12 @@ uses
        procedure setLedColors(rgbwType: string); // 0bRRRRGGBB for RGB + NEO_KHZ800,  0bWWRRGGBB for RGBW devices
        procedure setPixelsNumber(Number: smallint);
        procedure setBrightness(value: Byte);
-       function getPixel(Index: integer): TPixel;
+       function getNeoPixel(Index: integer): TPixel;
        procedure setFadeRunning(Enabled: Boolean);
        procedure setFadeLoopsWait(Loops: byte);
        procedure setGamma(Value: single);
-       procedure parsefirmatacommand(Sender: TObject);
-       function SendSysEx(data7bit: string; write: Boolean=true): string;
+       procedure parsefirmatacommand(Sender: TObject; Data: String);
+       function SendSysEx(data: string; write: Boolean=true): string;
      public
        constructor Create(AOwner: TComponent); override;
        destructor Destroy; override;
@@ -1083,33 +1322,54 @@ uses
        // All firmata functions for commands return the string command sent, they have a write parameter, if write is True the data is sent to the external device
        // if write is false then is not sent to device
        // neopixel functions
+
+       function ColorHSV(hue: uint16; sat: byte; val: byte): uint32;
+       procedure RainBow(First_Pixel: uint16; Last_Pixel: uint16; First_hue: uint16 = 0;
+             saturation: byte = 255; brightness: byte = 255; gammify: boolean = false; Delay: smallint=0; do_show: Boolean=true);
+       function gamma32(x: uint32; gamma: single): uint32;
+
+
        function config(write: Boolean=true): string;
        function Off(write: Boolean=true): string;
        function Show(write: Boolean=true): string;
 
-       function PixelColor(Pixel: smallint; Color: longword; do_show: boolean; write: Boolean=true): string;
-       function PixelColor(Pixel: smallint; Red: byte; Green: byte; Blue: Byte; White: byte; do_show: boolean; write: Boolean=true): string; overload;
-       function PixelColor(Pixel: smallint; Color: longword; write: Boolean=true): string; overload;
-       function PixelColor(Pixel: smallint; Red: byte; Green: byte; Blue: Byte; White: byte; write: Boolean=true): string; overload;
-       function FillSegment(Color: longword; First: smallint; Last: smallint; do_show: Boolean; write: Boolean=true): string;
-       function FillSegment(Red: byte; Green: byte; Blue: Byte; White: byte; first: smallint; last: smallint; do_show: Boolean; write: Boolean=true): string; overload;
-       function FillStrip(Color: longword; do_show: Boolean; write: Boolean=true): string;
-       function FillStrip(Red: byte; Green: byte; Blue: Byte; White: byte; do_show: Boolean; write: Boolean=true): string; overload;
-       function ShiftSegmentConfig(First: smallint; last: smallint; Direction: char; Wrap: Boolean; do_show: Boolean; write: Boolean=true): string;
-       function ShiftStripConfig(Direction: char; Wrap: Boolean; do_show: Boolean; write: Boolean=true): string; overload;
-       function FadeSegmentConfig(color: longword; first: smallint; last: smallint; write: Boolean=True): string;
-       function FadeSegmentConfig(Red: byte; Green: byte; Blue: Byte; White: byte; first: smallint; last: smallint; write: Boolean=True): string; overload;
-       function FadeStripConfig(color: longword; write: Boolean=True): string;
-       function FadeStripConfig(Red: byte; Green: byte; Blue: Byte; White: byte; write: Boolean=True): string;  overload;
+       {: Set pixel color, pixelnumber, color, show color after that}
+       function PixelColor(Pixel: smallint; Color: longword; do_show: boolean=true; write: Boolean=true): string;
+       {: Set pixel color, pixelnumber, Red, Green, Blue and White, show color after that}
+       function PixelColor(Pixel: smallint; Red: byte; Green: byte; Blue: Byte; White: byte; do_show: boolean=true; write: Boolean=true): string; overload;
+       {: Fill segment of pixels with color from First to Last pixel with color and Filldelay every pixel, do_show  after every pixel}
+       function FillSegment(Color: longword; First: smallint; Last: smallint; do_show: Boolean=true; write: Boolean=true): string;
+       {: Fill segment of pixels with color from First to Last pixel with color and Filldelay every pixel, do_show  after every pixel}
+       function FillSegment(Red: byte; Green: byte; Blue: Byte; White: byte; first: smallint; last: smallint; do_show: Boolean=true; write: Boolean=true): string; overload;
+       {: Fill complete strip with color from First to Last pixel with color and Filldelay every pixel, do_show  after every pixel}
+       function FillStrip(Color: longword; do_show: Boolean=true; write: Boolean=true): string;
+       {: Fill complete strip with color from First to Last pixel with color and Filldelay in ms every pixel, do_show  after every pixel}
+       function FillStrip(Red: byte; Green: byte; Blue: Byte; White: byte; do_show: Boolean=true; write: Boolean=true): string; overload;
+       {: Config shift segment of pixels}
+       function ShiftSegmentConfig(First: smallint; last: smallint; Direction: char; Wrap: Boolean; do_show: Boolean=true; write: Boolean=true): string;
+       {: Config shift strip of pixels}
+       function ShiftStripConfig(Direction: char; Wrap: Boolean; do_show: Boolean=true; write: Boolean=true): string; overload;
+       {: Run a step of shift segment or strema of pixels with Shitdelay}
        function ShiftRun(write: Boolean=True): string;
+       {: Run a step of shift segment or strema of pixels with Shiftdelay}
        function ShiftRun(ShiftType: Byte; write: Boolean=True): string; overload;
+       {: Config shade segment final color}
+       function FadeSegmentConfig(color: longword; first: smallint; last: smallint; write: Boolean=True): string;
+       {: Config shade segment final color}
+       function FadeSegmentConfig(Red: byte; Green: byte; Blue: Byte; White: byte; first: smallint; last: smallint; write: Boolean=True): string; overload;
+       {: Config shade strip final color}
+       function FadeStripConfig(color: longword; write: Boolean=True): string;
+       {: Config shade strip final color}
+       function FadeStripConfig(Red: byte; Green: byte; Blue: Byte; White: byte; write: Boolean=True): string;  overload;
+       {: Run fade segment or strip with Delay = (FadeWait + 1) * Board.SamplingInterval in ms, if FadeWait = 0 then is about 50 Hz}
        function FadeRunPause(write: Boolean=True): string;
-       function FadeOneStep(do_show: boolean; write: Boolean=True): string;
-       function CopyPixels(src: smallint; dest: smallint; count: smallint; do_show: Boolean; write: Boolean=True): string;
-       function sendBrightness(do_show: Boolean; write: Boolean=true): string;
-       procedure RecalculateBrightness;
+       {: Run a fade segment or strip step}
+       function FadeOneStep(do_show: boolean=true; write: Boolean=True): string;
+       {: Copy count pixels from src to dest}
+       function CopyPixels(src: smallint; dest: smallint; count: smallint; do_show: Boolean=true; write: Boolean=True): string;
+       function sendBrightness(do_show: Boolean=true; write: Boolean=true): string;
 
-       property Pixels[Index: integer]: TPixel read getPixel;
+       property Pixels[Index: integer]: TPixel read getNeoPixel;
        property Enabled: Boolean read FEnabled write SetEnabled;
        property Device: Byte read FDevice;
        property ShiftType: byte read FShiftType;
@@ -1141,14 +1401,18 @@ function StrToHexSep(const Value: string): string;
 function Decode7To8bit(Data7bit: string): String;
 {: encode a 8-bit-char string into a 7-bit-char string}
 function Encode8To7Bit(Data8bit:string): string;
-{: converts a N bytes string, low byte first, into a positive integer}
-function DecodeNBytesToInt(DataString: String): integer;
+{: converts a N bytes string, low byte first, into a positive value}
+function decodeNbytestoInt(DataString: String): QWord;
+{: converts a 64-bit unsigned int value into a byte string low byte first}
+function encode64BitUnsignedInt(Value: QWord): string;
 {: converts a 32-bit unsigned int value into a byte string low byte first}
 function encode32BitUnSignedInt(Value: Integer): String;
 {: converts a 32-bit int value into a byte string low byte first}
 function encode32BitSignedInt(Value: Integer): String;
 {: converts a string of bytes, low byte first, into a 32-bit int value}
 function decode32BitSignedInt(StrEncoded: string): integer;
+{: converts a string of bytes, low byte first, into a 64-bit unsigned value}
+function decode64BitUnsignedInt(StrEncoded: string): Qword;
 {: check crc8 of buffer being last byte CRC8}
 function CheckCRC8(Buffer: String): Boolean;
 {: check crc16 of buffer being 2 last bytes CRC16}
@@ -1157,28 +1421,23 @@ function CheckCRC16(Buffer: String): Boolean;
 function CalculateCRC8(Buffer: String): Byte;
 {: calculate crc16 of buffer}
 function CalculateCRC16(Buffer: String): uint16;
-{: encode double into accelstepper custom float (4 bytes of 7-bit char, only 28 bits are used)}
-function EncodeAccelFloat(Value: Double): String;
-{: decode 4 bytes custom float (7-bit-char) into a double}
-function DecodeAccelFloat(Data7Bit: string): Double;
-{: procedure to termnate application}
-procedure CloseApplication;
+{: encode single into accelstepper custom float (4 bytes of 7-bit char, only 28 bits are used)}
+function EncodeAccelFloat(Value: Single): String;
+{: decode 4 bytes custom float (7-bit-char) into a single}
+function DecodeAccelFloat(Data7Bit: string): single;
 {: function returning pin mode value}
 function ByteToPinModes(Value: Byte): TPinModes;
 {: function retuning pin mode from value}
 function PinModesToByte(PinMode: TPinModes): Byte;
+{: function returning Index of String Modes }
+function GetIndexModeOfString(StringMode: string): integer;
 {: function returning serial port type value}
 function ByteToSerialPorts(Value: Byte): TSerialPorts;
 {: function retuning serial port type from value}
 function SerialPortsToByte(SerialPort: TSerialPorts): Byte;
-{: function returning gamma corrected color}
-function gammaRGB(RGBColor: longword; gamma: single): longword;
 
-const
-  PinModesString: array[TPinModes] of string = ('INPUT', 'OUTPUT', 'ANALOG', 'PWM', 'SERVO',
-                                      'SHIFT', 'I2C', 'ONEWIRE', 'STEPPER', 'ENCODER',
-                                      'SERIAL', 'PULLUP', 'PS2MOUSE', 'NEOPIXELS', 'IGNORE PIN');
 
+//
 procedure Register;
 
 
@@ -1190,21 +1449,14 @@ uses
 procedure Register;
 begin
   {$I firmataboard.lrs}
-  RegisterComponents('Firmata', [TBoard, TPin, TTask, TOneWire, TI2C,
-                   TAccelStepper, TAccelStepperGroup, TSerial, TServo, TEncoder, TPS2Mouse, TNeoPixel]);
+  RegisterComponents('Firmata', [TBoard, TPin, TTask, TOneWire, TI2C, TSPI,
+                   TAccelStepper, TAccelStepperGroup, TSerial, TServo, TEncoder, TFrequency, TDHT, TPS2Mouse, TNeoPixel]);
 end;
 
-//
 //
 // utils functions
 //
 //
-procedure CloseApplication;
-begin
-  Application.Terminate; // cierra programa
-  while not Application.Terminated do   // comprueba que realmente termina
-    Application.ProcessMessages;
-end;
 
 function ByteToPinModes(Value: Byte): TPinModes;
 begin
@@ -1221,6 +1473,23 @@ begin
   else
     Result:=$7F;
 end;
+// Get pin mode byte of string
+function GetIndexModeOfString(StringMode: string): integer;
+begin
+  Result:= GetEnumValue(TypeInfo(TPinModes), StringMode);
+end;
+{function GetIndexModeOfString(StringMode: string): integer;
+var
+  i: Integer;
+begin
+  Result:=-1;  //Not found
+  for i:=0 to Length(PinModesString)-1 do
+    if StringMode = PinModesString[ByteToPinModes(i)] then
+    begin
+      Result:=i;
+      break;
+    end;
+end;}
 
 function ByteToSerialPorts(Value: Byte): TSerialPorts;
 begin
@@ -1248,8 +1517,7 @@ var
 begin
   Result := '';
   for n := 1 to Length(Value) do
-    Result := Result + Format('%3.2x', [ord(Value[n])]);
-  Result := upperCase(Result);
+    Result:=Result+IntToHex(ord(Value[n]), 2)+' ';
 end;
 
 function encode32BitUnSignedInt(Value: Integer): String;
@@ -1276,20 +1544,36 @@ begin
     Result[5]:=chr(ord(Result[5]) or $08);
 end;
 
+function encode64BitUnsignedInt(Value: QWord): string;
+var
+  i: integer;
+begin
+  Result:='';
+  for i:=0 to 9 do
+    Result:=Result+chr((Value >> (7 * i)) and $7F);
+  Result:=Result+chr(Value >> 63);
+end;
+
 function decode32BitSignedInt(StrEncoded: string): integer;
+begin
+  Result:=ord(StrEncoded[1]) or (ord(StrEncoded[2]) << 7)  or (ord(StrEncoded[3]) << 14)
+          or (ord(StrEncoded[4]) << 21) or ((ord(StrEncoded[5]) and $7) << 28);
+  if (ord(StrEncoded[5]) >> 3) = 1 then // negative
+    Result:=-Result;
+end;
+
+function decode64BitUnsignedInt(StrEncoded: string): QWord;
 var
   i: integer;
 begin
   Result:=0;
-  for i:=0 to 3 do
+  for i:=0 to 9 do
     Result:=Result or (ord(StrEncoded[i+1]) << (i*7));
-  Result:=Result or ((ord(StrEncoded[5]) << 28) and 7);
-
-  if (ord(StrEncoded[5]) >> 3) = 1 then // negative
-    Result:=-Result;
+  Result:=Result or ((ord(StrEncoded[10]) << 63) and 1);
 end;
+
 // converts a n bytes string, low byte first, into a positive int value
-function decodeNbytestoInt(DataString: String): integer;
+function decodeNbytestoInt(DataString: String): QWord;
 var
   i: integer;
 begin
@@ -1351,6 +1635,7 @@ begin
       inc(rotate);
     end;
 end;
+
 // converts a 2 bytes char into a 1 byte char
 function Decode2BytesCharTo1(Data2bytes: string): string;
 var
@@ -1472,7 +1757,7 @@ Byte 2 	Next most significant bits 	1000101
 Byte 3 	Next most significant bits 	0101001
 Byte 4 	Sign, Exponent and 2 most significant bits 	0000101
 Values in firmata are passed in the 7 least significant bits of each message byte so we will be passing in 4 bytes in this order:}
-function EncodeAccelFloat(Value: double): String;   // return a 4 bytes string encoded 7 bit
+function EncodeAccelFloat(Value: single): String;   // return a 4 bytes string encoded 7 bit
 var
   NumberS: string;
   EPos: integer;
@@ -1507,7 +1792,7 @@ Byte 2 	Next most significant bits 	1000101
 Byte 3 	Next most significant bits 	0101001
 Byte 4 	Sign, Exponent and 2 most significant bits 	0000101
 }
-function DecodeAccelFloat(Data7Bit: string): double;  // Data7Bit 4 bytes encoded to 7 bits, total 28 bits
+function DecodeAccelFloat(Data7Bit: string): single;  // Data7Bit 4 bytes encoded to 7 bits, total 28 bits
 var
   Mantissa: integer;
   Exponent: integer;
@@ -1523,74 +1808,189 @@ end;
 //
 //
 //
-{: function returning gamma corrected color}
-function gammaRGB(RGBColor: longword; gamma: single): longword;
-  function GammaCorrection(color: byte): longword; // actually return a byte value
-  begin
-    Result:=trunc(255*Power(color/255, gamma));
-  end;
+
+{ TBoardThread }
+procedure TBoardThread.DoOnTimer;
 begin
-  Result:=GammaCorrection(RGBColor and $FF) or // Blue
-         (GammaCorrection((RGBColor >> 8) and $FF) << 8) or // green
-         (GammaCorrection((RGBColor >> 16) and $FF) << 16) or // red
-         (GammaCorrection((RGBColor >> 24) and $FF) << 24); // white
+  if Assigned(FOnTimer) then
+    FOnTimer(Self);
 end;
 
-{ TComPortReadThread }
-procedure TBoardThread.CallEvent;
+procedure TBoardThread.TimeOut;
 begin
-  if Assigned(owner.FOnDeviceDataAvailable) then
-  begin
-    if Owner.FOnDeviceDataAvailable(self) then
-    begin
-      Owner.parsefirmatacommand(self);
-    end
-    else if Owner.FStarting then// Check if firmata has started to stop time out
-    begin
-      Owner.FStartingTime:=TThread.GetTickCount64-Owner.FInitTime;   // Get milisec ticks
-      if Owner.FStartingTime > Owner.FMaxTime then  // time out for firmata, default to 6 second
-      begin
-        Owner.RaiseError(1003, 'CallEvent');
-      end;
-    end;
-  end
-  else
-  begin
-    Owner.RaiseError(1026, 'CallEvent');  // now way to check available data
-  end;
+  if Assigned(FOwner) then
+    FOwner.RaiseError(1003, '');
+end;
+
+procedure TBoardThread.TimeOutByte;
+begin
+  if Assigned(FOwner) then
+    FOwner.RaiseError(1027, '');
+end;
+
+procedure TBoardThread.askProtocol;
+begin
+  if Assigned(FOwner) then
+    FOwner.askProtocol;   // ask for board protocol
 end;
 
 procedure TBoardThread.Execute;
 begin
-  try
-    while not MustDie do
+  while not Terminated do
+  begin
+    //Sleep(1);
+    if FEnabled and (TThread.GetTickCount64 - FTime > FInterval) then
     begin
-      Synchronize(
-      {$IFDEF OBJFPC}@{$ENDIF}CallEvent);
+      FTime:=TThread.GetTickCount64;
+      Synchronize({$IFDEF OBJFPC}@{$ENDIF}DoOnTimer);
     end;
-  finally
-    Terminate;
+    GetCommand;
+    if FStarting then
+    begin
+      if (TThread.GetTickCount64 - FInitTime) > FMaxTime then
+      begin
+        Synchronize({$IFDEF OBJFPC}@{$ENDIF}TimeOut);
+        Terminate;
+      end
+      else if ((TThread.GetTickCount64 - FInitTime) > 1000) and FFirstTry then
+      begin
+        FFirstTry:=False;
+        Synchronize({$IFDEF OBJFPC}@{$ENDIF}askProtocol);
+      end;
+    end
+    else if not FEndLastCommand and ((TThread.GetTickCount64 - FByteTimeOut) > 2000) then
+    begin
+      Synchronize({$IFDEF OBJFPC}@{$ENDIF}TimeOutByte);
+      Terminate;
+    end;
   end;
-
 end;
 
+procedure TBoardThread.ParseSysExCommand;
+begin
+  FOwner.ParseSysExCommand(FCommandData);
+  FStarting:=Owner.FStarting;
+end;
+
+procedure TBoardThread.ParseCommand;
+begin
+  FOwner.ParseCommand(FCommandData);
+end;
+
+procedure TBoardThread.GetCommand;
+var
+  i: integer;
+begin
+  Synchronize({$IFDEF OBJFPC}@{$ENDIF}UpdateVars);
+  while FCommandBuffer <> '' do
+  begin
+    if FEndLastCommand then
+      FByteTimeOut:=TThread.GetTickCount64;  // for data inside a command
+
+    FCommandData:='';   // new command data
+    FEndLastCommand:=false;
+
+    case ord(FCommandBuffer[1]) of
+      START_SYSEX: begin  // 0xF0
+        i:=Pos(chr(END_SYSEX), FCommandBuffer);
+        if i > 0 then   // found END_SYSEX, so complete sysex command received
+        begin
+          FCommandData:=Copy(FCommandBuffer, 2, i-2); // not include START_SYSEX nor END_SYEX
+          Delete(FCommandBuffer, 1, i); // delete sysex command from buffer
+          FEndLastCommand:=true;
+          if not FStarting or (ord(FCommandData[1]) in [REPORT_FIRMWARE, CAPABILITY_RESPONSE, STRING_DATA]) then
+            Synchronize({$IFDEF OBJFPC}@{$ENDIF}ParseSysExCommand); // not send START_SYSEX nor END_SYEX     // only can process these commands in starting mode
+        end
+        else  // no complete sysex command received, so roll back and wait for more data
+          exit;
+     end;
+     $90 .. $9F, $E0 .. $EF :
+       if length(FCommandBuffer) > 2 then
+       begin
+         FCommandData:=Copy(FCommandBuffer, 1, 3);
+         //FCommandBuffer:=Copy(FCommandBuffer, 4, Length(FCommandBuffer) - 3);
+         Delete(FCommandBuffer, 1, 3); // delete command from buffer
+         FEndLastCommand:=true;
+         if FStarting then
+           exit; // can't proccess this command in starting mode
+         Synchronize({$IFDEF OBJFPC}@{$ENDIF}ParseCommand);
+       end
+       else // no complete command received, so roll back and wait for more data
+         exit;
+     REPORT_PROTOCOL :  // same as REPORT_VERSION
+       if length(FCommandBuffer) > 2 then  // complete command received
+       begin
+         FCommandData:=Copy(FCommandBuffer, 1, 3);
+         //FCommandBuffer:=Copy(FCommandBuffer, 4, Length(FCommandBuffer) - 3);
+         Delete(FCommandBuffer, 1, 3);  // delete command from buffer
+         FEndLastCommand:=true;
+         Synchronize({$IFDEF OBJFPC}@{$ENDIF}ParseCommand);
+       end
+       else  // no complete command received, so roll back and wait for more data
+         exit;
+     else  // bad data, remove it
+       Delete(FCommandBuffer, 1, 1);
+       FEndLastCommand:=true;
+    end;
+  end;
+end;
+
+procedure TBoardThread.UpdateVars;   // Update vars on Thread from Board
+begin
+  FCommandBuffer:=FCommandBuffer + Owner.FCommandBuffer;
+  Owner.FCommandBuffer:='';
+  FStarting:=Owner.FStarting;
+end;
+
+procedure TBoardThread.StopTimer;
+begin
+  FEnabled:=False;
+end;
+
+procedure TBoardThread.StartTimer;
+begin
+  FTime:=TThread.GetTickCount64;
+  FEnabled:=True;
+  if Self.Suspended then
+    Start;
+end;
+
+constructor TBoardThread.Create(CreateSuspended: Boolean);
+begin
+  inherited Create(CreateSuspended);
+  FInterval:=1000;
+  FreeOnTerminate:=True;
+  FEnabled:=False;
+  FOwner:=nil;
+  FMaxTime:=6000;
+  FStarting:=True;
+  FFirstTry:=true;
+  FEndLastCommand:=true;
+end;
+
+destructor TBoardThread.Destroy;
+begin
+  inherited Destroy;
+end;
+
+
 { TBoard }
+
 constructor TBoard.Create(AOwner: TComponent);
 begin
   inherited;
 
   FBoardThread:=nil;
-  FStarting:=False;
-  FEndCommand:=true;
+  FStarting:=True;
   FEnabled:=False;
   FOnBeforeOpen:=nil;
   FOnAfterClose:=nil;
   FOnBoardReady:=nil;
-  FOnDeviceDataAvailable:=nil;
   FOnSendDataToDevice:=nil;
-  FOnGetDataFromDevice:=nil;
   FOnQueryAllTask:=nil;
   FOnError:=nil;
+  FonTimer:=nil;
+  FTimerInterval:=0;
   FOnBoardData:=nil;
   FOnPinValue:=nil;
   FOnPinState:=nil;
@@ -1599,14 +1999,22 @@ begin
   FAnalogPinsNumber:=0;
   FGotCapabilities:=False;
   FGotFirmware:=False;
-  FGotVersion:=False;
+  FGotProtocol:=False;
   FMaxTime:=6000; // default max time to wait for firmata to start
   FStartingTime:=0;
+  FBoardStringProtocol:='';
+  FBoardStringFirmware:='';
 end;
 
 destructor TBoard.Destroy();
 begin
   inherited Destroy;
+end;
+
+procedure TBoard.CloseApp;
+begin
+  Close;
+  TForm(Owner).Close;
 end;
 
 function TBoard.GetBoardPin(Index: Integer): TBoardPin;
@@ -1627,23 +2035,23 @@ procedure TBoard.SetSamplingInterval(Interval: integer);
 begin
   if Interval=FSamplingInterval then
     exit;
-  if Interval < 1 then
+  if (Interval < 1) or (Interval > $3FFF) then
     exit;
   FSamplingInterval:=Interval;
-  SendSamplingInterval(Interval);
+  if FEnabled then
+    SendSamplingInterval(true);
 end;
 
-function TBoard.SendSamplingInterval(Interval: integer; write: Boolean=true): string;
+function TBoard.SendSamplingInterval(write: Boolean=true): string;
 begin
-  if write then
-    FSamplingInterval:=Interval;
+  Result:='';
   if FEnabled then
-    Result:=SendSysEx(chr(SAMPLING_INTERVAL)+chr(Interval and $7F)+chr((Interval >> 7) and $7F), write);
+    Result:=SendSysEx(chr(SAMPLING_INTERVAL)+chr(FSamplingInterval and $7F)+chr((FSamplingInterval >> 7) and $7F), write);
 end;
 
 procedure TBoard.setMaxTime(TimeToWait: Qword);  // milisec to wait for firmata
 begin
-  if TimeToWait < 1700 then  // min time to wait is about 1700 milisec
+  if TimeToWait < 1800 then  // min time to wait is about 1800 milisec
     exit
   else
     FMaxTime:=TimeToWait;
@@ -1657,10 +2065,7 @@ begin
   if State then
      Open
   else
-  begin
-     DisableModules;
      Close;
-  end;
 end;
 
 procedure TBoard.Open;
@@ -1673,37 +2078,32 @@ begin
   FEnabled:=true;
 
   if Assigned(FOnBeforeOpen) then
-     FOnBeforeOpen(self);
-
-  // init time measure for starting firmata
-  FInitTime:=TThread.GetTickCount64;  // milisec
+    FOnBeforeOpen(self);
 
   if not FEnabled then
     exit;
 
   if not Assigned(FOnSendDataToDevice) then
-  begin
-    RaiseError(1001, 'Open');
-    close;
-  end;
-  if not Assigned(OnGetDataFromDevice) then
-  begin
-     RaiseError(1028, 'Open');
-     close;
-  end;
- if not Assigned(OnDeviceDataAvailable) then
-  begin
-     RaiseError(1026, 'Open');
-     close
-  end;
+    RaiseError(1001, 'Board:Open');
 
   // Launch Thread
-  FBoardThread := TBoardThread.Create(true);
-  FBoardThread.Owner := Self;
-  FBoardThread.MustDie := false;
+  FBoardThread:=TBoardThread.Create(true);
+  FBoardThread.Owner:=Self;
+  FBoardThread.FMaxTime:=FMaxTime;
+  FBoardThread.FByteTimeOut:=0;
+  FBoardThread.FStarting:=True;
 
-  FBoardThread.Start;
-  SetSamplingInterval(FSamplingInterval);
+  FBoardThread.FCommandData:='';
+  FBoardThread.FCommandBuffer:='';
+  FBoardThread.FEndLastCommand:=true;
+  FBoardThread.FOnTimer:={$IFDEF OBJFPC}@{$ENDIF}FOnTimer;
+  FBoardThread.FInterval:=FTimerInterval;
+  FBoardThread.FInitTime:=TThread.GetTickCount64;
+
+  FInitTime:=FBoardThread.FInitTime;
+
+  FBoardThread.Start;  //launch thread
+  //FBoardThread.StartTimer;  //launch thread timer, so Start Thread if necessary
 end;
 
 procedure TBoard.InternalBoardReady;
@@ -1714,10 +2114,16 @@ begin
   SetLength(FPins, FBoardPinsNumber);
 
   for i:=0 to 127 do  // Max tasks 127
-   FTasks[i]:=nil;
+    FTasks[i]:=nil;
 
   FI2C:=nil;     // in this moment only one module
+
   SetLength(FOneWires, FBoardPinsNumber);  // all pins can be used by a onewire module
+  for i:=0 to FBoardPinsNumber - 1 do
+    FOneWires[i]:=nil;
+
+  for i:=0 to MAX_SPI_DEVICES - 1 do
+    FSPIs[i]:=nil;
 
   for i:=0 to MAX_ACCELSTEPPER_DEVICES - 1 do
     FAccelSteppers[i]:=nil;
@@ -1732,6 +2138,14 @@ begin
 
   for i:=0 to MAX_ENCODERS - 1 do
     FEncoders[i]:=nil;
+
+  for i:=0 to MAX_FREQUENCIES - 1 do
+    FFrequencies[i]:=nil;
+
+  // all pins can be used for DHT
+  SetLength(FDHTs, FBoardPinsNumber);  // all pins can be used by a DHT module
+  for i:=0 to FBoardPinsNumber - 1 do
+    FDHTs[i]:=nil;
 
   for i:=0 to MAX_MICE - 1 do
     FMice[i]:=nil;
@@ -1754,6 +2168,17 @@ begin
      if Assigned(FMice[i]) and  FMice[i].FEnabled then
         FMice[i].setEnabled(false);
 
+   // disable DHTs
+    // disable Onewire modules
+   for i:=0 to FBoardPinsNumber - 1 do
+     if Assigned(FDHTs[i]) and FDHTs[i].FEnabled then
+       FDHTs[i].setEnabled(false);
+
+   // disable Frecuencies
+   for i:=0 to MAX_FREQUENCIES - 1 do
+     if Assigned(FFrequencies[i]) and FFrequencies[i].FEnabled then
+       FFrequencies[i].setEnabled(false);
+
    // disable servos
    for i:=0 to MAX_SERVOS - 1 do
      if Assigned(FServos[i]) and FServos[i].FEnabled then
@@ -1763,38 +2188,44 @@ begin
    for i:=0 to MAX_ENCODERS - 1 do
      if Assigned(FEncoders[i]) and FEncoders[i].FEnabled then
        FEncoders[i].setEnabled(false);
-  // disable AccelStepperGroup
-  if Assigned(FAccelStepperGroup) and FAccelStepperGroup.FEnabled then
-    FAccelStepperGroup.setEnabled(False);
 
-  // disable AccelSteppers
-  for i:=0 to MAX_ACCELSTEPPER_DEVICES - 1 do
-    if Assigned(FAccelSteppers[i]) and FAccelSteppers[i].FEnabled then
-      FAccelSteppers[i].setEnabled(False);
+   // disable AccelStepperGroup
+   if Assigned(FAccelStepperGroup) and FAccelStepperGroup.FEnabled then
+     FAccelStepperGroup.setEnabled(False);
 
-  // disable I2C
-  if Assigned(FI2C) and FI2C.FEnabled then
-    FI2C.setEnabled(False);
+   // disable AccelSteppers
+   for i:=0 to MAX_ACCELSTEPPER_DEVICES - 1 do
+     if Assigned(FAccelSteppers[i]) and FAccelSteppers[i].FEnabled then
+       FAccelSteppers[i].setEnabled(False);
 
-  // disable Onewire modules
-  for i:=0 to FBoardPinsNumber - 1 do
-    if Assigned(FOneWires[i]) and FOneWires[i].FEnabled then
-      FOneWires[i].setEnabled(false);
+   // disable I2C
+   if Assigned(FI2C) and FI2C.FEnabled then
+     FI2C.setEnabled(False);
 
-  // disable tasks
-  for i:=0 to 127 do
-    if Assigned(FTasks[i]) and FTasks[i].FEnabled then
-      FTasks[i].setEnabled(False);
+   // disable SPI
+   for i:=0 to MAX_SPI_DEVICES - 1 do
+     if Assigned(FSPIs[i]) and FSPIs[i].FEnabled then
+       FSPIs[i].setEnabled(False);
 
-  // disable serial ports
-  for i:=0 to MAX_SERIAL_PORTS - 1 do
-    if Assigned(FSerials[ByteToSerialPorts(i)]) and FSerials[ByteToSerialPorts(i)].FEnabled then
-      FSerials[ByteToSerialPorts(i)].setEnabled(False);
+   // disable Onewire modules
+   for i:=0 to FBoardPinsNumber - 1 do
+     if Assigned(FOneWires[i]) and FOneWires[i].FEnabled then
+       FOneWires[i].setEnabled(false);
 
- // disable pins
- for i:=0 to FBoardPinsNumber - 1 do
-  if Assigned(FPins[i]) and FPins[i].FEnabled then
-    FPins[i].setEnabled(False);
+   // disable tasks
+   for i:=0 to 127 do
+     if Assigned(FTasks[i]) and FTasks[i].FEnabled then
+       FTasks[i].setEnabled(False);
+
+   // disable serial ports
+   for i:=0 to MAX_SERIAL_PORTS - 1 do
+     if Assigned(FSerials[ByteToSerialPorts(i)]) and FSerials[ByteToSerialPorts(i)].FEnabled then
+       FSerials[ByteToSerialPorts(i)].setEnabled(False);
+
+   // disable pins
+   for i:=0 to FBoardPinsNumber - 1 do
+     if Assigned(FPins[i]) and FPins[i].FEnabled then
+       FPins[i].setEnabled(False);
 
 end;
 
@@ -1802,27 +2233,23 @@ procedure TBoard.Close;
 begin
   FEnabled:=False;
 
-  // stop running thread
-  if FBoardThread <> nil then
-  begin
-    FBoardThread.FreeOnTerminate:=false;
-    FBoardThread.MustDie:= true;
-
-    while not FBoardThread.Terminated do begin
-      Application.ProcessMessages;
-    end;
-
-    FBoardThread.Free;
-    FBoardThread:=nil;
-  end;
-
   if Assigned(FOnAfterClose) then
     FOnAfterClose(self);
+
+  DisableModules;
+
+  // stop and terminate thread
+  if FBoardThread <> nil then
+  begin
+    FBoardThread.FreeOnTerminate:=True;
+    FBoardThread.Terminate;
+    FBoardThread:=nil;
+  end;
 end;
 
-function TBoard.askVersion(write: Boolean=true): string;
+function TBoard.askProtocol(write: Boolean=true): string;
 begin
-  Result:=SendSysEx(chr(REPORT_VERSION), write);
+  Result:=SendCommand(chr(REPORT_VERSION), write);
 end;
 
 function TBoard.askFirmware(write: Boolean=true): string;
@@ -1837,592 +2264,504 @@ end;
 
 procedure TBoard.initBoardVariables;
 begin
+  FLastError:=0;
   FBoardPinsNumber:=0;
   FAnalogPinsNumber:=0;
   Setlength(FBoardPins,0);
-
-  FEndCommand:=True;
-  FBoardVersion[0]:=0;
-  FBoardVersion[1]:=0;
+  FCommandBuffer:='';
+  FBoardStringProtocol:='';
   FBoardStringFirmware:='';
-  FBoardFirmware[0]:=0;
-  FBoardFirmware[1]:=0;
-  FGotVersion:=False;
+  FGotProtocol:=False;
   FGotFirmware:=False;
   FGotCapabilities:=False;
   FStarting:=True;
+  FTimerInterval:=0;
 end;
 
-procedure TBoard.RaiseError(Error: integer; FunctionError: string; TextError: string='');
+procedure TBoard.RaiseError(Error: integer; FunctionError: string);
 var
   ErrorString: string;
 begin
   FLastError:=Error;
-  if Error > 1000 then
-    ErrorString:=Format('Error (%d); %s in %s %s',[Error, ErrorsArray[Error - 1000], FunctionError, TextError])
-  else
-    ErrorString:=Format('Error (%d); %s in %s %s',[Error, ErrorsArray[Error], FunctionError, TextError]);
+
+  ErrorString:=Format('Error (%d): %s',[Error, ErrorsArray[Error mod 1000]]);
+
+  if FunctionError <> '' then
+    ErrorString:=ErrorString+' at '+FunctionError;
 
   if Assigned(FOnError) then
-     FOnError(self, Error, ErrorString);
+    FOnError(self, Error, ErrorString);
 
-  if Error > 1000 then  // close application
-  begin
-    raise Exception.Create(ErrorString);
-    CloseApplication;
-  end;
+  if Error > 1000 then   // irrecuperable error
+    CloseApp;
 end;
 
 procedure TBoard.Reset;
 begin
-   BoardReset;
    Close;
    Open;
 end;
 
-//
-// This is a weird function because of the problem with TThread, threads only run when the program is in idle state, out of a Event
-//
-function TBoard.GetNextByte: Byte;
-var
-  value: integer;
-  TimeOut: QWord;
+procedure TBoard.ParseData(Data: string);
 begin
-  Value:=-1;
-  TimeOut:=TThread.GetTickCount64;
-
-  while true do
-  begin
-    if Assigned(FOnGetDataFromDevice) then
-      Value:=FOnGetDataFromDevice(self);
-    if Value <> -1 then
-      break;
-    if not FStarting and ((TThread.GetTickCount64 - TimeOut) > 2000) then  // time out reading a byte
-    begin
-      RaiseError(1031, 'GetNextByte');
-      Close;
-    end;
-  end;
-  Result:=Value;
+  FCommandBuffer:=FCommandBuffer+Data;
 end;
 
-procedure TBoard.parsefirmatacommand(Sender: TObject);
+procedure TBoard.parseCommand(Data: string);
 var
-  ReadByte: byte;
   Pin: Byte;
   Value: integer;
   BitValue: integer;
   mask: Byte;
   Port: Byte;
 begin
-  if FEndCommand then    // last command has finished
-  begin
-    FEndCommand:=False;  // Start a new command
-    ReadByte:=getNextByte;
+  case ord(Data[1]) of
+      {0  digital data, 0x90-0x9F, second nibble of byte 0 gives the port number (e.g. 0x92 is the third port, port 2)
+      1  digital pins 0-6 bitmask
+      2  digital pin 7-13 bitmask}
+    $90 .. $9F: begin  // digital I/O message
+      {port = Command; port_data = data[self.LSB] + (data[self.MSB] << 7)
+      set all the pins for this reporting port get the first pin number for this report, pin = port * PorTBoardPins}
+      mask:=1;
+      Port:= ord(Data[1]) and $0F; // port number
+      Value:=(ord(Data[2]) and $7F) or ((ord(Data[3]) << 7) and $7F);   // get digital values
 
-    case ReadByte of
-      START_SYSEX: begin  // 0xF0
-        GetSysExCommandData(GetNextByte);
-      end;
-        {0  digital data, 0x90-0x9F, second nibble of byte 0 gives the port number (e.g. 0x92 is the third port, port 2)
-        1  digital pins 0-6 bitmask
-        2  digital pin 7-13 bitmask}
-      $90 .. $9F: begin  // digital I/O message
-        {port = Command; port_data = data[self.LSB] + (data[self.MSB] << 7)
-        set all the pins for this reporting port get the first pin number for this report, pin = port * PorTBoardPins}
-        mask:=1;
-        Port:= ReadByte and $0F; // port number
-        Value:=(GetNextByte and $7F) or ((GetNextByte << 7) and $7F);   // get digital values
-
-        for Pin:=Port * 8 to Port * 8 + 7 do
+      for Pin:=Port * 8 to Port * 8 + 7 do
+      begin
+        if FEnabled and (Pin < Length(FPins)) and Assigned(FPins[Pin]) and FPins[Pin].Enabled and FPins[Pin].FReporting then  // report on pin is enabled
         begin
-          if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].Enabled and FPins[Pin].FReporting then  // report on pin is enabled
-          begin
-            BitValue:=ord((Value and mask) > 0);
-            FPins[Pin].FValue:=BitValue;
-            if Assigned(FPins[Pin].FOnPinValue) then  // Report has to be true
-              FPins[Pin].FOnPinValue(self, BitValue);
-          end;
-          mask:=mask << 1; // next pin mask
+          BitValue:=ord((Value and mask) > 0);
+          FPins[Pin].FValue:=BitValue;
+          if Assigned(FPins[Pin].FOnPinValue) then  // Report has to be true
+            FPins[Pin].FOnPinValue(self, BitValue);
         end;
-      end;
-      {0  analog pin, 0xE0-0xEF,
-      1  analog least significant 7 bits
-      2  analog most significant 7 bits}
-      $E0 .. $EF: begin  // analog I/O message ,    AnalogPin:= ReadByte and $0F; // Channel number
-        Pin:=GetPinFromAnalogPin(ReadByte and $0F);  // get pin from analogpin
-        Value:=GetNextByte or (GetNextByte << 7);
-        if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].FEnabled then
-          FPins[Pin].GetAnalogMessage(Value);
-      end;
-      {0  version report header (0xF9)
-      1  major version (0-127)
-      2  minor version (0-127)}
-      REPORT_VERSION: begin //
-        FBoardVersion[0]:=GetNextByte;
-        FBoardVersion[1]:=GetNextByte;
-        FGotVersion:=true;
+        mask:=mask << 1; // next pin mask
       end;
     end;
-    FEndCommand:=True;
+    {0  analog pin, 0xE0-0xEF,
+    1  analog least significant 7 bits
+    2  analog most significant 7 bits}
+    $E0 .. $EF: begin  // analog I/O message ,    AnalogPin:= ReadByte and $0F; // Channel number
+      Pin:=GetPinFromAnalogPin(ord(Data[1]) and $0F);  // get pin from analogpin
+      Value:=ord(Data[2]) or (ord(Data[3]) << 7);
+      if FEnabled and Assigned(FPins[Pin]) and FPins[Pin].FEnabled then
+        FPins[Pin].GetAnalogMessage(Value);
+    end;
+    {0  version report header (0xF9)
+    1  major protocol version (0-127)
+    2  minor protocol version (0-127)}
+    REPORT_PROTOCOL: begin // Protocol version
+      // data[2] = major version
+      // data[3] = mainor version
+      FGotProtocol:=true;
+
+      FBoardstringProtocol:=IntToStr(ord(Data[2]))+'.'+IntToStr(ord(Data[3]));
+      if FStarting then  // to complete init procedure
+        askFirmware;     // Don't know the reason why board does not send this
+    end;
   end;
 end;
 
-procedure TBoard.GetSysExCommandData(Command: byte);
+procedure TBoard.ParseSysExCommand(Data: string);
 var
-  ReadByte: Byte;
   Pin: byte;
   AnalogPin: byte;
   Value: integer;
   Mode: Byte;
   DataString: string;
-  Device: byte; // accelstepper device
-  // exended sysex
-  ID0: byte;
-  ID1: byte;
+  Device: byte; // accelstepper or SPI device
   Port: Byte;
   i: integer;
   TaskID: Byte;
   TaskIDs: array of Byte;
   EncoderData: string;
 begin
-     DataString:='';
-     case Command of
-          { 0  START_SYSEX       (0xF0)
-          1 EXTENDED_SYSEX       (0x00)
-          2 EXTENTED_ID_0         byte0
-          3 EXTENDED_ID_1         byte1
-          ... PAYLOAD             nbytes
-          N  END_SYSEX           (0xF7)}
-          EXTENDED_SYSEX: begin // 0x00  not yet supported
-             // TODO more research
-             ID0:=GetNextByte; // ID_0
-             ID1:=GetNextByte; // ID_1
-             // now read until end command
-             ReadByte:=GetNextByte;
-             while ReadByte <> END_SYSEX do
-             begin
-               DataString:=DataString+chr(ReadByte);
-               ReadByte:=GetNextByte;
-             end;
-             if Assigned(FOnExtendedSysex) then
-               FOnExtendedSysex(self, ID0, ID1, DataString);
-          end;
-          {0  START_SYSEX       (0xF0)
-          1  REPORT_VERSION     (0x79)
-          2  major version     (0-127)
-          3  minor version     (0-127)
-          4  first char of firmware name (LSB)
-          5  first char of firmware name (MSB)
-          6  second char of firmware name (LSB)
-          7  second char of firmware name (MSB)
-          ... for as many bytes as it needs
-          N  END_SYSEX         (0xF7)}
-          REPORT_FIRMWARE: begin // 0x79
-             FBoardFirmware[0]:=GetNextByte;
-             FBoardFirmware[1]:=GetNextByte;
-             ReadByte:=GetNextByte;
-             while ReadByte <> END_SYSEX do  // Read Firmware string each char are 2 bytes (low byte, high byte)
-             begin
-               DataString:=DataString+Chr(ReadByte);
-               ReadByte:=GetNextByte;
-             end;
-             DataString:=Decode2BytesCharTo1(DataString);  // converts 2 bytes char to 1 byte char
-             FBoardStringFirmware:=DataString+' firmware('+IntToStr(FBoardFirmware[0])+'.'+IntToStr(FBoardFirmware[1])+
-                          ') version('+IntToStr(FBoardVersion[0])+'.'+IntToStr(FBoardVersion[1])+')';
-             FGotFirmware:=True;
-             if (FBoardFirmware[0] > FIRMWARE_MAJOR_VERSION) or (FBoardFirmware[1] < FIRMWARE_MINOR_VERSION) then
-                RaiseError(1035, 'GetSysExCommand');
-             if not FGotcapabilities then
-               askBoardCapabilities;
-          end;
-          {0  START_SYSEX              (0xF0)
-          1  CAPABILITY_RESPONSE       (0x6C)
-          2  1st supported mode of pin 0
-          3  1st mode's resolution of pin 0
-          4  2nd supported mode of pin 0
-          5  2nd mode's resolution of pin 0
-          ... additional modes/resolutions, followed by `0x7F`,
-          to mark the end of the pin's modes. Subsequently, each pin
-          follows with its modes/resolutions and `0x7F`,
-          until all pins are defined.
-          N  END_SYSEX                (0xF7)}
-          CAPABILITY_RESPONSE: begin // 0x6C;
-             ReadByte:=GetNextByte;
-             Pin:=0;
-             AnalogPin:=0;
-             SetLength(FBoardPins,0); // clear FBoardPins
-             while ReadByte <> END_SYSEX do  // for all pin modes
-             begin
-                // New pin element
-                Setlength(FBoardPins,Pin+1);  // increment size of array of pins
-                FBoardPins[pin].Busy:=false;  // Pin no assigned to any module
-                FBoardPins[pin].AnalogMap:=PinModesToByte(PIN_MODE_IGNORE); // default no analog pin map
-                FBoardPins[pin].ActualMode:=PinModesToByte(PIN_MODE_OUTPUT);
+   DataString:='';
+   case ord(Data[1]) of
+        { 0  START_SYSEX       (0xF0)
+        1 EXTENDED_SYSEX       (0x00)
+        2 EXTENTED_ID_0         byte0
+        3 EXTENDED_ID_1         byte1
+        ... PAYLOAD             nbytes
+        N  END_SYSEX           (0xF7)}
+        EXTENDED_SYSEX: begin // 0x00  not yet supported
+           // TODO more research
+           DataString:=Copy(Data, 2, Length(Data) - 1); // excludes EXTENDED_SYEX
+           if Assigned(FOnExtendedSysex) then
+             FOnExtendedSysex(self, DataString);
+           if Assigned(FOnExtendedSysex) then
+             FOnExtendedSysex(self, DataString);
+        end;
+        {0  START_SYSEX       (0xF0)
+        1  REPORT_VERSION     (0x79)
+        2  major version     (0-127)
+        3  minor version     (0-127)
+        4  first char of firmware name (LSB)
+        5  first char of firmware name (MSB)
+        6  second char of firmware name (LSB)
+        7  second char of firmware name (MSB)
+        ... for as many bytes as it needs
+        N  END_SYSEX         (0xF7)}
+        REPORT_FIRMWARE: begin // 0x79
+          // data[2] = major version
+          // data[3] = mainor version
+           DataString:=Copy(Data, 4, Length(Data) - 3); // excludes 3 first bytes
+           DataString:=Decode2BytesCharTo1(DataString);  // converts 2 bytes char to 1 byte char
+           FBoardType:=DataString;
+           FBoardStringFirmware:=IntToStr(ord(Data[2]))+'.'+IntToStr(ord(Data[3]));
 
-                if ReadByte = PinModesToByte(PIN_MODE_IGNORE) then
-                  FBoardPins[pin].ActualMode:=ReadByte // if first mode is PIN_MODE_IGNORE then pin must be ignored
-                else
-                  while ReadByte <> PinModesToByte(PIN_MODE_IGNORE) do
-                  begin
-                     // New pin capability
-                     SetLength(FBoardPins[pin].Capabilities, Length(FBoardPins[Pin].Capabilities) + 1);
-                     FBoardPins[Pin].Capabilities[Length(FBoardPins[Pin].Capabilities) - 1].mode:=ReadByte;
-                     if ReadByte = PinModesToByte(PIN_MODE_ANALOG) then  // new analog pin discovered
-                     begin
-                       FBoardPins[pin].AnalogMap:=AnalogPin;  // map analog Pin
-                       inc(AnalogPin);
-                       FBoardPins[pin].ActualMode:=ReadByte; // default for anlog pin is analog mode
-                     end;
-                     ReadByte:=GetNextByte;  // read resolution for other than analogic mode
-                     FBoardPins[Pin].Capabilities[Length(FBoardPins[Pin].Capabilities) - 1].Resolution:=ReadByte; // store Resolution
-                     ReadByte:=GetNextByte; // read next capability
-                  end; // end pin
-                inc(Pin);    // next pin number
-                ReadByte:=GetNextByte;
-             end; // end all Pins
-             FBoardPinsNumber:=Pin;  // discovered pins
-             FAnalogPinsNumber:=AnalogPin;  // discovered analog pins
-             FGotCapabilities:=true;
-             if FGotVersion and FGotFirmware then //is from start or reset
-             begin
-               FStarting:=False;
-               FEnabled:=true;
-               InternalBoardReady; // Initializa module variables
-               if Assigned(FOnBoardReady) then
-                 FOnBoardReady(self);
-             end;
-          end;
-          {0  START_SYSEX              (0xF0)
-          1  ANALOG_MAPPING_RESPONSE   (0x6A)
-          2  analog channel corresponding to pin 0, or 127 if pin 0 does not support analog
-          3  analog channel corresponding to pin 1, or 127 if pin 1 does not support analog
-          4  analog channel corresponding to pin 2, or 127 if pin 2 does not support analog
-          ... etc, one byte for each pin
-          N  END_SYSEX                (0xF7)}
-          ANALOG_MAPPING_RESPONSE: begin // $6A
-            if FStarting then // avoid problems with some firmatas
-            begin
-              Repeat
-              until GetNextByte = END_SYSEX;
-            end
-            else // Firmata has already started, so normal behavior
-            begin
-              ReadByte:=GetNextByte;
-              Pin:=0;
-              while ReadByte <> END_SYSEX do
-              begin
-                FBoardPins[Pin].AnalogMap:=ReadByte;  // Pin map
-                Inc(Pin);  // next pin
-                ReadByte:=GetNextByte;
-              end;
-            end;
-          end;
-          {0  START_SYSEX              (0xF0)
-           1  PIN_STATE_RESPONSE       (0x6E)
-           2  pin                      (0-127)
-           3  pin mode (the currently configured mode)
-           4  pin state, bits 0-6
-           5  (optional) pin state, bits 7-13
-           6  (optional) pin state, bits 14-20
-           ... additional optional bytes, as many as needed
-           N  END_SYSEX                (0xF7)}
-          PIN_STATE_RESPONSE: begin // $6E  max 64 bits
-                Pin:=GetNextByte;
-                Mode:=GetNextByte;
-                ReadByte:=GetNextByte;
-                while ReadByte <> END_SYSEX do
-                begin
-                  DataString:=DataString+chr(ReadByte);   // First Char is LSB
-                  ReadByte:=GetNextByte;
-                end;
+           if not FGotcapabilities and not FGotFirmware then
+             askBoardCapabilities;
+           FGotFirmware:=True;
+        end;
+        {0  START_SYSEX              (0xF0)
+        1  CAPABILITY_RESPONSE       (0x6C)
+        2  1st supported mode of pin 0
+        3  1st mode's resolution of pin 0
+        4  2nd supported mode of pin 0
+        5  2nd mode's resolution of pin 0
+        ... additional modes/resolutions, followed by `0x7F`,
+        to mark the end of the pin's modes. Subsequently, each pin
+        follows with its modes/resolutions and `0x7F`,
+        until all pins are defined.
+        N  END_SYSEX                (0xF7)}
+        CAPABILITY_RESPONSE: begin // 0x6C;
+           Pin:=0;
+           AnalogPin:=0;
+           i:=2;   //  i:=1   exclude CAPABILITY_RESPONSE       (0x6C)
+           SetLength(FBoardPins,0); // clear FBoardPins
+           while i <= Length(Data) do
+           begin
+              // New pin element
+              Setlength(FBoardPins,Pin+1);  // increment size of array of pins
+              FBoardPins[pin].Busy:=false;  // Pin no assigned to any module
+              FBoardPins[pin].AnalogMap:=PinModesToByte(PIN_MODE_IGNORE); // default no analog pin map
+              FBoardPins[pin].ActualMode:=PinModesToByte(PIN_MODE_OUTPUT);
 
-                Value:=Decode32BitSignedInt(DataString);  // converts to int
-
-                if Assigned(FPins[Pin]) and FPins[Pin].Enabled then
-                begin
-                  FPins[Pin].FMode:=ByteToPinModes(Mode);
-                  FBoardPins[Pin].ActualMode:=Mode;
-                  if Assigned(FPins[Pin].FOnPinState) then
-                    FPins[Pin].FOnPinState(self, FPins[Pin].FMode, Value);
-                end;
-          end;
-          {0  START_SYSEX              (0xF0)
-          1  EXTENDED_ANALOG           (0x6F)
-          2  pin                      (0-127)
-          3  bits 0-6                 (least significant byte)
-          4  bits 7-13                (most significant byte)
-          ... additional bytes may be sent if more bits are needed
-          N  END_SYSEX                (0xF7)}
-          EXTENDED_ANALOG: begin //  $6F
-              Pin:=GetNextByte;
-              ReadByte:=GetNextByte;
-              while ReadByte <> END_SYSEX do
-              begin
-                DataString:=DataString+chr(ReadByte);   // First Char is LSB
-                ReadByte:=GetNextByte;
-              end;
-              Value:=Decode32BitSignedInt(DataString);  // converts to int
-
-              if Assigned(FPins[Pin]) and FPins[Pin].Enabled then
-              begin
-                FPins[Pin].FValue:=Value;
-                if Assigned(FPins[Pin].FOnPinValue) then
-                  FPins[Pin].FOnPinValue(self, Value);
-              end;
-          end;
-          {0  START_SYSEX        (0xF0)
-          1  STRING_DATA        (0x71)
-          2  first char LSB
-          3  first char MSB
-          4  second char LSB
-          5  second char MSB
-          ... additional bytes up to half the buffer size - 3 (START_SYSEX, STRING_DATA, END_SYSEX)
-          N  END_SYSEX          (0xF7)}
-          STRING_DATA: begin //  $71
-             ReadByte:=GetNextByte;
-             while ReadByte <> END_SYSEX do
-             begin
-                DataString:=DataString+Char(ReadByte);
-                ReadByte:=GetNextByte;
-             end;
-             DataString:=Decode2BytesCharTo1(DataString);
-             if Assigned(FOnBoardData) then
-                  FOnBoardData(self, STRING_DATA, DataString);
-          end;
-          {0  START_SYSEX        (0xF0)
-          1  SERIAL_DATA      (0x60)
-          2  SERIAL_REPLY       (0x40) // OR with port (0x41 = SERIAL_REPLY | HW_SERIAL1)
-          3  data 0             (LSB)
-          4  data 0             (MSB)
-          3  data 1             (LSB)
-          4  data 1             (MSB)
-          ...                   //up to max buffer - 5
-          n  END_SYSEX          (0xF7)}
-          SERIAL_DATA: begin // $60
-            ReadByte:=GetNextByte;
-            Port:=ReadByte;  // get port
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+Char(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
-            DataString:=Decode2BytesCharTo1(DataString);
-
-            if (Port and $FC) <> SERIAL_REPLY then // error
-              RaiseError(15, 'Serial Message Response')
-            else
-              Port:=Port and $0F;  // get real port
-
-            if Assigned(FSerials[ByteToSerialPorts(Port)]) and FSerials[ByteToSerialPorts(Port)].Enabled then
-            begin
-               if Assigned(FSerials[ByteToSerialPorts(Port)].FOnSerialMessage) then
-                 FSerials[ByteToSerialPorts(Port)].FOnSerialMessage(self, DataString);
-            end;
-          end;
-          {0  START_SYSEX              (0xF0)
-           1  Scheduler Command        (0x7B)
-           2  error_task Reply Command (0x08) or query_task Reply Command (0x0A)
-           3  task id                  (0-127)
-           4  time_ms bit 0-6
-           5  time_ms bit 7-13
-           6  time_ms bit 14-20
-           7  time_ms bit 21-27
-           8  time_ms bit 28-31 | (length bit 0-2) << 4
-           9  length bit 3-9
-           10 length bit 10-15 | (position bit 0) << 7
-           11 position bit 1-7
-           12 position bit 8-14
-           13 position bit 15 | taskdata bit 0-5 << 1 [taskdata is optional]
-           14 taskdata bit 6-12  [optional]
-           15 taskdata bit 13-19 [optional]
-           n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
-           n+1  END_SYSEX              (0xF7) }
-          SCHEDULER_DATA: begin // scheduler $7B
-            ReadByte:=GetNextByte;
-            case ord(ReadByte) of  // first byte is Error_task or query_task
-              ERROR_FIRMATA_TASK, QUERY_TASK_REPLY: begin
-                DataString:=chr(ReadByte); // save command
-                ReadByte:=GetNextByte;
-                while ReadByte <> END_SYSEX do
-                begin
-                  DataString:=DataString+chr(ReadByte);
-                  ReadByte:=GetNextByte;
-                end;
-                // get TaskID
-                TaskID:=ord(DataString[2]);
-                if Assigned(FTasks[TaskID]) and FTasks[TaskID].Enabled then
-                  FTasks[TaskID].parsefirmatacommand(Self, DataString);
-              end;
-              {0  START_SYSEX          (0xF0)
-               1  Scheduler Command    (0x7B)
-               2  query_all_tasks Reply Command (0x09)
-               3  taskid_1             (0-127) [optional]
-               4  taskid_2             (0-127) [optional]
-               n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
-               n+1  END_SYSEX (0xF7)}
-              QUERY_ALL_TASKS_REPLY: begin // query_all_tasks Reply Command (0x09)
-                SetLength(TaskIDs,0);
-                ReadByte:=GetNextByte;
-                while ReadByte <> END_SYSEX do
-                begin
-                  Setlength(TaskIDs,system.length(TaskIDs)+1);
-                  TaskIDs[system.length(TaskIDs)-1]:=ReadByte;
-                  ReadByte:=GetNextByte;
-                end;
-                if Assigned(FOnQueryAllTask) then
-                  FOnQueryAllTask(self, TaskIDs);
-              end;
+              if ord(Data[i]) = PinModesToByte(PIN_MODE_IGNORE) then
+                FBoardPins[pin].ActualMode:=ord(Data[i]) // if first mode is PIN_MODE_IGNORE then pin must be ignored
               else
-              begin  // unknown Scheduler command, now read until end command
-                ReadByte:=GetNextByte;
-                while ReadByte <> END_SYSEX do
+                while ord(Data[i]) <> PinModesToByte(PIN_MODE_IGNORE) do
                 begin
-                  DataString:=DataString+chr(ReadByte);
-                  ReadByte:=GetNextByte;
-                end;
-                RaiseError(4, 'GetSchedulerCommands');
-              end;
-            end;
-          end;
-          I2C_REPLY: begin // $77
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
-            if Assigned(FI2C) and FI2C.Enabled then
-              FI2C.parsefirmatacommand(Self, DataString);
-          end;
-          ONEWIRE_DATA: begin //  $73;
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
-            // first byte is subcommand
-            Pin:=ord(DataString[2]);  // second byte
-            if Assigned(FOneWires[Pin]) and FOneWires[Pin].Enabled then
-              FOneWires[Pin].parsefirmatacommand(Self, DataString);
-          end;
-          ACCELSTEPPER_DATA: begin  // $62
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
-            // subcommand is first byte
-            case ord(DataString[1]) of
-              {0  START_SYSEX                             (0xF0)
-               1  ACCELSTEPPER_DATA                       (0x62)
-               2  ACCELSTEPPER_REPORT_POSITION and ACCELSTEPPER_MOVE_COMPLETED   (0x06) and (0x0b)
-               3  device number                           (0-9)
-               4  position, bits 0-6
-               5  position, bits 7-13
-               6  position, bits 14-20
-               7  position, bits 21-27
-               8  position, bits 28-31
-               9  END_SYSEX                               (0xF7)}
-               ACCELSTEPPER_REPORT_POSITION, ACCELSTEPPER_MOVE_COMPLETED: begin  // only one accelstepper
-                 // Device is second byte
-                 Device:=ord(DataString[2]);
-                 if Assigned(FAccelSteppers[Device]) and FAccelSteppers[Device].Enabled then
-                    FAccelSteppers[Device].parsefirmatacommand(Self, DataString);
-               end;
-               {0  START_SYSEX                             (0xF0)
-               1  ACCELSTEPPER_DATA                       (0x62)
-               2  ACCELSTEPPER_MULTI_MOVE_COMPLETED      (0x24)
-               3  group  number                           (0-4)
-               4  END_SYSEX(0xF7)}
-               ACCELSTEPPER_MULTI_MOVE_COMPLETED: begin  // group of accelstepper
-                 if Assigned(FAccelStepperGroup) and FAccelStepperGroup.Enabled then
-                   FAccelStepperGroup.parsefirmatacommand(Self, DataString);
-              end
-              else  // subcommand unknown
-              begin
-                Repeat
-                until GetNextByte = END_SYSEX; // discart command
-                RaiseError(4, 'AccelStepper Unknown Command');
-              end;
-            end;
-          end;
-          {0 START_SYSEX                (0xF0)
-          * 1 ENCODER_DATA               (0x61)
-          * 2 first encoder #  &  DIRECTION    [= (direction << 6) | (#)]
-          * 3 first encoder position, bits 0-6
-          * 4 first encoder position, bits 7-13
-          * 5 first encoder position, bits 14-20
-          * 6 first encoder position, bits 21-27
-          * 7  END_SYSEX or second encoder #  &  DIRECTION    [= (direction << 6) | (#)]
-          * 8 second encoder position, bits 0-6
-          * ...
-          * N END_SYSEX                  (0xF7) }
-          ENCODER_DATA: begin   // $061
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
-            for i:=1 to (Length(DataString) - 1) div 5 do // length data less END SYSEX byte
-            begin
-              EncoderData:=Copy(DataString, (i - 1) * 5, 5);
-              Device:=ord(EncoderData[1]) and ENCODER_MASK;  // first byte
-
-              if Assigned(FEncoders[Device]) and FEncoders[Device].Enabled then
-                FEncoders[Device].parsefirmatacommand(Self, EncoderData);
-            end;
-            if ord(DataString[Length(DataString)]) <> END_SYSEX then
-              RaiseError(47, 'ENCODER_DATA'); // last Byte should be END_SYSEX
-          end;
-          {0  START_SYSEX      (0xF0)
-          1  PS2MOUSE_DATA     Command (0x50)
-          2  PS2MOUSE_command  (0x01)
-          3  Mouse number      (0-2)}
-          PS2MOUSE_DATA: begin // 0x50
-            // first byte subcommand
-            // second byte device
-            ReadByte:=GetNextByte;
-            while ReadByte <> END_SYSEX do
-            begin
-              DataString:=DataString+chr(ReadByte);
-              ReadByte:=GetNextByte;
-            end;
-            Device:=ord(DataString[2]);
-            if Assigned(FMice[Device]) and FMice[Device].Enabled then
-                FMice[Device].parsefirmatacommand(Self, DataString);
-          end;
-           {0  START_SYSEX      (0xF0)
-           1  NEOPIXELS_DATA    (0X51)
-           2  NEOPIXELS_RUN_PAUSE  (0X04)
-           3  deviceNum (0-3)
-           4  END_SYSEX        (0xF7) }
-          NEOPIXELS_DATA: begin // 0x51
-            // first byte subcommand
-            // second byte device
-            if GetNextByte <> NEOPIXELS_FADE_RUN_PAUSE then
-            begin
-              Repeat
-              until GetNextByte = END_SYSEX; // discart command
-              RaiseError(4, 'Got an unknown SysEx neopixels command data');
-              exit;
-            end;
-            Device:=GetNextByte;
-            if Assigned(FNeoPixels[Device]) and FNeoPixels[Device].Enabled then
-                FNeoPixels[Device].parsefirmatacommand(Self);
-          end;
-          else   // Sysex command unknown
+                   // New pin capability
+                   SetLength(FBoardPins[pin].Capabilities, Length(FBoardPins[Pin].Capabilities) + 1);
+                   FBoardPins[Pin].Capabilities[Length(FBoardPins[Pin].Capabilities) - 1].mode:=ord(Data[i]);
+                   if ord(Data[i]) = PinModesToByte(PIN_MODE_ANALOG) then  // new analog pin discovered
+                   begin
+                     FBoardPins[pin].AnalogMap:=AnalogPin;  // map analog Pin
+                     inc(AnalogPin);
+                     FBoardPins[pin].ActualMode:=ord(Data[i]); // default for anlog pin is analog mode
+                   end;
+                   inc(i);  // read resolution for other than analogic mode
+                   FBoardPins[Pin].Capabilities[Length(FBoardPins[Pin].Capabilities) - 1].Resolution:=ord(Data[i]); // store Resolution
+                   inc(i);    // read next capability
+                end; // end pin
+              inc(Pin);    // next pin number
+              inc(i);
+           end; // end all Pins
+           FBoardPinsNumber:=Pin;  // discovered pins
+           FAnalogPinsNumber:=AnalogPin;  // discovered analog pins
+           FGotCapabilities:=true;
+           if FGotProtocol and FGotFirmware then //is from start or reset
+           begin
+             FStarting:=False;
+             InternalBoardReady; // Initializa module variables
+             SendSamplingInterval;  // SamplingInterval default to 19 ms
+             FStartingTime:=TThread.GetTickCount64 - FInitTime;
+             if Assigned(FOnBoardReady) then
+               FOnBoardReady(self);
+           end;
+        end;
+        {0  START_SYSEX              (0xF0)
+        1  ANALOG_MAPPING_RESPONSE   (0x6A)
+        2  analog channel corresponding to pin 0, or 127 if pin 0 does not support analog
+        3  analog channel corresponding to pin 1, or 127 if pin 1 does not support analog
+        4  analog channel corresponding to pin 2, or 127 if pin 2 does not support analog
+        ... etc, one byte for each pin
+        N  END_SYSEX                (0xF7)}
+        ANALOG_MAPPING_RESPONSE: begin // $6A
+          if FStarting then // avoid problems with some firmatas
+            exit
+          else // Firmata has already started, so normal behavior
           begin
-            // now read until end command
-            Repeat
-            until GetNextByte = END_SYSEX; // discart command
-            RaiseError(4, 'Got an unknown SysEx command data');
+            i:=2;
+            Pin:=0;
+            while i <= Length(Data) do
+            begin
+              FBoardPins[Pin].AnalogMap:=ord(Data[i]);  // Pin map
+              Inc(Pin);  // next pin
+              inc(i);
+            end;
           end;
-     end;
+        end;
+        {0  START_SYSEX              (0xF0)
+         1  PIN_STATE_RESPONSE       (0x6E)
+         2  pin                      (0-127)
+         3  pin mode (the currently configured mode)
+         4  pin state, bits 0-6
+         5  (optional) pin state, bits 7-13
+         6  (optional) pin state, bits 14-20
+         ... additional optional bytes, as many as needed
+         N  END_SYSEX                (0xF7)}
+        PIN_STATE_RESPONSE: begin // $6E  max 64 bits
+          Pin:=ord(Data[2]);
+          Mode:=ord(Data[3]);
+          DataString:=Copy(Data, 4, Length(Data) - 3);
+
+          Value:=Decode32BitSignedInt(DataString);  // converts to int
+
+          if Assigned(FPins[Pin]) and FPins[Pin].Enabled then
+          begin
+            FPins[Pin].FMode:=ByteToPinModes(Mode);
+            FBoardPins[Pin].ActualMode:=Mode;
+            if Assigned(FPins[Pin].FOnPinState) then
+              FPins[Pin].FOnPinState(self, FPins[Pin].FMode, Value);
+          end;
+        end;
+        {0  START_SYSEX              (0xF0)
+        1  EXTENDED_ANALOG           (0x6F)
+        2  pin                      (0-127)
+        3  bits 0-6                 (least significant byte)
+        4  bits 7-13                (most significant byte)
+        ... additional bytes may be sent if more bits are needed
+        N  END_SYSEX                (0xF7)}
+        EXTENDED_ANALOG: begin //  $6F
+          Pin:=ord(Data[2]);
+          DataString:=Copy(Data, 3, Length(Data) - 2);
+          Value:=Decode32BitSignedInt(DataString);  // converts to int
+
+          if Assigned(FPins[Pin]) and FPins[Pin].Enabled then
+          begin
+            FPins[Pin].FValue:=Value;
+            if Assigned(FPins[Pin].FOnPinValue) then
+              FPins[Pin].FOnPinValue(self, Value);
+          end;
+        end;
+        {0  START_SYSEX        (0xF0)
+        1  STRING_DATA        (0x71)
+        2  first char LSB
+        3  first char MSB
+        4  second char LSB
+        5  second char MSB
+        ... additional bytes up to half the buffer size - 3 (START_SYSEX, STRING_DATA, END_SYSEX)
+        N  END_SYSEX          (0xF7)}
+        STRING_DATA: begin //  $71
+          DataString:=Copy(Data, 2, Length(Data) - 1);
+          DataString:=Decode2BytesCharTo1(DataString);
+          if Assigned(FOnBoardData) then
+            FOnBoardData(self, STRING_DATA, DataString);
+        end;
+        {0  START_SYSEX        (0xF0)
+        1  SERIAL_DATA      (0x60)
+        2  SERIAL_REPLY       (0x40) // OR with port (0x41 = SERIAL_REPLY | HW_SERIAL1)
+        3  data 0             (LSB)
+        4  data 0             (MSB)
+        3  data 1             (LSB)
+        4  data 1             (MSB)
+        ...                   //up to max buffer - 5
+        n  END_SYSEX          (0xF7)}
+        SERIAL_DATA: begin // $60
+          Port:=ord(Data[2]);  // get port
+          DataString:=Copy(Data, 3, Length(Data) - 2);
+          DataString:=Decode2BytesCharTo1(DataString);
+
+          if (Port and $FC) <> SERIAL_REPLY then // error
+            RaiseError(15, 'Board:ParseSysexCommand, Serial Message Response')
+          else
+            Port:=Port and $0F;  // get real port
+
+          if Assigned(FSerials[ByteToSerialPorts(Port)]) and FSerials[ByteToSerialPorts(Port)].Enabled then
+          begin
+             if Assigned(FSerials[ByteToSerialPorts(Port)].FOnSerialMessage) then
+               FSerials[ByteToSerialPorts(Port)].FOnSerialMessage(self, DataString);
+          end;
+        end;
+        {0  START_SYSEX              (0xF0)
+         1  Scheduler Command        (0x7B)
+         2  error_task Reply Command (0x08) or query_task Reply Command (0x0A)
+         3  task id                  (0-127)
+         4  time_ms bit 0-6
+         5  time_ms bit 7-13
+         6  time_ms bit 14-20
+         7  time_ms bit 21-27
+         8  time_ms bit 28-31 | (length bit 0-2) << 4
+         9  length bit 3-9
+         10 length bit 10-15 | (position bit 0) << 7
+         11 position bit 1-7
+         12 position bit 8-14
+         13 position bit 15 | taskdata bit 0-5 << 1 [taskdata is optional]
+         14 taskdata bit 6-12  [optional]
+         15 taskdata bit 13-19 [optional]
+         n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
+         n+1  END_SYSEX              (0xF7) }
+        SCHEDULER_DATA: begin // scheduler $7B
+          case ord(Data[2]) of  // first byte is Error_task or query_task
+            ERROR_FIRMATA_TASK, QUERY_TASK_REPLY: begin
+              DataString:=Copy(Data, 2, Length(Data) - 1); // include Data[2], excludes SCHEDULER_DATA
+              // get TaskID
+              TaskID:=ord(Data[3]);
+              if Assigned(FTasks[TaskID]) and FTasks[TaskID].Enabled then
+                FTasks[TaskID].parsefirmatacommand(Self, DataString);
+            end;
+            {0  START_SYSEX          (0xF0)
+             1  Scheduler Command    (0x7B)
+             2  query_all_tasks Reply Command (0x09)
+             3  taskid_1             (0-127) [optional]
+             4  taskid_2             (0-127) [optional]
+             n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
+             n+1  END_SYSEX (0xF7)}
+            QUERY_ALL_TASKS_REPLY: begin // query_all_tasks Reply Command (0x09)
+              SetLength(TaskIDs,0);
+              i:=2;
+              while i <= Length(Data) do
+              begin
+                Setlength(TaskIDs, length(TaskIDs)+1);   // new task
+                TaskIDs[length(TaskIDs)-1]:=ord(Data[i]);
+                inc(i);
+              end;
+              if (Length(FTasks) > 0) and Assigned(FOnQueryAllTask) then  // al least One task exists
+                FOnQueryAllTask(self, TaskIDs);
+            end;
+            else
+            begin  // unknown Scheduler command, discard command
+              RaiseError(4, 'Board:ParseSysexCommand, GetSchedulerCommands');
+            end;
+          end;
+        end;
+        I2C_REPLY: begin // $77
+          DataString:=Copy(Data, 2, Length(Data) - 1);
+          if Assigned(FI2C) and FI2C.Enabled then
+            FI2C.parsefirmatacommand(Self, DataString);
+        end;
+        SPI_DATA: begin // $68
+          DataString:=Copy(Data, 2, Length(Data) - 1);
+          // first byte is subcommand
+          // second byte is DeviceId and Channel
+          Device:=(ord(DataString[2]) and $78) >> 3; // extract Device ID
+          if Assigned(FSPIs[Device]) and FSPIs[Device].Enabled then
+            FSPIs[Device].parsefirmatacommand(Self, DataString);
+        end;
+        ONEWIRE_DATA: begin //  $73;
+          DataString:=Copy(Data, 2, Length(Data) - 1);
+          Pin:=ord(DataString[2]);  // second byte
+          if Assigned(FOneWires[Pin]) and FOneWires[Pin].Enabled then
+            FOneWires[Pin].parsefirmatacommand(Self, DataString);
+        end;
+        ACCELSTEPPER_DATA: begin  // $62
+          DataString:=Copy(Data, 2, Length(Data) - 1);
+          case ord(Data[2]) of
+            {0  START_SYSEX                             (0xF0)
+             1  ACCELSTEPPER_DATA                       (0x62)
+             2  ACCELSTEPPER_REPORT_POSITION and ACCELSTEPPER_MOVE_COMPLETED   (0x06) and (0x0b)
+             3  device number                           (0-9)
+             4  position, bits 0-6
+             5  position, bits 7-13
+             6  position, bits 14-20
+             7  position, bits 21-27
+             8  position, bits 28-31
+             9  END_SYSEX                               (0xF7)}
+             ACCELSTEPPER_REPORT_POSITION, ACCELSTEPPER_MOVE_COMPLETED: begin  // only one accelstepper
+               // Device is second byte
+               Device:=ord(DataString[2]);
+               if Assigned(FAccelSteppers[Device]) and FAccelSteppers[Device].Enabled then
+                  FAccelSteppers[Device].parsefirmatacommand(Self, DataString);
+             end;
+             {0  START_SYSEX                             (0xF0)
+             1  ACCELSTEPPER_DATA                       (0x62)
+             2  ACCELSTEPPER_MULTI_MOVE_COMPLETED      (0x24)
+             3  group  number                           (0-4)
+             4  END_SYSEX(0xF7)}
+             ACCELSTEPPER_MULTI_MOVE_COMPLETED: begin  // group of accelstepper
+               if Assigned(FAccelStepperGroup) and FAccelStepperGroup.Enabled then
+                 FAccelStepperGroup.parsefirmatacommand(Self, DataString);
+            end
+            else  // subcommand unknown
+            begin
+              RaiseError(4, 'Board:ParseSysexCommand, AccelStepper Unknown Command');
+            end;
+          end;
+        end;
+        {0 START_SYSEX                (0xF0)
+        * 1 ENCODER_DATA               (0x61)
+        * 2 first encoder #  &  DIRECTION    [= (direction << 6) | (#)]
+        * 3 first encoder position, bits 0-6
+        * 4 first encoder position, bits 7-13
+        * 5 first encoder position, bits 14-20
+        * 6 first encoder position, bits 21-27
+        * 7  END_SYSEX or second encoder #  &  DIRECTION    [= (direction << 6) | (#)]
+        * 8 second encoder position, bits 0-6
+        * ...
+        * N END_SYSEX                  (0xF7) }
+        ENCODER_DATA: begin   // $061
+          DataString:=Copy(Data, 2, Length(Data) - 1);
+          for i:=1 to (Length(DataString) div 5) do // length data div encoders number
+          begin
+            EncoderData:=Copy(DataString, (i - 1) * 5, 5);
+            Device:=ord(EncoderData[1]) and ENCODER_MASK;  // first byte
+
+            if Assigned(FEncoders[Device]) and FEncoders[Device].Enabled then
+              FEncoders[Device].parsefirmatacommand(Self, EncoderData);
+          end;
+        end;
+        {0  START_SYSEX      (0xF0)
+        1 FREQUENCY_COMMANDD     Command (0x7D)
+        2 FREQUENCY_SUBCOMMAND_REPORT (0x02)
+        3 pin                        (0-127)
+        4 Time of measurement        (32 bits as 5 bytes) in milliseconds
+        5 Current number of ticks    (32 bits as 5 bytes)
+        N END_SYSEX                  (0xF7)}
+        FREQUENCY_COMMAND: begin // $7D
+          if ord(Data[2]) <> FREQUENCY_SUBCOMMAND_REPORT then
+          begin
+            RaiseError(4, 'Board:ParseSysexCommand, Frequency Unknown Command Data');
+            exit;
+          end;
+          Device:=ord(Data[3]);
+          DataString:=Copy(Data, 3, Length(Data) - 2);
+          if Assigned(FFrequencies[Device]) and FFrequencies[Device].Enabled then
+            FFrequencies[Device].parsefirmatacommand(Self, DataString);
+        end;
+        {0 START_SYSEX                (0xF0)
+        1 DHTSENSOR_DATA             (0x74)
+        2 DHTSENSOR_RESPONSE         (0x00)
+        3 pin                        (0-127)
+        4 temperature, bits 0-6      (lsb - temperature in Celsius * 10)
+        5 temperature, bits 7-13     (msb - temperature in Celsius * 10)
+        6 humidity, bits 0-6         (lsb - relative humidity in % * 10)
+        7 humidity, bits 7-13        (msb - relative humidity in % * 10)
+        N END_SYSEX   (0xF7)}
+        DHTSENSOR_DATA: begin
+          DataString:=Copy(Data, 3, Length(Data) - 2);
+          Pin:=ord(Data[3]);
+          if Assigned(FDHTs[Pin]) and FDHTs[Pin].Enabled then
+            FDHTs[Pin].parsefirmatacommand(Self, DataString);
+        end;
+        PS2MOUSE_DATA: begin // 0x50
+          // first byte subcommand
+          // second byte device
+          DataString:=Copy(Data, 2, Length(Data) - 1);
+          Device:=ord(DataString[2]);
+          if Assigned(FMice[Device]) and FMice[Device].Enabled then
+              FMice[Device].parsefirmatacommand(Self, DataString);
+        end;
+         {0  START_SYSEX      (0xF0)
+         1  NEOPIXEL_DATA    (0X51)
+         2  NEOPIXEL_RUN_PAUSE  (0X04)
+         3  deviceNum (0-3)
+         4  END_SYSEX        (0xF7) }
+        NEOPIXEL_DATA: begin // 0x51
+          // first byte subcommand
+          // second byte device
+          if ord(Data[2]) <> NEOPIXEL_FADE_RUN_PAUSE then
+          begin
+            RaiseError(4, 'Board:ParseSysexCommand, Neopixel Unknown Command Data');
+            exit;
+          end;
+          Device:=ord(Data[3]);
+          if Assigned(FNeoPixels[Device]) and FNeoPixels[Device].Enabled then
+            FNeoPixels[Device].parsefirmatacommand(Self, Data[3]);
+        end;
+   end;
 end;
 
 function TBoard.GetPinFromAnalogPin(AnalogPin: byte): Byte;
@@ -2474,7 +2813,7 @@ begin
   Port:=Pin div 8;
 
   for i:=Port * 8 to Port * 8 + 7 do // 8 pins in port
-    if (i <> Pin) and Assigned(FPins[i]) and FPins[i].FEnabled and FPins[i].FReporting then
+    if (i < Length(FPins)) and (i <> Pin) and Assigned(FPins[i]) and FPins[i].FEnabled and FPins[i].FReporting then
     begin
       Result:=True;
       break;
@@ -2502,15 +2841,9 @@ begin
     end;
   end;
   if NotFound then
-    RaiseError(34, 'GetPinResolution');
+    RaiseError(34, 'Board:GetPinResolution, GetPinResolution');
 end;
 
-{system reset 	0xFF}
-function TBoard.BoardReset(write: Boolean=true): string;
-begin
-     //FLazSerial.SynSer.Purge; // clear all data in serial port
-     Result:=SendCommand(chr(SYSTEM_RESET), write);
-end;
 {0  START_SYSEX              (0xF0)
 1  Scheduler Command        (0x7B)
 2  query_all_tasks command  (0x05)
@@ -2536,29 +2869,28 @@ begin
 end;
 
 { Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
-function TBoard.SendSysEx(data7bit: string; write: Boolean=true): string;
+function TBoard.SendSysEx(data: string; write: Boolean=true): string;
 begin
   Result:='';
   if (not FEnabled) and (not FStarting) then
   begin
-    RaiseError(2, 'SendSysEx');
+    RaiseError(2, 'Board:SendSysEx');
     exit;
   end;
-  if Length(data7bit) > (MAX_DATA_BYTES - 2) then
+  if Length(data) > MAX_DATA_BYTES  then
   begin
-    RaiseError(21, 'SendSysEx');
+    RaiseError(21, 'Board:SendSysEx');
     exit;
   end;
-  Result:=chr(START_SYSEX)+Data7bit+chr(END_SYSEX);
+  Result:=chr(START_SYSEX)+Data+chr(END_SYSEX);
   if write then
   begin
     if Assigned(OnSendDataToDevice) then
     begin
       FOnSendDataToDevice(self, Result);
-//      sleep(FSamplingInterval+length(Result));  // gives some time to Firmata
     end
     else
-      RaiseError(1001, 'SendSysEx');
+      RaiseError(1001, 'Board:SendSysEx');
     Result:='';
   end;
 end;
@@ -2569,7 +2901,7 @@ begin
   Result:=Data;
   if (not FEnabled) and (not FStarting) then
   begin
-    RaiseError(2, 'SendCommand');
+    RaiseError(2, 'Board:SendCommand');
     exit;
   end;
   if write then
@@ -2577,23 +2909,19 @@ begin
     if Assigned(OnSendDataToDevice) then
     begin
       FOnSendDataToDevice(self, Data);
-      //sleep(FSamplingInterval+length(Result));  // gives some time to Firmata
     end
     else
-      RaiseError(1001, 'SendCommand');
+      RaiseError(1001, 'Board:SendCommand');
     Result:='';
   end;
 end;
 
-procedure TBoard.printPinInfo(Memo: TMemo);
+procedure TBoard.printPinInfo(Info: TStrings);
 var
-  pin : integer;
+  pin : byte;
   Line: string;
   i: integer;
 begin
-  //memo.Append('');
-  //Memo.Append('Firmata capabilities');
-  memo.Append('');
   for pin:=0 to FBoardPinsNumber - 1 do
   begin
        Line:='Pin '+pin.ToString+': Mode=';
@@ -2602,17 +2930,17 @@ begin
        end
        else
        begin
-         Line:=Line+PinModesString[ByteToPinModes(FBoardPins[pin].ActualMode)]+', Capabilities=';
+         Line:=Line + Copy(GetEnumName(TypeInfo(TPinModes), FBoardPins[pin].ActualMode), 10, 10) +', Capabilities=';
          for i:=0 to Length(FBoardPins[Pin].Capabilities) - 1 do
          begin
-           Line:=Line+PinModesString[ByteToPinModes(FBoardPins[pin].Capabilities[i].mode)];
+           Line:=Line + Copy(GetEnumName(TypeInfo(TPinModes), FBoardPins[pin].Capabilities[i].mode), 10, 10);
            Line:=Line+'('+IntToStr(FBoardPins[pin].Capabilities[i].Resolution)+' bit), ';
          end;
        end;
        if RightStr(Line,2) = ', ' then
          Line:=LeftStr(Line, Length(Line)-2);
 
-       Memo.Append(Line);
+       Info.Add(Line);
   end;
 end;
 //
@@ -2649,7 +2977,7 @@ end;
 procedure TPin.setBoard(Board: TBoard);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
+    FBoard.RaiseError(33, 'Pin:setBoard')
   else if Assigned(Board) then
     FBoard:=Board;
 end;
@@ -2675,7 +3003,7 @@ begin
         begin
           // Pin is busy
           FEnabled:=False;
-          FBoard.RaiseError(12, 'setEnabled');
+          FBoard.RaiseError(12, 'Pin:setEnabled');
           exit;
         end
         else // pin is free
@@ -2691,7 +3019,7 @@ begin
       begin
         FEnabled:=False;
         // Not a valid mode
-        FBoard.RaiseError(11, 'setEnabled');
+        FBoard.RaiseError(11, 'Pin:setEnabled');
       end;
     end
     else  // Board not asigned
@@ -2720,16 +3048,16 @@ begin
   if Mode = FMode then
     exit;
   if Enabled then
-    FBoard.RaiseError(33, 'setMode')
+    FBoard.RaiseError(33, 'Pin:setMode')
   else if Mode in [PIN_MODE_INPUT, PIN_MODE_OUTPUT, PIN_MODE_ANALOG, PIN_MODE_PWM,
-           PIN_MODE_SERVO, PIN_MODE_SHIFT, PIN_MODE_ENCODER, PIN_MODE_PULLUP] then
+           PIN_MODE_PULLUP] then
     FMode:=Mode;
 end;
 
 procedure TPin.setPin(Pin: Byte);
 begin
   if FEnabled then // cannot do that
-    FBoard.RaiseError(33, 'setPin')
+    FBoard.RaiseError(33, 'Pin:setPin')
   else if Pin < PinModesToByte(PIN_MODE_IGNORE) then  // disabled
     FPin:=Pin;
 end;
@@ -2742,12 +3070,12 @@ begin
   Result:=FBoard.SendCommand(Data, write);
 end;
 
-function TPin.SendSysEx(data7bit: string; write: Boolean=true): string;
+function TPin.SendSysEx(data: string; write: Boolean=true): string;
 begin
   Result:='';
   if not FEnabled and write then
     exit;
-  Result:=FBoard.SendSysEx(Data7bit, write);
+  Result:=FBoard.SendSysEx(Data, write);
 end;
 
 procedure TPin.GetAnalogMessage(Value: integer);
@@ -2767,7 +3095,7 @@ begin
 end;
 {0  set digital pin mode (0xF4) (MIDI Undefined)
 1  set pin number (0-127)
-2  mode (INPUT/OUTPUT/ANALOG/PWM/SERVO/I2C/ONEWIRE/STEPPER/ENCODER/SERIAL/PULLUP)}
+2  mode (INPUT/OUTPUT/ANALOG/PWM/SERVO/I2C/ONEWIRE/STEPPER/ENCODER/SERIAL/PULLUP/etc)}
 function TPin.SetPinMode(write: Boolean=true): string; // if write true then send bytes to device
 var
   ModeValue: Byte;
@@ -2788,6 +3116,7 @@ begin
   end;
   Result:=SendCommand(chr(SET_PIN_MODE)+chr(FPin)+chr(ModeValue), write); // $F4   );
 end;
+
 // enable/disable report for digital pin or analog pin
 function TPin.ReportPin(Enabled: boolean; write: Boolean=true): string;
 begin
@@ -2826,7 +3155,7 @@ begin
   // check first
   if FMode <> PIN_MODE_ANALOG then
   begin
-    FBoard.RaiseError(10, 'AnalogReport');
+    FBoard.RaiseError(10, 'Pin:AnalogReport');
     exit;
   end;
 
@@ -2842,14 +3171,14 @@ end;
 function TPin.DigitalWritePort(Port: byte; Value: integer; write: Boolean=true): string;
 var
   mask: integer;
-  Pin: integer;
+  Pin: byte;
 begin
   Result:='';
 
   if (Port * 8 + 8) > (FBoardPinsNumber - 1) then
   begin
-      FBoard.RaiseError(8, 'DigitalWritePort');
-      exit;
+    FBoard.RaiseError(8, 'Pin:DigitalWritePort');
+    exit;
   end;
 
   if write then
@@ -2857,7 +3186,7 @@ begin
     mask:=1;
     for Pin:=Port * 8 to Port * 8 + 7 do // default 8 pins in port
     begin
-      if Assigned(FBoard.FPins[Pin]) and Fboard.FPins[FPin].Enabled and (FMode in [PIN_MODE_OUTPUT, PIN_MODE_INPUT, PIN_MODE_PULLUP]) then
+      if (Pin < Length(FBoard.FPins)) and FEnabled and Assigned(FBoard.FPins[Pin]) and Fboard.FPins[FPin].Enabled and (FMode in [PIN_MODE_OUTPUT, PIN_MODE_INPUT, PIN_MODE_PULLUP]) then
       begin
         if (Value and mask)>0 then  // write a 1
           FBoard.FPins[Pin].FState:=HIGH
@@ -2872,21 +3201,21 @@ begin
   Result:=SendCommand(chr(DIGITAL_MESSAGE or Port)+chr(Value and $7F)+chr((value >> 7) and $7F), write);
 end;
 // Write pin value, for digital or analog pin
-function TPin.WriteValue(Value: integer; write: Boolean=True): string;
+function TPin.WriteValue(Value: uint32; write: Boolean=True): string;
 var
-  ValueTmp: integer;
+  ValueTmp: uint32;
 begin
-  if FMode = PIN_MODE_OUTPUT then
+  if FMode in [PIN_MODE_OUTPUT, PIN_MODE_INPUT, PIN_MODE_PULLUP] then
     Result:=SetDigitalPinValue(Value, write)
-  else if FMode in [PIN_MODE_PWM, PIN_MODE_SERVO, PIN_MODE_SHIFT] then
+  else if FMode = PIN_MODE_PWM then
   begin
     // search for resolution
-    ValueTmp:=Value and FBoard.GetPinResolution(FPin, FMode);
+    ValueTmp:=min(Value, FBoard.GetPinResolution(FPin, FMode));
 
     if (ValueTmp > $3FFF) or (FPin > 15) then
-      Result:=AnalogWriteExtended(Value, write)
+      Result:=AnalogWriteExtended(ValueTmp, write)
     else
-      Result:=Analogwrite(Value, write);
+      Result:=AnalogWrite(ValueTmp, write);      // value for analogwrite is 14 bits $3FFF
   end;
 end;
 
@@ -2906,7 +3235,7 @@ begin
 
   if not (FMode in [PIN_MODE_OUTPUT, PIN_MODE_INPUT, PIN_MODE_PULLUP]) then
   begin
-    FBoard.RaiseError(7, 'DigitalWrite');
+    FBoard.RaiseError(7, 'Pin:DigitalWrite');
     exit;
   end;
   if Value <> 0 then
@@ -2919,27 +3248,24 @@ begin
 
   Result:=SendCommand(chr(SET_DIGITAL_PIN_VALUE)+chr(FPin)+chr(TmpValue), write); // $F5
 end;
-{0  analog pin, 0xE0-0xEF, (MIDI Pitch Wheel)
+{0  analog pin, 0xE0-0xEF, (MIDI Pitch Wheel)  max 15 pins
 1  analog least significant 7 bits
 2  analog most significant 7 bits }
-function TPin.AnalogWrite(Value: integer; write: Boolean=true): string;
+function TPin.AnalogWrite(Value: word; write: Boolean=true): string;
 var
-   ValueTmp: integer;
+   ValueTmp: uint32;
 begin
-  Result:='';
-
-  if not (FMode in [PIN_MODE_PWM, PIN_MODE_SERVO, PIN_MODE_SHIFT]) then
+  if FPin > 15 then
   begin
-    FBoard.RaiseError(11, 'AnalogWrite');
+    Result:=AnalogWriteExtended(Value, write);
     exit;
   end;
-  // search for resolution
-  ValueTmp:=Value and FBoard.GetPinResolution(FPin, FMode);
 
+  ValueTmp:=min(Value, FBoard.GetPinResolution(FPin, FMode));
+
+  Result:=SendCommand(chr(ANALOG_MESSAGE or FPin)+chr(ValueTmp and $7F)+chr((ValueTmp >> 7) and $7F),write);
   if write then
-    FState:=Valuetmp;  // store last value written
-
-  Result:=SendCommand(chr(ANALOG_MESSAGE or FPin)+chr(Valuetmp and $7F)+chr(Valuetmp >> 7 and $7F),write);
+    FState:=ValueTmp;  // store last value written
 end;
 {0  START_SYSEX              (0xF0)
 1  extended analog message  (0x6F)
@@ -2948,29 +3274,28 @@ end;
 4  bits 7-13                (most significant byte)
 ... additional bytes may be sent if more bits are needed
 N  END_SYSEX                (0xF7)}
-function TPin.AnalogWriteExtended(Value: integer; write: Boolean=True): string; // analog write (PWM, Servo, etc) to any pin
+function TPin.AnalogWriteExtended(Value: uint32; write: Boolean=True): string; // analog write (PWM, Servo, etc) to any pin
 var
   i: integer;
   Valuetmp: integer;
-  data: String;
+  Data: String;
 begin
-  data:='';
+  ValueTmp:=min(Value, FBoard.GetPinResolution(FPin, FMode));
 
-  // search for resolution
-  ValueTmp:=Value and FBoard.GetPinResolution(FPin, FMode);
+  Data:=chr(Valuetmp and $FF);  // byte 1
+  Valuetmp:=Valuetmp>>8; // prepare value
 
-  for i:=0 to sizeof(Valuetmp) do
+  for i:=2 to 4 do    // max 4 bytes 32 bits
   begin
-    data:=chr(Valuetmp and $FF)+data;  // LSB byte ,MSB byte
-    Valuetmp:=Valuetmp>>8; // get new byte
+    data:=data+chr(Valuetmp and $FF);  // LSB byte ,MSB byte
+    Valuetmp:=Valuetmp>>8; // prepare value
     if Valuetmp = 0 then  // no more data to send
       break;
   end;
 
-  if write then
-    FState:=ValueTmp;  //store value written
-
   Result:=SendSysEx(chr(EXTENDED_ANALOG)+chr(FPin)+Encode8To7Bit(data), write);
+  if write then
+    FState:=min(Value, FBoard.GetPinResolution(FPin, FMode));   //store value written
 end;
 
 //
@@ -2988,11 +3313,12 @@ begin
   FEnabled:=false;
   FTaskID:=0;  // Task ID
   FDataTask:='';
+  FDataTaskRunOnce:='';
   FRunOnce:=True;
-
   FOnEnabled:=nil;
   FOnDisabled:=nil;
-
+  FRunDelay:=0;
+  FTimeDelay:=0;
   FOnTaskError:=nil;
   FOnQueryTask:=nil;
 end;
@@ -3005,7 +3331,7 @@ end;
 procedure TTask.setTask(Task: Byte);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setTask')
+    FBoard.RaiseError(33, 'Task:setTask')
   else if Task > 127 then
     FTaskID:=0
   else
@@ -3015,9 +3341,9 @@ end;
 procedure TTask.setTimeDelay(Delay: integer);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setTimeDelay')
-  else if Delay < 1 then
-    FTimeDelay:=1
+    FBoard.RaiseError(33, 'Task:setTimeDelay')
+  else if Delay < 0 then
+    FTimeDelay:=0
   else
     FTimeDelay:=Delay;
 end;
@@ -3025,9 +3351,9 @@ end;
 procedure TTask.setRunDelay(Delay: integer);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setRunDelay')
-  else if Delay < 1 then
-    FRunDelay:=1
+    FBoard.RaiseError(33, 'Task:setRunDelay')
+  else if Delay < 0 then
+    FRunDelay:=0
   else
     FRunDelay:=Delay;
 end;
@@ -3035,15 +3361,12 @@ end;
 procedure TTask.setBoard(Board: TBoard);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
+    FBoard.RaiseError(33, 'Task:setBoard')
   else if Assigned(Board) then
     FBoard:=Board;
 end;
 
 procedure TTask.setEnabled(State: Boolean);
-var
-  i: integer;
-  Data7Bit: string;
 begin
   if not Assigned(FBoard) then
     exit;
@@ -3051,40 +3374,38 @@ begin
   if FEnabled = State then
      exit;
 
-  if State then
+  if State = True then
   begin
     if Assigned(FBoard) and FBoard.Enabled then
     begin
-      if length(FDataTask) < 3 then // min command length
+      if length(FDataTaskRunOnce) < 3 then // min command length
       begin
-        FBoard.RaiseError(25, 'setEnabled');
+        FBoard.RaiseError(25, 'Task:setEnabled');
         exit;
       end;
       if Assigned(FBoard.FTasks[FTaskID]) then // TaskID already exists
       begin
-        FBoard.RaiseError(45, 'setEnabled');
+        FBoard.RaiseError(45, 'Task:setEnabled');
         exit;
       end;
       // task does not exist
-      if not FRunOnce then  // task run again after finished, so needs a end delay
-        FDataTask:=FDataTask+DelayTask(false);  // only get command, for continuous running
-      FBoard.FLastError:=0;
+
+      if FRunOnce then  // task run again after finished, so needs a end delay
+        FDataTask:=FDataTaskRunOnce
+      else
+        FDataTask:=FDataTaskRunOnce+DelayTask(false);  // only get command, for continuous running
+
+      FBoard.LastError:=0;
       FBoard.FTasks[FTaskID]:=self;
       FEnabled:=True;
       CreateTask; // length of task is Length of FDataTask
-      if FBoard.FLastError > 0 then
+      if FBoard.LastError > 0 then
       begin
         FEnabled:=False;
         FBoard.FTasks[FTaskID]:=nil;
         exit;
       end;
-      Data7Bit:=Encode8To7Bit(FDataTask);
-      for i:=0 to Length(Data7Bit) div 59 do // max lentgh sysex command 64 - 5 of addtotask command
-      begin
-        AddToTask(Copy(Data7Bit, i * 59 + 1, 59));
-      end;
-      if Length(Data7Bit) > (i + 1) * 59 then
-         AddToTask(Copy(Data7Bit, i * 59 + 1, 59));
+      AddToTask(FDataTask);
       ScheduleTask;  // Run task
       if Assigned(FOnEnabled) then
         FOnEnabled(self);
@@ -3092,7 +3413,7 @@ begin
     else // FBoard is not enabled
     begin
       FEnabled:=false;
-      FBoard.RaiseError(2, 'setEnabled');
+      FBoard.RaiseError(2, 'Task:setEnabled');
     end;
   end
   else  // disabled
@@ -3110,19 +3431,17 @@ var
   TaskID: byte;
   DataString: string;
   Time_ms: integer;
-  Length: integer;
+  Len: integer;     // data length
   Position: integer;
   Command: Byte;
 begin
-  DataString:='';
-  TaskID:=0;
   Time_ms:=0;
-  Length:=0;
+  Len:=0;
   Position:=0;
   Command:=ord(CommandData[1]);   // subcommand is first byte
     {0  START_SYSEX              (0xF0)
     1  Scheduler Command        (0x7B)
-    2  error_task Reply Command (0x08) or query_task Reply Command (0x0A)
+    2  error_task Reply subCommand (0x08) or query_task Reply Command (0x0A)
     3  task id                  (0-127)
     4  time_ms bit 0-6
     5  time_ms bit 7-13
@@ -3138,32 +3457,32 @@ begin
     15 taskdata bit 13-19 [optional]
     n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
     n+1  END_SYSEX              (0xF7) }
-  TaskID:=ord(Commanddata[2]);  // get task ID
-  DataString:=Copy(CommandData, 3, system.Length(CommandData) - 2);
+  TaskID:=ord(CommandData[2]);  // get task ID
+  DataString:=Copy(CommandData, 3, Length(CommandData) - 2);
   if DataString <> '' then
   begin
     DataString:=Decode7To8bit(DataString);  // decode 7 bits string
     Time_ms:=decodeNbytestoInt(Copy(DataString,1,4)); // first 32 bits, 4 bytes
-    Length:=decodeNbytestoInt(Copy(DataString,5,2));  // next 16 bits, 2 bytes
+    Len:=decodeNbytestoInt(Copy(DataString,5,2));  // next 16 bits, 2 bytes
     Position:=decodeNbytestoInt(Copy(DataString,7,2));  // next 16 bits, 2 bytes
-    DataString:=Copy(DataString,9,system.Length(DataString)-8);  // Task Data
+    DataString:=Copy(DataString,9,Length(DataString)-8);  // Task Data
   end;
 
   if Command = QUERY_TASK_REPLY then
   begin
     if Assigned(FOnQueryTask) then
-      FOnQueryTask(self, Time_ms, Length, Position, DataString);
+      FOnQueryTask(self, Time_ms, Len, Position, DataString);
   end
   else if Assigned(FOnTaskError) then    // ERROR_TASK_REPLY
-    FOnTaskError(self, Time_ms, Length, Position, DataString);
+    FOnTaskError(self, Time_ms, Len, Position, DataString);
 end;
 { Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
-function TTask.SendSysEx(data7bit: string; write: Boolean=true): string;
+function TTask.SendSysEx(data: string; write: Boolean=true): string;
 begin
   Result:='';
   if not FEnabled and write then
     exit;
-  Result:=FBoard.SendSysEx(Data7bit, write);
+  Result:=FBoard.SendSysEx(Data, write);
 end;
 
 //
@@ -3175,7 +3494,8 @@ end;
  3  task id              (0-127)
  4  length LSB           (bit 0-6)
  5  length MSB           (bit 7-13)
- 6  END_SYSEX            (0xF7) }
+ 6  Config byte (optional)  (bit 0 = 1 task is paused at then end not deleted
+ 6,7  END_SYSEX            (0xF7) }
 function TTask.CreateTask(write: Boolean=true): string;
 var
   Flength: integer;
@@ -3186,10 +3506,9 @@ begin
 
   if FLength > $3FFF then // 14 bits
   begin
-    FBoard.RaiseError(6, 'CreateTask');
+    FBoard.RaiseError(6, 'Task:CreateTask');
     exit;
   end;
-
   Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(CREATE_TASK)+chr(FTaskID and $7F)+chr(FLength and $7F)+chr((FLength >> 7) and $7F), write);
 end;
 {0  START_SYSEX          (0xF0)
@@ -3211,9 +3530,18 @@ end;
 6  taskdata bit 14-20   [optional]
 n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
 n+1  END_SYSEX          (0xF7)}
-function TTask.AddToTask(Data7Bit: String; write: Boolean=true): string;
+function TTask.AddToTask(Data: String; write: Boolean=true): string;
+var
+  i: integer;
 begin
-  Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(ADD_TO_TASK)+chr(FTaskID)+Data7Bit, write);
+  Result:='';
+  i:=0;
+  while i < Length(Data) do
+  begin
+    // max size for send is 52 8_bits bytes = 59 bytes 7_Bits, should be 53 but one error on ConfigurableFirmata.cpp, 64 bytes message
+    Result:=Result+SendSysEx(chr(SCHEDULER_DATA)+chr(ADD_TO_TASK)+chr(FTaskID)+Encode8To7Bit(Copy(Data, i+1, 52)), write);
+    inc(i, 52);
+  end;
 end;
 {0  START_SYSEX          (0xF0)
  1  Scheduler Command    (0x7B)
@@ -3253,6 +3581,7 @@ begin
   Result:=SendSysEx(chr(SCHEDULER_DATA)+chr(QUERY_TASK)+chr(FTaskID), write);
 end;
 
+
 //
 //
 //
@@ -3273,7 +3602,7 @@ begin
   FOnOneWireData:=nil;
   FOnSearch:=nil;
   FOnOneWireAlarm:=nil;
-  FOneWirePin:=PinModesToByte(PIN_MODE_IGNORE);
+  FPin:=PinModesToByte(PIN_MODE_IGNORE);
   FParasitisticPower:=false;
 end;
 
@@ -3285,17 +3614,25 @@ end;
 procedure TOneWire.setBoard(Board: TBoard);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
+    FBoard.RaiseError(33, 'OneWire:setBoard')
   else if Assigned(Board) then
     FBoard:=Board;
 end;
 
-procedure TOneWire.setOneWirePin(Pin: Byte);
+procedure TOneWire.setPin(Pin: Byte);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setOneWirePin')
+  begin
+    FBoard.RaiseError(33, 'OneWire:setPin');
+    exit;
+  end
+  else if Pin > 127 then
+  begin
+    FBoard.RaiseError(31, 'OneWire:setPin');
+    FPin:=127;
+  end
   else
-    FOneWirePin:=Pin;
+    FPin:=Pin;
 end;
 
 procedure TOneWire.setEnabled(State: Boolean);
@@ -3312,33 +3649,33 @@ begin
     if Assigned(FBoard) and FBoard.Enabled then
     begin
       // Check if supported pin
-      if not FBoard.CheckCapability(FOneWirePin, PIN_MODE_ONEWIRE) then // not supported
+      if not FBoard.CheckCapability(FPin, PIN_MODE_ONEWIRE) then // not supported
       begin
         FEnabled:=false;
-        FBoard.RaiseError(7, 'setOneWirePin');
+        FBoard.RaiseError(7, 'OneWire:setEnabled');
       end
-      else if FBoard.FBoardPins[FOneWirePin].Busy then  // check if pin is assigned
+      else if FBoard.FBoardPins[FPin].Busy then  // check if pin is assigned
       begin
         FEnabled:=false;
-        FBoard.RaiseError(12, 'setOneWirePin');
+        FBoard.RaiseError(12, 'OneWire:setEnabled');
       end;
     end
     else
     begin
       FEnabled:=false; // firmataboard not enabled
-      FBoard.RaiseError(36, 'setOneWirePin');
+      FBoard.RaiseError(2, 'OneWire:setEnabled');
     end;
     if FEnabled then
     begin
-      if Assigned(FBoard.FOneWires[FOneWirePin]) then
+      if Assigned(FBoard.FOneWires[FPin]) then
       begin
         FEnabled:=False;
-        FBoard.RaiseError(43, 'setEnabled');
+        FBoard.RaiseError(54, 'OneWire:setEnabled');
       end
       else // new onewire module
       begin
-        FBoard.FOneWires[FOneWirePin]:=self;
-        FBoard.FBoardPins[FOneWirePin].Busy:=true;  //  pin is assigned to this module
+        FBoard.FOneWires[FPin]:=self;
+        FBoard.FBoardPins[FPin].Busy:=true;  //  pin is assigned to this module
         config;  // configure onewire
         if Assigned(FOnEnabled) then
           FOnEnabled(self);
@@ -3351,8 +3688,8 @@ begin
       FOnDisabled(self);
     if Assigned(FBoard) then
     begin
-      FBoard.FBoardPins[FOneWirePin].Busy:=false; // free onewire pin
-      FBoard.FOneWires[FOneWirePin]:=nil;
+      FBoard.FBoardPins[FPin].Busy:=false; // free onewire pin
+      FBoard.FOneWires[FPin]:=nil;
     end;
     FEnabled:=False;
   end;
@@ -3364,22 +3701,9 @@ var
   DataString: string;
   OneWireIDs: array of string;
   i: integer;
-  Command: Byte;
-  Index: integer;
-
-  function GetNextByte: Byte;
-  begin
-    if Index > system.Length(CommandData) then
-      Result:=END_SYSEX
-    else
-     Result:=ord(CommandData[Index]);
-    Inc(Index);
-  end;
 begin
-  Index:=1;
-  // first byte is subcommand
-  Command:=GetNextByte;
-  case Command of
+  // first byte is ONEWIRE_SEARCH_REPLY or ONEWIRE_SEARCH_ALARMS_REPLY
+  case ord(CommandData[1]) of   // Onewire command
        {0  START_SYSEX      (0xF0)
        1  OneWire Command  (0x73)
        2  search reply command (0x42|0x45) 0x42 normal search reply
@@ -3395,8 +3719,8 @@ begin
        n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
        n+1  END_SYSEX      (0xF7)}
        ONEWIRE_SEARCH_REPLY, ONEWIRE_SEARCH_ALARMS_REPLY: begin  // $42 $45
-          Pin:=GetNextByte;
-          DataString:=Copy(CommandData, Index, system.Length(CommandData));
+          Pin:=ord(CommandData[2]);
+          DataString:=Copy(CommandData, 3, Length(CommandData)-2);  // excludes ONEWIRE_SEARCH_REPLY or ONEWIRE_SEARCH_ALARMS_REPLY and Pin
           DataString:=Decode7To8bit(DataString);
 
           SetLength(OneWireIDs,Length(DataString) div 8);  // Calc size of discovered IDs array
@@ -3405,7 +3729,7 @@ begin
           if (Length(OneWireIDs) > 0) and (Length(OneWireIDs[0]) > 0) then
             FDevice:=OneWireIDs[0];   // deafult device to first OneWireID found
 
-          if Command = ONEWIRE_SEARCH_REPLY then
+          if ord(CommandData[1]) = ONEWIRE_SEARCH_REPLY then
           begin
             if Assigned(FOnSearch) then
               FOnSearch(self,OneWireIDs);
@@ -3426,28 +3750,23 @@ begin
        n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)
        n+1  END_SYSEX          (0xF7)}
        ONEWIRE_READ_REPLY: begin //  $43;
-           Pin:=GetNextByte;
-           DataString:=Copy(CommandData, Index, system.Length(CommandData));
+           Pin:=ord(CommandData[2]);
+           DataString:=Copy(CommandData, 3, Length(CommandData)-2);  // excludes ONEWIRE_READ_REPLY and Pin
            DataString:=Decode7To8bit(DataString); // Data received from Onewire
            if Assigned(FOnOneWireData) then
              // object, data (correlation and scratchpad)
              FOnOneWireData(self,DataString);
-       end
-       else   // Onwrire command unknown
-       begin   // unknown OneWire command
-         DataString:=Copy(CommandData, Index, system.Length(CommandData));
-         FBoard.RaiseError(4, 'Got an unknown OneWire commands');
        end;
    end;
 end;
 { Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
-function TOneWire.SendSysEx(data7bit: string; write: Boolean=true): string;
+function TOneWire.SendSysEx(data: string; write: Boolean=true): string;
 begin
   Result:='';
   if not FEnabled and write then
     exit;
 
-  Result:=FBoard.SendSysEx(Data7bit, write);
+  Result:=FBoard.SendSysEx(Data, write);
 end;
 //
 // ONEWIRE commands
@@ -3463,9 +3782,9 @@ end;
 5  END_SYSEX (0xF7)}
 function TOneWire.config(write: Boolean=true): string;
 begin
-  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(ONEWIRE_CONFIG_REQUEST)+chr(FOneWirePin)+chr(ord(FParasitisticPower)), write);
+  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(ONEWIRE_CONFIG_REQUEST)+chr(FPin)+chr(ord(FParasitisticPower)), write);
   if write then
-    FBoard.FBoardPins[FOneWirePin].ActualMode:=PinModesToByte(PIN_MODE_ONEWIRE);
+    FBoard.FBoardPins[FPin].ActualMode:=PinModesToByte(PIN_MODE_ONEWIRE);
 end;
 
 {0  START_SYSEX      (0xF0)
@@ -3477,7 +3796,7 @@ end;
  4  END_SYSEX        (0xF7)}
 function TOneWire.Search(write: Boolean=true): string;
 begin
-  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(ONEWIRE_SEARCH_REQUEST)+chr(FOneWirePin), write);
+  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(ONEWIRE_SEARCH_REQUEST)+chr(FPin), write);
 end;
 {0  START_SYSEX      (0xF0)
 1  OneWire Command  (0x73)
@@ -3488,7 +3807,7 @@ end;
 4  END_SYSEX        (0xF7) }
 function TOneWire.AlarmSearch(write: Boolean=true): string;
 begin
-  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(ONEWIRE_SEARCH_ALARMS_REQUEST)+chr(FOneWirePin), write);
+  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(ONEWIRE_SEARCH_ALARMS_REQUEST)+chr(FPin), write);
 end;
 
 {0  START_SYSEX      (0xF0)
@@ -3527,37 +3846,37 @@ n  ... as many bytes as needed (don't exceed MAX_DATA_BYTES though)}
 function TOneWire.SendCommands(Command: Byte; numBytesToRead: uint16;
                    correlationId: uint16; delay: integer; dataToWrite: String; write: Boolean=true): string;
 var
-   Data8bit: string;
+   Data: string;
    SubCommand: byte;
 begin
   Result:='';
 
-  Data8bit:='';
+  Data:='';
   Subcommand:=Command and $3F;  // bits 0 to 5
 
   if (Subcommand and ONEWIRE_SELECT_REQUEST_BIT) > 0 then
   begin
     // Device
-    Data8bit:=leftStr(FDevice+'#0#0#0#0#0#0#0#0',8);  // set length to 8 and fill with #0
+    Data:=leftStr(FDevice+'#0#0#0#0#0#0#0#0',8);  // set length to 8 and fill with #0
   end;
   if ((Subcommand and ONEWIRE_READ_REQUEST_BIT) > 0) or (numBytesToRead > 0) then
   begin
     SubCommand:=Subcommand or ONEWIRE_READ_REQUEST_BIT;
-    Data8bit:=Data8bit+chr(numBytesToRead and $FF)+chr((numBytesToRead >> 8) and $FF);
-    Data8bit:=Data8bit+chr(correlationId and $FF)+chr((correlationId >> 8) and $FF);
+    Data:=Data+chr(numBytesToRead and $FF)+chr((numBytesToRead >> 8) and $FF);
+    Data:=Data+chr(correlationId and $FF)+chr((correlationId >> 8) and $FF);
   end;
   if ((Subcommand and ONEWIRE_DELAY_REQUEST_BIT) > 0 ) or (delay > 0) then
   begin
     SubCommand:=Subcommand or ONEWIRE_DELAY_REQUEST_BIT;
-    Data8bit:=Data8bit+chr(delay and $FF)+chr((delay >> 8) and $FF)+chr((delay >> 16) and $FF)+chr((delay >> 24) and $FF);
+    Data:=Data+chr(delay and $FF)+chr((delay >> 8) and $FF)+chr((delay >> 16) and $FF)+chr((delay >> 24) and $FF);
   end;
   if ((Subcommand and ONEWIRE_WRITE_REQUEST_BIT) > 0 ) or (dataToWrite <> '') then
   begin
     SubCommand:=Subcommand or ONEWIRE_WRITE_REQUEST_BIT;
-    Data8bit:=Data8bit+dataToWrite;
+    Data:=Data+dataToWrite;
   end;
 
-  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(Subcommand)+chr(FOneWirePin)+Encode8To7Bit(Data8Bit), write);
+  Result:=SendSysEx(chr(ONEWIRE_DATA)+chr(Subcommand)+chr(FPin)+Encode8To7Bit(Data), write);
 end;
 
 function TOneWire.Reset(write: Boolean=true): string;
@@ -3582,6 +3901,25 @@ function TOneWire.ResetAndSelect(write: Boolean=true): string;
 begin
   //Command, numBytesToRead, correlationId, delay, dataToWrite, write
   Result:=SendCommands(ONEWIRE_RESET_REQUEST_BIT or ONEWIRE_SELECT_REQUEST_BIT, 0, 0, 0, '', write);
+end;
+
+function TOneWire.ResetAndSelectAndWrite(DataOut: string; write: Boolean=true): string;
+begin
+   //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_RESET_REQUEST_BIT or ONEWIRE_SELECT_REQUEST_BIT or ONEWIRE_WRITE_REQUEST_BIT, 0, 0, 0, DataOut, write);
+end;
+
+function TOneWire.ResetAndSelectAndWrite(Delay: integer; DataOut: string; write: Boolean=true): string; overload;
+begin
+   //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_RESET_REQUEST_BIT or ONEWIRE_SELECT_REQUEST_BIT or ONEWIRE_WRITE_REQUEST_BIT, 0, 0, Delay, DataOut, write);
+end;
+
+function TOneWire.ResetAndSelectAndWriteAndRead(BytestoRead: uint16; Correlation: uint16; Delay: integer; DataOut: string; write: Boolean=true): string;
+begin
+  //Command, numBytesToRead, correlationId, delay, dataToWrite, write
+  Result:=SendCommands(ONEWIRE_RESET_REQUEST_BIT or ONEWIRE_SELECT_REQUEST_BIT or ONEWIRE_WRITE_REQUEST_BIT or ONEWIRE_READ_REQUEST_BIT,
+                         BytesToRead, Correlation, Delay, DataOut, write);
 end;
 
 function TOneWire.Read(BytestoRead: uint16; Correlation: uint16; write: Boolean=true): string;
@@ -3632,7 +3970,9 @@ begin
   FOnDisabled:=nil;
 
   FContinuously:=nil;
-  FContinuously10Bits:=nil;
+
+  F10bits:=False;   // not supported yet
+  FSequence:=0;
 
   FOnI2CData:=nil;
   FI2CQueries:=0;
@@ -3649,29 +3989,52 @@ end;
 procedure TI2C.setBoard(Board: TBoard);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
+    FBoard.RaiseError(33, 'I2C:setBoard')
   else if Assigned(Board) then
     FBoard:=Board;
 end;
 
-procedure TI2C.setSDAPin(SDApin: Byte);   // for future use
+procedure TI2C.setSDAPin(pin: Byte);   // for future use
 begin
   if FEnabled then
   begin
-    FBoard.RaiseError(33, 'setSDAPin');
+    FBoard.RaiseError(33, 'I2C:setSDAPin');
     exit;
-  end;
-  FSDAPin:=SDAPin
+  end
+  else if Pin > 127 then
+  begin
+    FBoard.RaiseError(31, 'I2C:setSDAPin');
+    FSDAPin:=18;   // default to arduino
+  end
+  else
+    FSDAPin:=Pin;
 end;
 
-procedure TI2C.setSCLPin(SCLpin: Byte);  // for future use
+procedure TI2C.setSCLPin(pin: Byte);  // for future use
 begin
   if FEnabled then
   begin
-    FBoard.RaiseError(33, 'setSCLPin');
+    FBoard.RaiseError(33, 'I2C:setSCLPin');
     exit;
-  end;
-  FSCLPin:=SCLPin
+  end
+  else if Pin > 127 then
+  begin
+    FBoard.RaiseError(31, 'I2C:setSCLPin');
+    FSCLPin:=19;   // default to arduino
+  end
+  else
+    FSCLPin:=Pin;
+end;
+
+procedure TI2C.setSequence(Value: Byte);
+begin
+  if Value > 7 then
+  begin
+    FSequence:=0;
+    FBoard.RaiseError(26, 'I2C:setSequence');
+  end
+  else
+    FSequence:=Value;
 end;
 
 procedure TI2C.setEnabled(State: Boolean);
@@ -3693,25 +4056,28 @@ begin
       begin
         if FBoard.FBoardPins[FSDAPin].Busy or FBoard.FBoardPins[FSCLPin].Busy then
         begin
-          FBoard.RaiseError(12, 'setEnabled');
+          FBoard.RaiseError(12, 'I2C:setEnabled');
           exit;
         end
-        else if not Assigned(FBoard.FI2C) then // Both pis are free, check if there is another module
+        else if not Assigned(FBoard.FI2C) then // Both pis are free, check if module is free
         begin // Configure I2C
           FBoard.FI2C:=self;
           FEnabled:=true;
+          FSequence:=0;
           config(FDelay);
+          FBoard.FBoardPins[FSDAPin].Busy:=True;
+          FBoard.FBoardPins[FSCLPin].Busy:=True;
           if Assigned(FOnEnabled) then
             FOnEnabled(self);
         end
         else  // Module already in use
-          FBoard.RaiseError(45, 'setEnabled');
+          FBoard.RaiseError(45, 'I2C:setEnabled');
       end
       else  // No valid pins
-        FBoard.RaiseError(7, 'setEnabled');
+        FBoard.RaiseError(7, 'I2C:setEnabled');
     end
     else  // firmata is not enabled
-      FBoard.RaiseError(36, 'setEnabled');
+      FBoard.RaiseError(36, 'I2C:setEnabled');
   end
   else  // state is false disable
   begin
@@ -3720,10 +4086,7 @@ begin
     // check if there is any ReadContinuously activated and stop it
     for i:=0 to Length(FContinuously) - 1 do
       StopReading(FContinuously[i]);
-    for i:=0 to Length(FContinuously10Bits) - 1 do    // for future use
-      StopReading10Bits(FContinuously10Bits[i]);
     FContinuously:=nil;
-    FContinuously10Bits:=nil;    // for future use
     FBoard.FBoardPins[FSDAPin].Busy:=false;   // free pins
     FBoard.FBoardPins[FSCLPin].Busy:=false;
     if Assigned(FBoard) then
@@ -3735,44 +4098,49 @@ end;
 procedure TI2C.parsefirmatacommand(Sender: TObject; CommandData: String);
 var
   DataString: string;
-  Slave_Address : byte;
+  Slave_Address : word;
   I2C_Register: byte;
-  Index: integer;
-
-  function GetNextByte: Byte;
-  begin
-    if Index > system.Length(CommandData) then
-      Result:=END_SYSEX
-    else
-     Result:=ord(CommandData[Index]);
-    Inc(Index);
-  end;
+  Sequence: byte;
 begin
-  Index:=1;
   {0  START_SYSEX (0xF0)
    1  I2C_REPLY (0x77)
    2  slave address (LSB)
-   3  slave address (MSB)
+   3  slave address (MSB). Bits 0-2 return the transaction sequence from the request in 7 bit mode.
    4  register (LSB)
    5  register (MSB)
    6  data 0 (LSB)
    7  data 0 (MSB)
    ...
    n  END_SYSEX (0XF7)}
-   Slave_Address:=GetNextByte or (GetNextByte << 7);
-   I2C_Register:=GetNextByte or (GetNextByte << 7);
-   DataString:=Copy(Commanddata, Index, system.Length(CommandData));
+
+   // CommandData excludes I2C_REPLAY and END_SYSEX
+
+   Slave_Address:=ord(CommandData[1]);
+
+   if F10bits then
+   begin
+     Slave_Address:=Slave_Address or (ord(CommandData[2]) << 7);   // 10 bits mode
+     Sequence:=0;
+   end
+   else   // 7 Bits mode
+     Sequence:=ord(CommandData[2]) and $7;
+
+
+
+   I2C_Register:=ord(CommandData[3]) or (ord(CommandData[4]) << 7);
+   DataString:=Copy(CommandData, 5, Length(CommandData)-4);
    DataString:=Decode2BytesCharTo1(DataString);
    if Assigned(FOnI2CData) then
-      FOnI2CData(self, Slave_Address, I2C_Register, DataString);
+      FOnI2CData(self, Slave_Address, I2C_Register, Sequence, DataString);
 end;
+
 { Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
-function TI2C.SendSysEx(data7bit: string; write: Boolean=true): string;
+function TI2C.SendSysEx(data: string; write: Boolean=true): string;
 begin
   Result:='';
   if not FEnabled and write then
     exit;
-  Result:=FBoard.SendSysEx(Data7bit, write);
+  Result:=FBoard.SendSysEx(Data, write);
 end;
 //
 // I2C commands
@@ -3789,10 +4157,11 @@ var
 begin
   Result:='';
   I2CData:='';
-  if Delay > 0 then
-    I2CData:=chr(Delay and $7F)+chr(Delay >> 7);
 
-  // Firmata defaults pins, set pin 18 y 19 (analog 4 and 5) to I2c Mode  SDA, SCL
+  if Delay > 0 then
+    I2CData:=chr(Delay and $7F)+chr((Delay >> 7) and $7F) ;
+
+  // Firmata defaults pins, set pin 18 y 19 (analog 4 and 5) on arduino to I2C Mode  SDA, SCL
   // Default pins for esp8266 are SDApin=4 and SCLpin=5
   if write then
   begin
@@ -3814,24 +4183,27 @@ end;
           bit 6: auto restart transmission, 0 = stop (default), 1 = restart
           bit 5: address mode, 0 = 7bits mode, 1 = 10-bit mode
           bits 4-3: read/write, 00 = write, 01 = read once, 10 = read continuously, 11 = stop reading
-          bits 2-0: slave address MSB in 10-bit mode, not used in 7-bit mode
+          bits 2-0: slave address MSB in 10-bit mode, transaction sequence number in 7-bit mode
 4  data 0 (LSB)
 5  data 0 (MSB)
 6  data 1 (LSB)
 7  data 1 (MSB)
 ...
 n  END_SYSEX (0xF7) }
-function TI2C.Request(Slave: word; command: byte; data: string; restart: Boolean=false; mode10bit: boolean=false; write: Boolean=True): string;
+function TI2C.Request(Slave: word; command: byte; data: string; restart: Boolean=false; write: Boolean=True): string;
 var
   I2CData: string;
   Mode: Byte;   // is slave address (MSB) + bits
 begin
   Mode:=command and I2C_READ_WRITE_MODE_MASK; // only keeps bits 4 and 3
-  if mode10bit then
+
+  if F10bits then
   begin
-     Mode:=Mode or ((Slave >> 7) and 7); // takes bits 7,8 and 9 from slave ¿?
+     Mode:=Mode or ((Slave >> 7) and $7); // takes bits 7,8 and 9 from slave ¿?
      Mode:=Mode or I2C_10BIT_ADDRESS_MODE_MASK;  // set 10 bit mode, bit 5 on
-  end;
+  end
+  else if Mode in [I2C_READ, I2C_READ_CONTINUOUSLY] then
+    Mode:=Mode or (FSequence and  $7);  // bits 0-2
 
   if restart then
     Mode:=Mode or I2C_AUTORESTART_RESTART;   // bit 6 on
@@ -3865,8 +4237,8 @@ begin
   Result:=SendSysEx(chr(I2C_REQUEST)+chr(Slave and $7F)+chr(Mode)+I2CData, write);
 end;
 
-function TI2C.WriteData(Slave: Byte; Address: integer; AddressSize: Byte; Data: String; restart: Boolean=false; write: Boolean=True): string;
-  //Request(Slave, command, data, restart, mode10bit, write)
+function TI2C.WriteData(Slave: word; Address: integer; AddressSize: Byte; Data: String; restart: Boolean=false; write: Boolean=True): string;
+  //Request(Slave, command, data, restart, write)
 var
   I2CData: string;
 begin
@@ -3876,18 +4248,20 @@ begin
   if AddressSize = 2 then
     I2CData:=chr((Address >> 8) and $FF)+I2CData;   // first is MSB byte address
 
-  if ((Length(Data)+Length(I2CData)) * 2) > (MAX_DATA_BYTES - 5) then // because each byte needs two bytes in messsage
-  begin
-    FBoard.RaiseError(30, 'i2cWrite');
+  I2CData:=I2CData+Data;
+
+  if (Length(I2CData) * 2) > (MAX_DATA_BYTES - 3) then               // b) 64 - 3 = 61 max Message Data so 60 ( Data = 30) because each data is 2 bytes
+  begin                                                              // Data size max is 28 for addressSize 2 or 29 for AddressSize 1
+    FBoard.RaiseError(30, 'I2C:i2cWrite');
     exit;
   end;
 
-  Result:=Request(Slave, I2C_WRITE, I2CData+Data, restart, false, write);
+  Result:=Request(Slave, I2C_WRITE, I2CData, restart, write);
 end;
 
-function TI2C.Read(Slave: Byte; regID: integer; BytesToRead: byte;
+function TI2C.Read(Slave: word; regID: integer; BytesToRead: byte;
                  restart: Boolean=false; write: Boolean=True): string;
-//Request(Slave, command, data, restart, mode10bit, write)
+//Request(Slave, command, data, restart, write)
 var
   I2CData: string;
 begin
@@ -3898,32 +4272,16 @@ begin
   else
     I2CData:=chr(BytesToRead);
 
-  if ((Length(I2CData)+BytesToRead) * 2) > (MAX_DATA_BYTES - 5) then // because each byte needs two bytes in messsage
+  if ((BytesToRead + ord(RegID <> -1)) * 2) > (MAX_DATA_BYTES - 5) then   // 64 - 5 = 59 max Message Data so 29 bytesToRead (look at TI2C.parsefirmatacommand)
   begin
-    FBoard.RaiseError(29, 'i2cRead');
+    FBoard.RaiseError(29, 'I2C:i2cRead');
     exit;
   end;
-  Result:=Request(Slave, I2C_READ, I2CData, restart, false, write);
+  Result:=Request(Slave, I2C_READ, I2CData, restart, write);
 end;
 
-function TI2C.RandomRead(Slave: Byte; Address: word; AddressSize: Byte; BytesToRead: byte;
-                 restart: Boolean=false; write: Boolean=True): string;
-//Request(Slave, command, data, restart, mode10bit, write)
-begin
-  Result:='';
-  if ((BytesToRead + 1) * 2) > (MAX_DATA_BYTES - 5) then // because each byte needs two bytes in messsage
-  begin
-    FBoard.RaiseError(29, 'i2cRandomRead');
-    exit;
-  end;
-  // Dummy write, select address
-  Result:=WriteData(Slave, Address, AddressSize, '', restart, write);
-  // Real read
-  Result:=Result+Request(Slave, I2C_READ, chr(BytesToRead), restart, false, write);
-end;
-
-function TI2C.ReadContinuously(Slave: Byte; RegID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=True): string;
-//Request(Slave, command, data, restart, mode10bit, write)
+function TI2C.ReadContinuously(Slave: word; RegID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=True): string;
+//Request(Slave, command, data, restart, write)
 var
   I2CData: string;
 begin
@@ -3934,23 +4292,24 @@ begin
   else
     I2CData:=chr(BytesToRead);
 
-  if ((Length(I2CData)+BytesToRead) * 2) > (MAX_DATA_BYTES - 5) then // because each byte needs two bytes in messsage
+  if (BytesToRead * 2) > (MAX_DATA_BYTES - 5) then   // 64 - 5 = 59 max Message Data so 29 bytesToRead (look at TI2C.parsefirmatacommand)
   begin
-    FBoard.RaiseError(29, 'i2cReadContinuously');
+    FBoard.RaiseError(29, 'I2C:i2cReadContinuously');
     exit;
   end;
+
   if write then   // store for stop it when disabled if we forget to do it
   begin
     SetLength(FContinuously, Length(FContinuously) + 1);
     FContinuously[Length(FContinuously)]:=Slave;
   end;
-  Result:=Request(Slave, I2C_READ_CONTINUOUSLY, I2CData, restart, false, write);
+  Result:=Request(Slave, I2C_READ_CONTINUOUSLY, I2CData, restart, write);
 end;
 
-function TI2C.StopReading(Slave: Byte; write: Boolean=True): string;
+function TI2C.StopReading(Slave: word; write: Boolean=True): string;
 var
   i: integer;
-//Request(Slave, command, data, restart, mode10bit, write)
+//Request(Slave, command, data, restart, write)
 begin
   if write then
     for i:=0 to Length(FContinuously) - 1 do
@@ -3961,105 +4320,7 @@ begin
         setLength(FContinuously, Length(FContinuously) - 1);
         break;
       end;
-  Result:=Request(Slave, I2C_STOP_READING, '', false, false, write);
-end;
-
-// for future use
-function TI2C.WriteData10Bits(Slave: uint16; Address: integer; AddressSize: Byte; Data: String; restart: Boolean=false; write: Boolean=True): string;
-  //Request(Slave, command, data, restart, mode10bit, write)
-var
-  I2CData: string;
-begin
-  Result:='';
-
-  I2CData:=chr(Address and $FF);
-  if AddressSize = 2 then
-    I2CData:=chr((Address >> 8) and $FF)+I2CData;   // first is MSB byte address
-
-  if ((Length(Data)+Length(I2CData)) * 2) > (MAX_DATA_BYTES - 5) then // because each byte needs two bytes in messsage
-  begin
-    FBoard.RaiseError(30, 'i2cWrite10Bits');
-    exit;
-  end;
-  Result:=Request(Slave, I2C_WRITE, I2CData+Data, restart, true, write);
-end;
-// for future use
-function TI2C.Read10bits(Slave: uint16; regID: integer; BytesToRead: byte; restart: Boolean=false; write: Boolean=True): string;
-var
-  I2CData: string;
-begin
-  Result:='';
-
-  if RegID <> -1 then
-    I2CData:=chr(RegID and $7F)+chr(BytesToRead)
-  else
-    I2CData:=chr(BytesToRead);
-
-  if ((Length(I2CData)+BytesToRead) * 2) > (MAX_DATA_BYTES - 5) then // because each byte needs two bytes in messsage
-  begin
-    FBoard.RaiseError(29, 'i2cRead10Bits');
-    exit;
-  end;
-  Result:=Request(Slave, I2C_READ, I2CData, restart, true, write);
-end;
-// for future use
-function TI2C.RandomRead10bits(Slave: Byte; Address: word; AddressSize: Byte; BytesToRead: byte;
-                 restart: Boolean=false; write: Boolean=True): string;
-begin
-  Result:='';
-
-  if ((BytesToRead + 1) * 2) > (MAX_DATA_BYTES - 5) then // because each byte needs two bytes in messsage
-  begin
-    FBoard.RaiseError(29, 'i2cRandomRead10Bits');
-    exit;
-  end;
-  // Dummy write, select address
-  Result:=WriteData10Bits(Slave, Address, AddressSize, '', restart, write);
-  // Real read
-  Result:=Result+Request(Slave, I2C_READ, chr(BytesToRead), restart, True, write);
-end;
-// for future use
-function TI2C.Read10bitsContinuously(Slave: uint16; RegID: integer; BytesToRead: byte;
-                 restart: Boolean=false; write: Boolean=True): string;
-//Request(Slave, command, data, restart, mode10bit, write)
-var
-  I2CData: string;
-begin
-  Result:='';
-
-  if RegID <> -1 then
-    I2CData:=chr(RegID and $7F)+chr(BytesToRead)
-  else
-    I2CData:=chr(BytesToRead);
-
-  if ((Length(I2CData)+BytesToRead) * 2) > (MAX_DATA_BYTES - 5) then // because each byte needs two bytes in messsage
-  begin
-    FBoard.RaiseError(29, 'i2cRead10BitsContinuously');
-    exit;
-  end;
-  if write then
-  begin
-    SetLength(FContinuously10Bits, Length(FContinuously10Bits) + 1);
-    FContinuously10Bits[Length(FContinuously10Bits)]:=Slave;
-  end;
-  Result:=Request(Slave, I2C_READ_CONTINUOUSLY, I2CData, restart, True, write);
-end;
-// for future use
-function TI2C.StopReading10bits(Slave: uint16; write: Boolean=True): string;
-var
-  I: integer;
-//Request(Slave, command, data, restart, mode10bit, write)
-begin
-  if write then
-    for i:=0 to Length(FContinuously10Bits) - 1 do
-      if FContinuously10Bits[i] = Slave then
-      begin
-        if i < (Length(FContinuously10Bits) - 1) then
-          FContinuously10Bits[i]:=FContinuously10Bits[Length(FContinuously10Bits) - 1];
-        setLength(FContinuously10Bits, Length(FContinuously10Bits) - 1);
-        break;
-      end;
-  Result:=Request(Slave, I2C_STOP_READING, '', false, True, write);
+  Result:=Request(Slave, I2C_STOP_READING, '', false, write);
 end;
 //
 //
@@ -4094,6 +4355,7 @@ begin
   FSteps:=0;
   FAcceleration:=40;
   FRunning:=False;
+  FFastStop:=False;
   FInterfaceType:=ACCEL_INTERFACE_4_WIRE;  // default to 4 wire
   FOnStepperPosition:=nil;
   FOnStepperMoveCompleted:=nil;
@@ -4107,7 +4369,7 @@ end;
 procedure TAccelStepper.setBoard(Board: TBoard);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
+    FBoard.RaiseError(33, 'AccelStepper:setBoard')
   else if Assigned(Board) then
     FBoard:=Board;
 end;
@@ -4116,12 +4378,12 @@ procedure TAccelStepper.setDevice(Device: Byte);
 begin
   if Device > (MAX_ACCELSTEPPER_DEVICES - 1) then
   begin
-    FBoard.RaiseError(16, 'setDevice');
+    FBoard.RaiseError(16, 'AccelStepper:setDevice');
     exit;
   end;
   if FEnabled then
   begin
-    FBoard.RaiseError(33, 'setDevice');
+    FBoard.RaiseError(33, 'AccelStepper:setDevice');
     exit;
   end;
   FDevice:=Device;
@@ -4132,12 +4394,12 @@ begin
   Result:=PinModesToByte(PIN_MODE_IGNORE);
   if MotorPin > PinModesToByte(PIN_MODE_IGNORE) then
   begin
-    FBoard.RaiseError(16, 'setMotorPin');
+    FBoard.RaiseError(16, 'AccelStepper:setMotorPin');
     exit;
   end;
   if FEnabled then
   begin
-    FBoard.RaiseError(33, 'setMotorPin');
+    FBoard.RaiseError(33, 'AccelStepper:setMotorPin');
     exit;
   end;
   Result:=MotorPin;
@@ -4208,7 +4470,7 @@ begin
         if FBoard.FBoardPins[FMotorPin1].Busy or FBoard.FBoardPins[FMotorPin2].Busy then
         begin
            FEnabled:=False;
-           FBoard.RaiseError(12, 'setEnabled', '; MotorPin1 and/or MotorPin2');
+           FBoard.RaiseError(12, 'AccelStepper:setEnabled; MotorPin1 and/or MotorPin2');
         end
         else  // motorpin1 and motorpin2 pins are free
         begin
@@ -4221,7 +4483,7 @@ begin
               if FBoard.FBoardPins[FMotorPin3].Busy then
               begin
                 FEnabled:=False;
-                FBoard.RaiseError(12, 'setEnabled', '; MotorPin3');
+                FBoard.RaiseError(12, 'AccelStepper:setEnabled; MotorPin3');
               end
               else // motorpin3 is free
                 FBoard.FBoardPins[FMotorPin3].Busy:=True;
@@ -4229,7 +4491,7 @@ begin
             else  // motorpin3 not supported
             begin
               FEnabled:=False;
-              FBoard.RaiseError(11, 'setEnabled', '; MotorPin3');
+              FBoard.RaiseError(11, 'AccelStepper:setEnabled; MotorPin3');
             end;
           end
           else if FInterfaceType = ACCEL_INTERFACE_4_WIRE then
@@ -4239,7 +4501,7 @@ begin
               if FBoard.FBoardPins[FMotorPin3].Busy or FBoard.FBoardPins[FMotorPin4].Busy then
               begin
                 FEnabled:=False;
-                FBoard.RaiseError(12, 'setEnabled','; MotorPin3 and/or MotorPin4');
+                FBoard.RaiseError(12, 'AccelStepper:setEnabled; MotorPin3 and/or MotorPin4');
               end
               else // pins are free
               begin
@@ -4250,7 +4512,7 @@ begin
             else  // motorpin3 and/or motorpin4 not supported
             begin
               FEnabled:=False;
-              FBoard.RaiseError(11, 'setEnabled', '; MotorPin3 and/or MotorPin4');
+              FBoard.RaiseError(11, 'AccelStepper:setEnabled; MotorPin3 and/or MotorPin4');
             end;
           end;
         end;
@@ -4258,7 +4520,7 @@ begin
       else // motorpin1 and/or Motorpin2 not supported
       begin
         FEnabled:=False;
-        FBoard.RaiseError(11, 'setEnabled','; MotorPin1 and/or MotorPin2');
+        FBoard.RaiseError(11, 'AccelStepper:setEnabled; MotorPin1 and/or MotorPin2');
       end;
       if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then  // pin assigned
       begin
@@ -4267,7 +4529,7 @@ begin
           if FBoard.FBoardPins[FMotorEnablePin].Busy then   // pin is not free
           begin
             FEnabled:=False;
-            FBoard.RaiseError(12, 'setEnabled','; MotorEnablePin');
+            FBoard.RaiseError(12, 'AccelStepper:setEnabled; MotorEnablePin');
           end
           else    // pin is free
             FBoard.FBoardPins[FMotorEnablePin].Busy:=True;
@@ -4275,7 +4537,7 @@ begin
         else   // pin is not compatible
         begin
           FEnabled:=False;
-          FBoard.RaiseError(11, 'setEnabled', '; MotorEnablePin');
+          FBoard.RaiseError(11, 'AccelStepper:setEnabled; MotorEnablePin');
         end
       end;
       if FEnabled then
@@ -4283,7 +4545,7 @@ begin
         if Assigned(FBoard.FAccelSteppers[FDevice]) then
         begin
           FEnabled:=False;
-          FBoard.RaiseError(43, 'setEnabled');
+          FBoard.RaiseError(43, 'AccelStepper:setEnabled');
         end
         else // new stepper, device not found
         begin
@@ -4305,7 +4567,7 @@ begin
     else  // Board disabled
     begin
       FEnabled:=False;
-      FBoard.RaiseError(2, 'setEnabled');
+      FBoard.RaiseError(2, 'AccelStepper:setEnabled');
     end;
   end
   else  // state is false disable
@@ -4329,24 +4591,8 @@ procedure TAccelStepper.parsefirmatacommand(Sender: TObject; CommandData: String
 var
   DataString: string;
   Position: integer;
-  Command: Byte;
   Device: Byte;
-  Index: integer;
-
-  function GetNextByte: Byte;
-  begin
-    if Index > system.Length(CommandData) then
-      Result:=END_SYSEX
-    else
-     Result:=ord(CommandData[Index]);
-    Inc(Index);
-  end;
 begin
-  Index:=1;
-  // command is first byte, Device is second byte
-  Command:=GetNextByte;
-  Device:=GetNextByte;
-  DataString:=Copy(Commanddata, Index, system.Length(CommandData));
   {0  START_SYSEX                             (0xF0)
   1  ACCELSTEPPER_DATA                       (0x62)
   2  ACCELSTEPPER_REPORT_POSITION and ACCELSTEPPER_MOVE_COMPLETED   (0x06) and (0x0a)
@@ -4357,28 +4603,32 @@ begin
   7  position, bits 21-27
   8  position, bits 28-31
   9  END_SYSEX        (0xF7)}
+  DataString:=Copy(CommandData, 3, Length(CommandData)-2);
   Position:=Decode32BitSignedInt(DataString);
-  if Command = ACCELSTEPPER_REPORT_POSITION then
-    begin
-      if Assigned(FBoard.FAccelSteppers[Device].FOnStepperPosition) then
-          FBoard.FAccelSteppers[Device].FOnStepperPosition(self, Device, Position);
-    end
-    else
-    begin
-      FRunning:=False; // stepper has stopped
-      //if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
-      //  MotorEnable(False);
-      if Assigned(FBoard.FAccelSteppers[Device].FOnStepperMoveCompleted) then
-          FBoard.FAccelSteppers[Device].FOnStepperMoveCompleted(self, Device, Position);
-    end;
+
+  // command is first byte, Device is second byte
+  Device:=ord(CommandData[2]);
+  if ord(CommandData[1]) = ACCELSTEPPER_REPORT_POSITION then
+  begin
+    if Assigned(FBoard.FAccelSteppers[Device].FOnStepperPosition) then
+        FBoard.FAccelSteppers[Device].FOnStepperPosition(self, Device, Position);
+  end
+  else    // ACCELSTEPPER_MOVE_COMPLETED
+  begin
+    FRunning:=False; // stepper has stopped
+    {//if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then  // to do it automatically
+        Result:=MotorEnable(False, write); }
+    if Assigned(FBoard.FAccelSteppers[Device].FOnStepperMoveCompleted) then
+        FBoard.FAccelSteppers[Device].FOnStepperMoveCompleted(self, Device, Position);
+  end;
 end;
 { Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
-function TAccelStepper.SendSysEx(data7bit: string; write: Boolean=true): string;
+function TAccelStepper.SendSysEx(data: string; write: Boolean=true): string;
 begin
   Result:='';
   if not FEnabled and write then
     exit;
-  Result:=FBoard.SendSysEx(Data7bit, write);
+  Result:=FBoard.SendSysEx(Data, write);
 end;
 
 //
@@ -4463,7 +4713,7 @@ begin
     end;
     if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
       FBoard.FBoardPins[FMotorEnablePin].ActualMode:=PinModesToByte(PIN_MODE_STEPPER);
-      // Arduino sets Pin FMotorEnablePin as OUTPUT HIGH if not inverted
+      // Arduino sets Pin FMotorEnablePin as OUTPUT HIGH if it has to be LOW then invert this pin
   end;
 end;
 {0  START_SYSEX                            (0xF0)
@@ -4477,7 +4727,7 @@ begin
 end;
 {  START_SYSEX                             (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
-2  ACCELSTEPPER_TO              (0x02)
+2  ACCELSTEPPER_MOVE_RELATIVE             (0x02)
 3  device number                           (0-9)
 4  num steps, bits 0-6
 5  num steps, bits 7-13
@@ -4491,13 +4741,13 @@ begin
   if write then
     FRunning:=True;
 
-  {if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
+  {if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then  // to do it automatically
     Result:=MotorEnable(True, write); }
-  Result:=Result+SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_STEP)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
+  Result:=Result+SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_MOVE_RELATIVE)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
 end;
 {0  START_SYSEX                            (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
-2  ACCELSTEPPER_ABSOLUTE_STEP              (0x03)
+2  ACCELSTEPPER_MOVE_ABSOLUTE              (0x03)
 3  device number                           (0-9)
 4  position, bits 0-6
 5  position, bits 7-13
@@ -4511,9 +4761,9 @@ begin
   if write then
     FRunning:=True;
 
-  {if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then
+  {if FMotorEnablePin <> PinModesToByte(PIN_MODE_IGNORE) then  // to do it automatically
     Result:=MotorEnable(True, write); }
-  Result:=Result+SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_TO)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
+  Result:=Result+SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_MOVE_ABSOLUTE)+chr(FDevice)+Encode32BitSignedInt(FSteps), write);
 end;
 {0  START_SYSEX                             (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
@@ -4533,16 +4783,16 @@ end;
 4  END_SYSEX                             (0xF7)}
 function TAccelStepper.Stop(write: Boolean=True): string;
 begin
-    Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_STOP)+chr(FDevice), write);
+  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_STOP)+chr(FDevice), write);
 end;
+// faststop implemented
 function TAccelStepper.FastStop(write: Boolean=True): string;
 begin
-  // set Max Acceleration posible
-  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_SET_ACCELERATION)+chr(FDevice)+EncodeAccelFloat(1000000), write);
-  Result:=Result+Stop(write);   // stop with max acceleration
-  // recover Acceleration
-  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_SET_ACCELERATION)+chr(FDevice)+EncodeAccelFloat(FAcceleration), write);
+  if write then // prepare result value for task
+    FFastStop:=true;
+  Result:=MotorAcceleration(0.0, write)+Stop(write)+MotorAcceleration(FAcceleration, write);  // stops with max decceleration and recover acceleration
 end;
+
 {0  START_SYSEX                             (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
 2  ACCELSTEPPER_REPORT_POSITION            (0x06)
@@ -4552,6 +4802,10 @@ function TAccelStepper.ReportPosition(write: Boolean=True): string;
 begin
   Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_REPORT_POSITION)+chr(FDevice), write);
 end;
+//
+//TODO
+// Stepper limit, not yet implemented in ConfigurableFirmata
+//
 {0  START_SYSEX                             (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
 2  ACCELSTEPPER_STOP_LIMIT                 (0x07)
@@ -4562,6 +4816,7 @@ end;
 7  upper limit state                       (0x00 | 0x01)
 8  END_SYSEX                               (0xF7)}
 // not yet implemented
+
 //
 {0  START_SYSEX                             (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
@@ -4573,9 +4828,14 @@ end;
 7  accel, bits 21-27
 8  END_SYSEX                               (0xF7)}
 
-function TAccelStepper.MotorAcceleration(write: Boolean=True): string;
+function TAccelStepper.MotorAcceleration(write: Boolean=True): string;   // uses FAcceleration
 begin
   Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_SET_ACCELERATION)+chr(FDevice)+EncodeAccelFloat(FAcceleration), write);
+end;
+
+function TAccelStepper.MotorAcceleration(Acceleration: single; write: Boolean=True): string; overload;  // uses Acceleration
+begin
+  Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_SET_ACCELERATION)+chr(FDevice)+EncodeAccelFloat(Acceleration), write);
 end;
 {0  START_SYSEX                             (0xF0)
 1  ACCELSTEPPER_DATA                       (0x62)
@@ -4632,12 +4892,12 @@ var
 begin
   if FEnabled then
   begin
-    FBoard.RaiseError(33, 'AddMember');
+    FBoard.RaiseError(33, 'AccelStepperGroup:AddMember');
     exit;
   end;
   if Length(FMembers) = MAX_ACCELSTEPPER_DEVICES then // no more room for members
   begin
-    FBoard.RaiseError(38, 'AddMember');
+    FBoard.RaiseError(38, 'AccelStepperGroup:AddMember');
     exit;
   end;
 
@@ -4647,7 +4907,7 @@ begin
     if FMembers[Length(FMembers)].Device = FirmataAccelStepper.FDevice then
     begin
       exists:=true;
-      FBoard.RaiseError(39, 'AddMember');
+      FBoard.RaiseError(39, 'AccelStepperGroup:AddMember');
       break;
     end;
   end;
@@ -4666,7 +4926,7 @@ var
 begin
   if FEnabled then
   begin
-    FBoard.RaiseError(33, 'DeleteMember');
+    FBoard.RaiseError(33, 'AccelStepperGroup:DeleteMember');
     exit;
   end;
   exists:=False;
@@ -4685,13 +4945,13 @@ begin
     end;
 
   if not exists then // not exist
-    FBoard.RaiseError(40, 'DeleteMember');
+    FBoard.RaiseError(40, 'AccelStepperGroup:DeleteMember');
 end;
 
 procedure TAccelStepperGroup.setBoard(Board: TBoard);
 begin
   if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
+    FBoard.RaiseError(33, 'AccelStepperGroup:setBoard')
   else if Assigned(Board) then
     FBoard:=Board;
 end;
@@ -4700,12 +4960,12 @@ procedure TAccelStepperGroup.setGroup(Group: Byte);
 begin
   if FEnabled then
   begin
-    FBoard.RaiseError(33, 'setGroup');
+    FBoard.RaiseError(33, 'AccelStepperGroup:setGroup');
     exit;
   end;
   if Group > (MAX_ACCELSTEPPER_MULTI - 1) then
   begin
-    FBoard.RaiseError(16, 'setGroup');
+    FBoard.RaiseError(16, 'AccelStepperGroup:setGroup');
     exit;
   end;
   FGroup:=Group;
@@ -4733,14 +4993,14 @@ begin
         else  // no members
         begin
           FEnabled:=False;
-          FBoard.RaiseError(41, 'setEnabled');
+          FBoard.RaiseError(41, 'AccelStepperGroup:setEnabled');
           exit;
         end;
       end
       else  // firmata is not enabled
       begin
         FEnabled:=False;
-        FBoard.RaiseError(36, 'setEnabled');
+        FBoard.RaiseError(36, 'AccelStepperGroup:setEnabled');
       end;
     end
     else  // state is false disable
@@ -4756,30 +5016,19 @@ begin
     end;
 end;
 { Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
-function TAccelStepperGroup.SendSysEx(data7bit: string; write: Boolean=true): string;
+function TAccelStepperGroup.SendSysEx(data: string; write: Boolean=true): string;
 begin
   Result:='';
   if not FEnabled and write then
     exit;
-  Result:=FBoard.SendSysEx(Data7bit, write);
+  Result:=FBoard.SendSysEx(Data, write);
 end;
 
 // get data from firmata
 procedure TAccelStepperGroup.parsefirmatacommand(Sender: TObject; CommandData: String);
 var
-  Index: integer;
   group: Byte;
-
-  function GetNextByte: Byte;
-  begin
-    if Index > system.Length(CommandData) then
-      Result:=END_SYSEX
-    else
-      Result:=ord(CommandData[Index]);
-    Inc(Index);
-  end;
 begin
-    Index:=1;
     {0  START_SYSEX                             (0xF0)
      1  ACCELSTEPPER_DATA                       (0x62)
      2  multi stepper move complete command     (0x24)
@@ -4787,8 +5036,7 @@ begin
      4  END_SYSEX(0xF7)}
 
      // first byte is subcommand and second byte is Group number
-    GetNextByte; // drop first byte
-    Group:=GetNextByte;
+    Group:=ord(CommandData[2]);  // drop command first byte
     if Assigned(FOnAccelStepperMultiMoveCompleted) then
            FOnAccelStepperMultiMoveCompleted(self, Group);
 end;
@@ -4814,7 +5062,7 @@ begin
   Result:='';
   if Length(FMembers) < 1 then
   begin
-    FBoard.RaiseError(41, 'StepperMultiConfig');
+    FBoard.RaiseError(41, 'AccelStepperGroup:StepperMultiConfig');
     exit;
   end;
   for i:=0 to Length(FMembers)-1 do
@@ -4850,770 +5098,11 @@ begin
   Result:='';
   if Group > 4 then
   begin
-    FBoard.RaiseError(16, 'StepperMultiStop');
+    FBoard.RaiseError(16, 'AccelStepperGroup:StepperMultiStop');
     exit;
   end;
 
   Result:=SendSysEx(chr(ACCELSTEPPER_DATA)+chr(ACCELSTEPPER_STOP)+chr(FGroup), write);
-end;
-//
-//
-//
-// TSerial
-//
-//
-//
-constructor TSerial.Create(AOwner: TComponent);
-begin
-  inherited;
-
-  FBoard:= nil;
-  FEnabled:=false;
-  FPort:=HW_SERIAL1;
-  FBaudRate:=0;   // TODO
-  FRxPin:=RES_RX1;
-  FTxPin:=RES_TX1;
-  FOnEnabled:=nil;
-  FOnDisabled:=nil;
-
-  FOnSerialMessage:=nil;
-end;
-
-destructor TSerial.Destroy();
-begin
-  inherited Destroy;
-end;
-
-procedure TSerial.setBoard(Board: TBoard);
-begin
-  if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
-  else if Assigned(Board) then
-    FBoard:=Board;
-end;
-
-procedure TSerial.setPort(Port: TSerialPorts);
-begin
-  if FEnabled then
-  begin
-    FBoard.RaiseError(33, 'setPort');
-    exit;
-  end;
-
-  FPort:=Port;
-end;
-
-procedure TSerial.setRxPin(Pin: Byte);
-begin
-  if FEnabled then
-  begin
-    FBoard.RaiseError(33, 'setRxPin');
-    exit;
-  end;
-  if Pin < PinModesToByte(PIN_MODE_IGNORE) then
-    FRxPin:=Pin;
-end;
-
-procedure TSerial.setTxPin(Pin: Byte);
-begin
-  if FEnabled then
-  begin
-    FBoard.RaiseError(33, 'setTxPin');
-    exit;
-  end;
-  if Pin < PinModesToByte(PIN_MODE_IGNORE) then
-    FTxPin:=Pin;
-end;
-
-procedure TSerial.setBaudRate(BaudRate: integer);
-begin
-  begin
-    FBoard.RaiseError(33, 'setBaudRate');
-    exit;
-  end;
-  if BaudRate > $1FFFFF then
-    FBaudRate:=$1FFFFF
-  else if BaudRate < 1 then
-    FBaudRate:=1
-  else
-    FBaudRate:=BaudRate;
-end;
-
-procedure TSerial.setEnabled(State: Boolean);
-  function getPinFromPort(Port: TSerialPorts; PinType: TSerialPinType): Byte;
-  var
-    i: integer;
-  begin
-    Result:=PinModesToByte(PIN_MODE_IGNORE);
-    for i:=0 to FBoard.FBoardPinsNumber - 1 do
-      if (ord(Port)+ord(PinType)) = FBoard.GetPinResolution(i, PIN_MODE_SERIAL) then
-      begin
-        Result:=i;
-        break;
-      end;
-  end;
-begin
-  if not Assigned(FBoard) then
-    exit;
-
-  if FEnabled = State then
-     exit;
-
-  if State then
-  begin
-    FEnabled:=True;
-    if Assigned(FBoard) and FBoard.Enabled then
-    begin
-      if FPort < SW_SERIAL0 then // hardware serial
-      begin
-        FRxPin:=getPinFromPort(FPort, RX);
-        FTxPin:=getPinFromPort(FPort, TX);
-        if (FRxPin = PinModesToByte(PIN_MODE_IGNORE)) or (FTxPin = PinModesToByte(PIN_MODE_IGNORE)) then // check capability pins
-        begin
-          FEnabled:=false;
-          FBoard.RaiseError(11, 'setEnabled');
-        end
-        else if FBoard.FBoardPins[FRxPin].Busy or FBoard.FBoardPins[FRxPin].Busy then // now check if pins are busy
-        begin
-          FEnabled:=false;
-          FBoard.RaiseError(12, 'setEnabled');
-        end;
-      end
-      else // software serial
-      begin
-        // Check if supported pins are supported
-        if not FBoard.CheckCapability(FRxPin, PIN_MODE_SERIAL) or not FBoard.CheckCapability(FTxPin, PIN_MODE_SERIAL) then // not supported
-        begin
-          FEnabled:=false;
-          FBoard.RaiseError(7, 'setEnabled');
-        end
-        else if FBoard.FBoardPins[FRxPin].Busy or FBoard.FBoardPins[FTxPin].Busy then  // check if pins are assigned
-        begin
-          FEnabled:=false;
-          FBoard.RaiseError(12, 'setEnabled');
-        end;
-      end;
-    end
-    else // firmataboard not enabled
-    begin
-      FEnabled:=false;
-      FBoard.RaiseError(36, 'setenabled');
-    end;
-    if FEnabled then
-    begin
-      if Assigned(FBoard.FSerials[FPort]) then
-      begin
-        FEnabled:=False;
-        FBoard.RaiseError(43, 'setEnabled');
-      end
-      else // new Tserial module
-      begin
-        FBoard.FSerials[FPort]:=self;
-        FBoard.FBoardPins[FRxPin].Busy:=true;  //  pin is assigned to this module
-        FBoard.FBoardPins[FTxPin].Busy:=true;  //  pin is assigned to this module
-        config;  // configure Serial module
-        if Assigned(FOnEnabled) then
-          FOnEnabled(self);
-      end;
-    end;
-  end
-  else  // disable
-  begin
-    if Assigned(FOnDisabled) then
-      FOnDisabled(self);
-    if Assigned(FBoard) then
-    begin
-      FBoard.FBoardPins[FRxPin].Busy:=false; // free Rxpin
-      FBoard.FBoardPins[FTxPin].Busy:=false; // free Txpin
-      FBoard.FSerials[FPort]:=nil;
-    end;
-    FEnabled:=False;
-  end;
-end;
-
-{ Send START_SYSEX + data + END_SYSEX total <= MAX_DATA_BYTES (64 bytes)}
-function TSerial.SendSysEx(data7bit: string; write: Boolean=true): string;
-begin
-  Result:='';
-  if not FEnabled and write then
-    exit;
-
-  Result:=FBoard.SendSysEx(Data7bit, write);
-end;
-//
-// SERIAL COMMANDS
-//
-{0  START_SYSEX      (0xF0)
-1  SERIAL_DATA      (0x60)  // command byte
-2  SERIAL_CONFIG    (0x10)  // OR with port (0x11 = SERIAL_CONFIG | HW_SERIAL1)
-3  baud             (bits 0 - 6)
-4  baud             (bits 7 - 13)
-5  baud             (bits 14 - 20) // need to send 3 bytes for baud even if value is < 14 bits
-6  rxPin            (0-127) [optional] // only set if platform requires RX pin number
-7  txPin            (0-127) [optional] // only set if platform requires TX pin number
-6|8 END_SYSEX      (0xF7)}
-function TSerial.Config(write: Boolean=true): String;
-var
-  StrBaud: string;
-  RXTXPins: string;
-begin
-  Result:='';
-  RXTXPins:='';
-
-  StrBaud:=chr(FBaudRate and $7F)+chr((FBaudRate >> 7) and $7F)+ chr((FBaudRate >> 14) and $7F);
-
-  if FPort >= SW_SERIAL0 then // soft port, pins have been sent
-    RXTXPins:=chr(FRxPin)+chr(FTxPin);
-
-  Result:=SendSysEx(chr(SERIAL_DATA)+chr(SERIAL_CONFIG or SerialPortsToByte(FPort))+StrBaud+RXTXPins, write);
-
-  if write then
-  begin
-   FBoard.FBoardPins[FRxPin].ActualMode:=PinModesToByte(PIN_MODE_SERIAL);
-   FBoard.FBoardPins[FTxPin].ActualMode:=PinModesToByte(PIN_MODE_SERIAL);
-  end;
-end;
-{0  START_SYSEX      (0xF0)
-1  SERIAL_DATA      (0x60)
-2  SERIAL_WRITE     (0x20) // OR with port (0x21 = SERIAL_WRITE | HW_SERIAL1)
-3  data 0           (LSB)
-4  data 0           (MSB)
-5  data 1           (LSB)
-6  data 1           (MSB)
-...                 // up to max buffer - 5
-n  END_SYSEX        (0xF7)}
-function TSerial.Write(Data: string; write: Boolean=true): String;
-var
-  TwoBytesChar: String;
-begin
-  TwoBytesChar:=Encode1ByteCharTo2(Data);
-  Result:=SendSysEx(chr(SERIAL_DATA)+chr(SERIAL_WRITE or SerialPortsToByte(FPort))+TwoBytesChar, write);
-end;
-{0  START_SYSEX        (0xF0)
-1  SERIAL_DATA        (0x60)
-2  SERIAL_READ        (0x30) // OR with port (0x31 = SERIAL_READ | HW_SERIAL1)
-3  SERIAL_READ_MODE   (0x00) // 0x00 => read continuously, 0x01 => stop reading
-4  maxBytesToRead     (lsb) [optional]
-5  maxBytesToRead     (msb) [optional]
-4|6 END_SYSEX         (0xF7)}
-function TSerial.Read(ReadMode: byte; BytesToRead: uint16; write: Boolean=true): String;
-var
-  ReadsNumber: string;
-begin
-  ReadsNumber:='';
-  if BytesToRead > 0 then
-    ReadsNumber:=chr(BytesToRead and $7F)+chr((BytesToRead >> 7) and $7F);
-  Result:=SendSysEx(chr(SERIAL_DATA)+chr(SERIAL_READ or SerialPortsToByte(FPort))+chr(ReadMode and $01)+ReadsNumber, write);
-end;
-{0  START_SYSEX        (0xF0)
-1  SERIAL_DATA        (0x60)
-2  SERIAL_CLOSE       (0x50) // OR with port (0x51 = SERIAL_CLOSE | HW_SERIAL1)
-3  END_SYSEX          (0xF7)}
-function TSerial.Close(write: Boolean=True): string;
-begin
-  Result:=SendSysEx(chr(SERIAL_DATA)+chr(SERIAL_CLOSE or SerialPortsToByte(FPort)), write);
-end;
-{0  START_SYSEX        (0xF0)
-1  SERIAL_DATA        (0x60)
-2  SERIAL_FLUSH       (0x60) // OR with port (0x61 = SERIAL_FLUSH | HW_SERIAL1)
-3  END_SYSEX          (0xF7)}
-function TSerial.Flush(write: Boolean=True): string;
-begin
-  Result:=SendSysEx(chr(SERIAL_DATA)+chr(SERIAL_FLUSH or SerialPortsToByte(FPort)), write);
-end;
-{0  START_SYSEX        (0xF0)
-1  SERIAL_DATA        (0x60)
-2  SERIAL_LISTEN      (0x70) // OR with port to switch to (0x79 = switch to SW_SERIAL1)
-3  END_SYSEX          (0xF7)}
-function TSerial.Listen(write: Boolean=True): string;
-begin
-  Result:=SendSysEx(chr(SERIAL_DATA)+chr(SERIAL_LISTEN or SerialPortsToByte(FPort)), write);
-end;
-//
-//
-//
-// TServo
-//
-//
-//
-constructor TServo.Create(AOwner: TComponent);
-begin
-  inherited;
-  FBoard:= nil;
-  FEnabled:=false;
-  FPin:=PinModesToByte(PIN_MODE_IGNORE);
-  FDevice:=PinModesToByte(PIN_MODE_IGNORE);
-
-  FMinPulse:=544;
-  FMaxPulse:=2400;
-  FValue:=0;
-
-  FOnEnabled:=nil;
-  FOnDisabled:=nil;
-end;
-
-destructor TServo.Destroy();
-begin
-  inherited Destroy;
-end;
-
-procedure TServo.setBoard(Board: TBoard);
-begin
-  if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
-  else if Assigned(Board) then
-    FBoard:=Board;
-end;
-
-procedure TServo.setEnabled(State: Boolean);
-var
-  i: integer;
-begin
-  if not Assigned(FBoard) then
-    exit;
-
-  if FEnabled = State then
-     exit;
-
-  if State then
-  begin
-    if FBoard.Enabled then
-    begin
-      FEnabled:=True;
-      if FBoard.CheckCapability(FPin, PIN_MODE_SERVO) then
-      begin
-        if FBoard.FBoardPins[FPin].Busy then
-        begin
-          // Pin is busy
-          FEnabled:=False;
-          FBoard.RaiseError(12, 'setEnabled');
-          exit;
-        end
-        else // pin is free
-        begin
-          for i:=0 to MAX_SERVOS - 1 do  // looking for a free servo room
-          begin
-            if not Assigned(FBoard.FServos[i]) then // found one free
-            begin
-              FDevice:=i;
-              break;
-            end;
-          end;
-          if FDevice <> PinModesToByte(PIN_MODE_IGNORE) then
-          begin
-            FBoard.FBoardPins[FPin].Busy:=True;
-            FBoard.FServos[FDevice]:=self;
-            Config;  // set pin mode to servo and config min and max pulses
-            WriteValue;
-            if Assigned(FOnEnabled) then
-                 FOnEnabled(self);
-          end
-          else  // // there is not left servo
-          begin
-            FEnabled:=False;
-            FBoard.RaiseError(44, 'setEnabled');
-          end;
-        end;
-      end
-      else  // not pin capability
-      begin
-        FEnabled:=False;
-        // Not a valid mode
-        FBoard.RaiseError(11, 'setEnabled');
-      end;
-    end;
-  end
-  else  // disable
-  begin
-    if Assigned(FOnDisabled) then
-      FOnDisabled(self);
-    if Assigned(FBoard) then
-    begin
-      FBoard.FBoardPins[FPin].Busy:=False;  // free pin
-      FBoard.FServos[FDevice]:=nil;    // free servo
-      FDevice:=PinModesToByte(PIN_MODE_IGNORE);
-    end;
-    FEnabled:=False;
-  end;
-end;
-
-procedure TServo.setMinPulse(Pulse: integer);
-begin
-  if Pulse > $3FFF then  // out of range
-    FMinPulse:=$3FFF
-  else if Pulse < 1 then
-    FMinPulse:=1
-  else if Pulse > FMaxPulse then
-    FMinPulse:=FMaxPulse
-  else
-    FMinPulse:=Pulse;
-end;
-
-procedure TServo.setMaxPulse(Pulse: integer);
-begin
-  if Pulse > $3FFF then  // out of range
-    FMaxPulse:=$3FFF
-  else if Pulse < 1 then
-    FMaxPulse:=1
-  else if Pulse < FMinPulse then
-    FMaxPulse:=FMinPulse
-  else
-    FMaxPulse:=Pulse;
-end;
-
-procedure TServo.setPin(Pin: Byte);
-begin
-  if FEnabled then // cannot do that
-    FBoard.RaiseError(33, 'setPin')
-  else if Pin < PinModesToByte(PIN_MODE_IGNORE) then  // disabled
-    FPin:=Pin;
-end;
-
-procedure TServo.setValue(Value: integer);
-begin
-  FValue:=Value;
-  if FEnabled then
-     WriteValue;
-end;
-
-function TServo.SendCommand(Data: string; write: Boolean=True): string;
-begin
-  Result:='';
-  if not FEnabled and write then
-    exit;
-  Result:=FBoard.SendCommand(Data, write);
-end;
-
-function TServo.SendSysEx(data7bit: string; write: Boolean=true): string;
-begin
-  Result:='';
-  if not FEnabled and write then
-    exit;
-  Result:=FBoard.SendSysEx(Data7bit, write);
-end;
-
-// minPulse and maxPulse are 14-bit unsigned integers
-{0  START_SYSEX          (0xF0)
-1  SERVO_CONFIG         (0x70)
-2  pin number           (0-127)
-3  minPulse LSB         (0-6)
-4  minPulse MSB         (7-13)
-5  maxPulse LSB         (0-6)
-6  maxPulse MSB         (7-13)
-7  END_SYSEX            (0xF7) }
-function TServo.config(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(SERVO_CONFIG)+chr(FPin)+chr(FMinPulse and $7F)+chr((FMinPulse >> 7) and $7F)+chr(FMaxPulse and $7F)+chr((FMaxPulse << 7) and $7F), write);
-  if write then
-    FBoard.FBoardPins[FPin].ActualMode:=PinModesToByte(PIN_MODE_SERVO);
-end;
-{
-0  analog pin, 0xE0-0xEF, (MIDI Pitch Wheel)
-1  analog least significant 7 bits
-2  analog most significant 7 bits }
-function TServo.AnalogWrite(Value: integer; write: Boolean=true): string;
-begin
-  if write then
-    FValue:=Value;
-  Result:=SendCommand(chr(ANALOG_MESSAGE or FPin)+chr(Value and $7F)+chr(Value >> 7 and $7F), write)
-end;
-{0  START_SYSEX              (0xF0)
-1  extended analog message  (0x6F)
-2  pin                      (0-127)
-3  bits 0-6                 (least significant byte)
-4  bits 7-13                (most significant byte)
-... additionaly bytes may be sent if more bits are needed
-N  END_SYSEX     (0xF7)}
-function TServo.AnalogWriteExtended(Value: integer; write: Boolean=true): string;
-var
-  i: integer;
-  Valuetmp: integer;
-  data: String;
-begin
-  data:='';
-
-  // search for resolution
-  ValueTmp:=Value and FBoard.GetPinResolution(FPin, PIN_MODE_SERVO);
-
-  for i:=0 to sizeof(Valuetmp) do
-  begin
-    data:=chr(Valuetmp and $FF)+data;  // LSB byte ,MSB byte
-    Valuetmp:=Valuetmp>>8; // get new byte
-    if Valuetmp = 0 then  // no more data to send
-      break;
-  end;
-  if write then
-    FValue:=ValueTmp;
-
-  Result:=SendSysEx(chr(EXTENDED_ANALOG)+chr(FPin)+Encode8To7Bit(data), write);
-end;
-{Write to servo, servo write is performed if the pin mode is SERVO
-if value > $3FFF (14 bits) or Pin > 15 then extended analog write else Analog Write }
-function TServo.WriteValue(write: Boolean=true): string;
-begin
-  if (FValue > $3FFF) or (FPin > 15) then
-    Result:=AnalogWriteExtended(FValue, write)
-  else
-    Result:=AnalogWrite(FValue, write);
-end;
-//
-//
-//
-// TEncoder
-//
-//
-//
-constructor TEncoder.Create(AOwner: TComponent);
-begin
-  inherited;
-  FBoard:= nil;
-  FEnabled:=false;
-  FPinA:=PinModesToByte(PIN_MODE_IGNORE);
-  FPinB:=PinModesToByte(PIN_MODE_IGNORE);
-  FDevice:=PinModesToByte(PIN_MODE_IGNORE);  // not assigned to board yet
-
-  FOnEnabled:=nil;
-  FOnDisabled:=nil;
-end;
-
-destructor TEncoder.Destroy();
-begin
-  inherited Destroy;
-end;
-
-procedure TEncoder.setBoard(Board: TBoard);
-begin
-  if FEnabled then
-    FBoard.RaiseError(33, 'setBoard')
-  else if Assigned(Board) then
-    FBoard:=Board;
-end;
-
-procedure TEncoder.setEnabled(State: Boolean);
-var
-  i: integer;
-begin
-  if not Assigned(FBoard) then
-    exit;
-
-  if FEnabled = State then
-     exit;
-
-  if State then
-  begin
-    if FBoard.Enabled then
-    begin
-      FEnabled:=True;
-      if FBoard.CheckCapability(FPinA, PIN_MODE_ENCODER)
-         and FBoard.CheckCapability(FPinB, PIN_MODE_ENCODER) then  // I think all pins are capable, not information in capability
-      begin
-        if FBoard.FBoardPins[FPinA].Busy or FBoard.FBoardPins[FPinA].Busy then
-        begin
-          // Pin is busy
-          FEnabled:=False;
-          FBoard.RaiseError(12, 'setEnabled');
-          exit;
-        end
-        else // pins are free
-        begin
-          for i:=0 to MAX_ENCODERS - 1 do
-          begin
-            if not Assigned(FBoard.FEncoders[i]) then  // found a free encoder
-            begin
-              FDevice:=i;
-              break;
-            end;
-          end;
-          if FDevice <> PinModesToByte(PIN_MODE_IGNORE) then
-          begin
-            FBoard.FBoardPins[FPinA].Busy:=True;
-            FBoard.FBoardPins[FPinB].Busy:=True;
-            FBoard.FEncoders[FDevice]:=self;
-            Attach;  // set pins to encoders
-            if Assigned(FOnEnabled) then
-              FOnEnabled(self);
-          end
-          else  // there is not left encoder
-          begin
-            FEnabled:=False;
-            FBoard.RaiseError(44, 'setEnabled');
-          end;
-        end;
-      end
-      else  // not pin capability
-      begin
-        FEnabled:=False;
-        // Not a valid mode
-        FBoard.RaiseError(11, 'setEnabled');
-      end;
-    end;
-  end
-  else  // disable
-  begin
-    if Assigned(FOnDisabled) then
-      FOnDisabled(self);
-    if Assigned(FBoard) then
-    begin
-      FBoard.FBoardPins[FPinA].Busy:=False;
-      FBoard.FBoardPins[FPinB].Busy:=False;
-      FBoard.FEncoders[FDevice]:=nil;
-      FDevice:=PinModesToByte(PIN_MODE_IGNORE);
-    end;
-    FEnabled:=False;
-  end;
-end;
-
-procedure TEncoder.setPinA(Pin: Byte);
-begin
-  if FEnabled then // cannot do that
-    FBoard.RaiseError(33, 'setPinA')
-  else if Pin < PinModesToByte(PIN_MODE_IGNORE) then
-    FPinA:=Pin;
-end;
-
-procedure TEncoder.setPinB(Pin: Byte);
-begin
-  if FEnabled then // cannot do that
-    FBoard.RaiseError(33, 'setPinB')
-  else if Pin < PinModesToByte(PIN_MODE_IGNORE) then
-    FPinB:=Pin;
-end;
-
-function TEncoder.SendSysEx(data7bit: string; write: Boolean=true): string;
-begin
-  Result:='';
-  if not FEnabled and write then
-    exit;
-  Result:=FBoard.SendSysEx(Data7bit, write);
-end;
-{/* -----------------------------------------------------
-* 0 START_SYSEX                (0xF0)
-* 1 ENCODER_DATA               (0x61)
-* 2 ENCODER_ATTACH             (0x00)
-* 3 encoder #                  ([0 - MAX_ENCODERS-1])
-* 4 pin A #                    (first pin)
-* 5 pin B #                    (second pin)
-* 6 END_SYSEX                  (0xF7)
-* -----------------------------------------------------
-*/ }
-function TEncoder.Attach(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(ENCODER_DATA)+chr(ENCODER_ATTACH)+chr(FDevice)+chr(FPinA)+chr(FPinB), write);
-  if write then
-  begin
-    FBoard.FBoardPins[FPinA].ActualMode:=PinModesToByte(PIN_MODE_ENCODER);
-    FBoard.FBoardPins[FPinB].ActualMode:=PinModesToByte(PIN_MODE_ENCODER);
-  end;
-end;
-{
-Report encoder's position  Query
-
- /* -----------------------------------------------------
- * 0 START_SYSEX                (0xF0)
- * 1 ENCODER_DATA               (0x61)
- * 2 ENCODER_REPORT_POSITION    (0x01)
- * 3 Encoder #                  ([0 - MAX_ENCODERS-1])
- * 4 END_SYSEX                  (0xF7)
- * -----------------------------------------------------
- */}
-function TEncoder.QueryPosition(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(ENCODER_DATA)+chr(ENCODER_REPORT_POSITION)+chr(FDevice), write);
-end;
-{Report all encoders positions  Query
-
- /* -----------------------------------------------------
- * 0 START_SYSEX                (0xF0)
- * 1 ENCODER_DATA               (0x61)
- * 2 ENCODER_REPORT_POSITIONS   (0x02)
- * 3 END_SYSEX                  (0xF7)
- * -----------------------------------------------------
- */}
- function TEncoder.AllEncoderPositions(write: Boolean=true): string;
- begin
-   Result:=SendSysEx(chr(ENCODER_DATA)+chr(ENCODER_REPORT_POSITIONS), write);
- end;
-{Reset encoder position to zero  Query
-
-  /* -----------------------------------------------------
-  * 0 START_SYSEX                (0xF0)
-  * 1 ENCODER_DATA               (0x61)
-  * 2 ENCODER_RESET_POSITION     (0x03)
-  * 3 encoder #                  ([0 - MAX_ENCODERS-1])
-  * 4 END_SYSEX                  (0xF7)
-  * -----------------------------------------------------
-  */ }
-function TEncoder.ResetPosition(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(ENCODER_DATA)+chr(ENCODER_RESET_POSITION)+chr(FDevice), write);
-end;
-{Enable/disable reporting Query
-
- /* -----------------------------------------------------
- * 0 START_SYSEX                (0xF0)
- * 1 ENCODER_DATA               (0x61)
- * 2 ENCODER_REPORT_AUTO        (0x04)
- * 3 enable                     (0x00 => false, true otherwise)
- * 4 END_SYSEX                  (0xF7)
- * -----------------------------------------------------
- */
-}
-function TEncoder.Reporting(Enabled: Boolean; write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(ENCODER_DATA)+chr(ENCODER_REPORT_AUTO)+chr(ord(Enabled)), write);
-end;
-{Detach encoder Query
-
- /* -----------------------------------------------------
- * 0 START_SYSEX                (0xF0)
- * 1 ENCODER_DATA               (0x61)
- * 2 ENCODER_DETACH             (0x05)
- * 3 encoder #                  ([0 - MAX_ENCODERS-1])
- * 4 END_SYSEX                  (0xF7)
- * -----------------------------------------------------
- */}
-function TEncoder.Detach(write: Boolean=true): string;
-begin
-  Result:=SendSysEx(chr(ENCODER_DATA)+chr(ENCODER_DETACH)+chr(FDevice), write);
-  if write then
-  begin
-    FBoard.FBoardPins[FPinA].ActualMode:=PinModesToByte(PIN_MODE_OUTPUT);
-    FBoard.FBoardPins[FPinB].ActualMode:=PinModesToByte(PIN_MODE_OUTPUT);
-    setEnabled(False);  // disable encoder and pins
-  end;
-end;
-{Response to query encoder's position
-
- /* -----------------------------------------------------
- * 0 START_SYSEX                (0xF0)
- * 1 ENCODER_DATA               (0x61)
- * 2 Encoder #  &  DIRECTION    [= (direction << 6) | (#)]
- * 3 current position, bits 0-6
- * 4 current position, bits 7-13
- * 5 current position, bits 14-20
- * 6 current position, bits 21-27
- * 7 END_SYSEX                  (0xF7)
- * -----------------------------------------------------
- */
- Note : Byte #2 contains both encoder's number (i.e. channel) and encoder's direction.
- Direction is stored on the seventh bit, 0 (LOW) for positive and 1 (HIGH) for negative.
-
-directionMask = 0x40; // B01000000
-channelMask   = 0x3F; // B00111111
-
-//ex direction is negative and encoder is on index 2
-direction = 1;
-encoder = 2;
-bytes[2] =  (direction << 6) | (encoder);
-}
-procedure TEncoder.parsefirmatacommand(Sender: TObject; CommandData: String);
-var
-  Position: integer;
-begin
-  // first byte is encoder and direction
-  Position:=ord(CommandData[2]) or (ord(CommandData[3]) << 7) or (ord(CommandData[4]) << 14) or (ord(CommandData[5]) << 21);
-  if Assigned(FOnEncoderPosition) then
-    FOnEncoderPosition(self, ord((ord(CommandData[1]) and DIRECTION_MASK) <> 0), Position);
 end;
 
 {$include 'firmataboard1.inc'};

@@ -8,8 +8,8 @@ interface
 uses
   Classes, SysUtils;
 
-type
-  {TPinValue = 0..1;
+{
+  TPinValue = 0..1;
 
   TPortPins = bitpacked record
     Pin0, Pin1, Pin2, Pin3, Pin4, Pin5, Pin6, Pin7: TPinValue;
@@ -19,19 +19,20 @@ type
      case Integer of
        0: (Byte: Byte);
        1: (Pins: TPortPins);
-     end; }
+     end;
 
   TErrorRec = record
     Number: integer;
     Text: string;
-  end;
+  end; }
 
 const
+
 // if error > 1000 + ErrorArray index then irrecuperable error close application
-ErrorsArray: array [1..53] of String = (
+ErrorsArray: array [1..60] of String = (
   'No way to send data, check OnSendDataToDevice event',       // 1
   'Firmata board not enabled',                                 // 2
-  'Too much time waiting for firmata, close firmata',          // 3
+  'Too much time waiting for firmata',                         // 3
   'Unknown SysEx command, ',                                   // 4
   'Task ID number too big',                                    // 5
   'Length of task too big',                                    // 6
@@ -39,8 +40,8 @@ ErrorsArray: array [1..53] of String = (
   'Port is not supported',                                     // 8
   'Analog pin is not supported',                               // 9
   'Analog pin is not in analog mode',                          // 10
-  'Mode is not supported',                                     // 11
-  'Pin belongs to a module',                                   // 12
+  'Pin mode is not supported',                                 // 11
+  'Pin already in use',                                        // 12
   'Pin is not in right mode',                                  // 13
   'Is not a valid Port',                                       // 14
   'Got bad serial message',                                    // 15
@@ -52,25 +53,25 @@ ErrorsArray: array [1..53] of String = (
   'Data too long, max for sysex is 64',                        // 21
   'Task does not exists',                                      // 22
   'There is not any task',                                     // 23
-  'Data too long, max for sysex is 64',                        // 24
+  'Invalid Data length',                                       // 24
   'Bad length of task',                                        // 25
-  'No way to check available data, check OnDeviceDataAvailable', // 26
-  'Too much time waiting for data,  device error',             // 27
-  'No way to get external data, check OnGetDataFromDevice',    // 28
+  'Transaction must be between 0 and 7',                       // 26
+  'Too much time waiting for data',                            // 27
+  'There aren''t any free pins',                               // 28
   'Many bytes to read',                                        // 29
   'Data message too long',                                     // 30
-  'Too much waiting for data, close firmata',                  // 31
+  'Pin number too big',                                        // 31
   'Module is not enabled',                                     // 32
   'Module is enabled, disable it first',                       // 33
   'No resolution found for mode',                              // 34
-  'No soported firmata version',                               // 35
+  'Mode must be between 0 and 3',                              // 35
   'Pulses per step',                                           // 36
   'Motor pin is busy',                                         // 37
   'Too many member in group',                                  // 38
   'Member already exists',                                     // 39
   'Can not delete member does not exist',                      // 40
   'There are not any members in group',                        // 41
-  'Number out of range',                                       // 42
+  'SPI supports channel 0 in this moment',                     // 42
   'AccelStepper module already exists',                        // 43
   'No more room for',                                          // 44
   'There is already a module',                                 // 45
@@ -81,19 +82,28 @@ ErrorsArray: array [1..53] of String = (
   'Pixel number out of range',                                 // 50
   'Wrong led color support',                                   // 51
   'Only positive values for gamma',                            // 52
-  'Fade is running'                                            // 53
+  'Fade is running',                                           // 53
+  'Onewire module already exists',                             // 54
+  'SPI module already exists',                                 // 55
+  'No more room for SPI',                                      // 56
+  'No object stream assigned',                                 // 57
+  'Channel must be between 0 and 7',                           // 58
+  'SPI supports 8 bit only in this moment',                    // 59
+  'Not Valid value'                                            // 60
   );
 
-   FIRMWARE_MAJOR_VERSION =  2;
-   FIRMWARE_MINOR_VERSION =  5;
+   FIRMWARE_VERSION = '2.12';
+   //FIRMWARE_MAJOR_VERSION =  2;
+   //FIRMWARE_MINOR_VERSION =  10;
 
    {
     Version numbers for the protocol.  The protocol is still changing, so these
     version numbers are important.
     Query using the REPORT_VERSION message.
    }
-   PROTOCOL_MAJOR_VERSION =  2; // for non-compatible changes
-   PROTOCOL_MINOR_VERSION =  5; // for backwards compatible changes
+   PROTOCOL_VERSION = '2.6';
+   //PROTOCOL_MAJOR_VERSION =  2; // for non-compatible changes
+   //PROTOCOL_MINOR_VERSION =  6; // for backwards compatible changes
 
    MAX_DATA_BYTES =          64; // max number of data bytes in incoming messages
 
@@ -108,6 +118,7 @@ ErrorsArray: array [1..53] of String = (
    SET_DIGITAL_PIN_VALUE =   $F5; // set value of an individual digital pin
 
    REPORT_VERSION =          $F9; // report protocol version
+   REPORT_PROTOCOL =         $F9; // report protocol version
    SYSTEM_RESET =            $FF; // reset from MIDI
 
    START_SYSEX =             $F0; // start a MIDI Sysex message
@@ -116,35 +127,42 @@ ErrorsArray: array [1..53] of String = (
    // extended command set using sysex (0-127/$00-$7F)
   { $00-$0F reserv for user-defined commands }
    PS2MOUSE_DATA =           $50; // user defined command PS2 mouse
-   NEOPIXELS_DATA =          $51; // user defined command Neopixels
+   NEOPIXEL_DATA =           $51; // user defined command Neopixels
+
    SERIAL_DATA =             $60; // SERIAL DATA
    SERIAL_MESSAGE =          $60; // SERIAL DATA
    ENCODER_DATA =            $61; // reply with encoders current positions
    ACCELSTEPPER_DATA =       $62; // Accelerated stepper data
+
+   SPI_DATA =                $68; // SPI Commands start with this byte
+   ANALOG_MAPPING_QUERY =    $69; // ask for mapping of analog to pin numbers
+   ANALOG_MAPPING_RESPONSE = $6A; // reply with mapping info
+   CAPABILITY_QUERY =        $6B; // ask for supported modes and resolution of all pins
+   CAPABILITY_RESPONSE =     $6C; // reply with supported modes and resolution
+   PIN_STATE_QUERY =         $6D; // ask for a pin's current mode and value
+   PIN_STATE_RESPONSE =      $6E; // reply with pin's current mode and value
+   EXTENDED_ANALOG =         $6F; // analog write (PWM, servo, etc) to any pin
    SERVO_CONFIG =            $70; // set max angle, minPulse, maxPulse, freq
    STRING_DATA =             $71; // a string message with 14-bits per char
    STEPPER_DATA =            $72; // control a stepper motor, old system
    ONEWIRE_DATA =            $73; // send an OneWire read/write/reset/select/skip/search request
+   DHTSENSOR_DATA =          $74; // DHT sensor
    SHIFT_DATA =              $75; // a bitstream to/from a shift register
    I2C_REQUEST =             $76; // send an I2C read/write request
    I2C_REPLY =               $77; // a reply to an I2C read request
    I2C_CONFIG =              $78; // config I2C settings such as delay times and power pins
    REPORT_FIRMWARE =         $79; // report name and version of the firmware
-   EXTENDED_ANALOG =         $6F; // analog write (PWM, devvo, etc) to any pin
-   PIN_STATE_QUERY =         $6D; // ask for a pin's current mode and value
-   PIN_STATE_RESPONSE =      $6E; // reply with pin's current mode and value
-   CAPABILITY_QUERY =        $6B; // ask for supported modes and resolution of all pins
-   CAPABILITY_RESPONSE =     $6C; // reply with supported modes and resolution
-   ANALOG_MAPPING_QUERY =    $69; // ask for mapping of analog to pin numbers
-   ANALOG_MAPPING_RESPONSE = $6A; // reply with mapping info
    SAMPLING_INTERVAL =       $7A; // set the poll rate of the main loop
    SCHEDULER_DATA =          $7B; // send a createtask/deletetask/addtotask/schedule/querytasks/querytask request to the scheduler
+
+   FREQUENCY_COMMAND =       $7D; // Command for the Frequency module
    SYSEX_NON_REALTIME =      $7E; // MIDI Redevved for non-realtime messages
    SYSEX_REALTIME =          $7F; // MIDI Redevved for realtime messages
 
   // pin modes
-   PIN_MODE_INPUT =          $00; // same as INPUT defined in Arduino.h
-   PIN_MODE_OUTPUT =         $01; // same as OUTPUT defined in Arduino.h
+   PIN_MODE_INPUT =          $00; // INPUT is defined in Arduino.h, but may conflict with other uses
+   PIN_MODE_OUTPUT =         $01; // OUTPUT is defined in Arduino.h. Careful: OUTPUT is defined as 2 on ESP32!
+                                  // therefore OUTPUT and PIN_MODE_OUTPUT are not the same!
    PIN_MODE_ANALOG =         $02; // analog pin in analogInput mode
    PIN_MODE_PWM =            $03; // digital pin in PWM output mode
    PIN_MODE_SERVO =          $04; // digital pin in SERVO output mode
@@ -155,8 +173,15 @@ ErrorsArray: array [1..53] of String = (
    PIN_MODE_ENCODER =        $09; // pin configured for rotary encoders
    PIN_MODE_SERIAL =         $0A; // pin configured for serial communication
    PIN_MODE_PULLUP =         $0B; // enable internal pull-up resistor for pin
-   PIN_MODE_PS2MOUSE =       $0C; // mouse mode pin
-   PIN_MODE_NEOPIXELS =      $0D; // mode for neopixels leds
+  // Extensions under development
+   PIN_MODE_SPI =            $0C; // pin configured for SPI
+   PIN_MODE_SONAR =          $0D; // pin configured for HC-SR04
+   PIN_MODE_TONE =           $0E; // pin configured for tone
+   PIN_MODE_DHT =            $0F; // pin configured for DHT
+   PIN_MODE_FREQUENCY =      $10; // pin configured for frequency measurement
+   PIN_MODE_PS2MOUSE =       $11; // mouse mode pin
+   PIN_MODE_NEOPIXEL =       $12; // mode for neopixels leds
+
    PIN_MODE_IGNORE =         $7F; // pin configured to be ignored by digitalWrite and capabilityResponse
 
    HIGH = 1;
@@ -196,14 +221,25 @@ ErrorsArray: array [1..53] of String = (
    SERIAL_READ_MODE_CONT =   $00;
    SERIAL_READ_MODE_STOP =   $01;
 
-   // ConfigurableFirmata
+   // I2C ConfigurableFirmata
    I2C_WRITE                = $00;
-   I2C_READ                 = $08;
-   I2C_READ_CONTINUOUSLY    = $10;
-   I2C_STOP_READING         = $18;
-   I2C_READ_WRITE_MODE_MASK = $18;
-   I2C_10BIT_ADDRESS_MODE_MASK = $20;
-   I2C_AUTORESTART_RESTART     = $40;
+   I2C_READ                 = $08;      // Bit 3, 00001000
+   I2C_READ_CONTINUOUSLY    = $10;      // Bit 4, 00010000
+   I2C_STOP_READING         = $18;      // bit 3 and 4, 00011000
+   I2C_READ_WRITE_MODE_MASK = $18;      // bit 3 and 4, 00011000
+   I2C_10BIT_ADDRESS_MODE_MASK = $20;   // bit 5, 00100000
+   I2C_AUTORESTART_RESTART     = $40;   // bit 6, 01000000
+
+   // SPI ConfigurableFirmata
+   SPI_BEGIN                = $00;
+   SPI_DEVICE_CONFIG        = $01;
+   SPI_TRANSFER             = $02;
+   SPI_WRITE                = $03;
+   SPI_READ                 = $04;
+   SPI_REPLY                = $05;
+   SPI_END                  = $06;
+   SPI_WRITE_ACK            = $07;
+   MAX_SPI_DEVICES          = 4;
 
    //onewire ConfigurabelFirmata:
    ONEWIRE_SEARCH_REQUEST = $40;
@@ -213,13 +249,13 @@ ErrorsArray: array [1..53] of String = (
    ONEWIRE_SEARCH_ALARMS_REQUEST = $44;
    ONEWIRE_SEARCH_ALARMS_REPLY = $45;
 
-   ONEWIRE_RESET_REQUEST_BIT = $01;
-   ONEWIRE_SKIP_REQUEST_BIT = $02;
-   ONEWIRE_SELECT_REQUEST_BIT = $04;
-   ONEWIRE_READ_REQUEST_BIT = $08;
-   ONEWIRE_DELAY_REQUEST_BIT = $10;
-   ONEWIRE_WRITE_REQUEST_BIT = $20;
-   ONEWIRE_WITHDATA_REQUEST_BITS = $3C;
+   ONEWIRE_RESET_REQUEST_BIT = $01;        // 00000001
+   ONEWIRE_SKIP_REQUEST_BIT = $02;         // 00000010
+   ONEWIRE_SELECT_REQUEST_BIT = $04;       // 00000100
+   ONEWIRE_READ_REQUEST_BIT = $08;         // 00001000
+   ONEWIRE_DELAY_REQUEST_BIT = $10;        // 00010000
+   ONEWIRE_WRITE_REQUEST_BIT = $20;        // 00100000
+   ONEWIRE_WITHDATA_REQUEST_BITS = $3C;    // 00111100
 
    // Scheduler
    CREATE_TASK =             $00; // Create_task command  (0x00)
@@ -237,8 +273,8 @@ ErrorsArray: array [1..53] of String = (
    // Accelerated stepper
    ACCELSTEPPER_CONFIG =     $00; // config stepper
    ACCELSTEPPER_ZERO =       $01; // set zero stepper position
-   ACCELSTEPPER_STEP =       $02;  // relative steps to move
-   ACCELSTEPPER_TO =         $03;  // absolute steps to move from zero
+   ACCELSTEPPER_MOVE_RELATIVE = $02;  // relative steps to move from position
+   ACCELSTEPPER_MOVE_ABSOLUTE = $03;  // absolute steps to move from zero
    ACCELSTEPPER_ENABLE =     $04;  // enable steppers with enable pin
    ACCELSTEPPER_STOP =       $05;  // stepper move completed
    ACCELSTEPPER_REPORT_POSITION = $06;  // stepper report position
@@ -273,7 +309,10 @@ ErrorsArray: array [1..53] of String = (
    //                                 XXXXXX0 = no enable pin
    //                                 XXXXXX1 = has enable pin)
    //
+   // Servos
    MAX_SERVOS =               12; // max servos devices
+   //
+   // Encoders
    //
    MAX_ENCODERS =             5; // max encoders devices
    ENCODER_ATTACH =           $00;  // config
@@ -284,6 +323,23 @@ ErrorsArray: array [1..53] of String = (
    ENCODER_DETACH =           $05;  // detach encoder
    DIRECTION_MASK =           $40;  // B01000000
    ENCODER_MASK =             $3F;  // B00111111, ENCODER
+
+   // DHT Sensor module
+   DHTSENSOR_RESPONSE =       $00;
+   DHTSENSOR_DETACH =         $03;
+
+   // Frequency
+   MAX_FREQUENCIES = 2;    //only 2 pins are available on AVR based boards (2 and 3)
+   FREQUENCY_SUBCOMMAND_CLEAR  = $00;
+   FREQUENCY_SUBCOMMAND_QUERY  = $01;
+   FREQUENCY_SUBCOMMAND_REPORT = $02;
+   INTERRUPT_MODE_DISABLE      = $00;
+   INTERRUPT_MODE_LOW          = $01;
+   INTERRUPT_MODE_HIGH         = $02;
+   INTERRUPT_MODE_RISING       = $03;
+   INTERRUPT_MODE_FALLING      = $04;
+   INTERRUPT_MODE_CHANGE       = $05;
+
    // PS2 mouse
    MAX_MICE =                  $03;
    PS2MOUSE_RESET      =       $00;
@@ -304,21 +360,21 @@ ErrorsArray: array [1..53] of String = (
    PS2MOUSE_8_COUNT_MM =       3;
    PS2MOUSE_SCALING_1_TO_1  =  $E6;
    PS2MOUSE_SCALING_2_TO_1  =  $E7;
-   // NeoPixel NEOPIXELS_DATA = $51          hybridgroup/FirmataNeopixels
-   MAX_NEOPIXELS        =	4;
 
-   NEOPIXELS_OFF        =      $00; // set strip to be off
-   NEOPIXELS_CONFIG     =      $01; // configure the strip
-   NEOPIXELS_SHOW       =      $02; // latch the pixels and show them
-   NEOPIXELS_SET_PIXEL  =      $03; // set the color value of pixel n
-   NEOPIXELS_FADE_RUN_PAUSE =  $04; // run and pause fade
-   NEOPIXELS_SET_BRIGHTNESS =  $05; // set the brightness of pixel n using 8bit value
-   NEOPIXELS_SHIFT_CONFIG   =  $06; // shift pixels places along the strip
-   NEOPIXELS_FILL_SEGMENT   =  $07; // Fills all or a given start+length of strip.
-   NEOPIXELS_FADE_CONFIG    =  $08; // progressive pixels color change
-   NEOPIXELS_SHIFT_RUN      =  $09; // run shift step
-   NEOPIXELS_FADE_ONE_STEP  =  $0A; // progressive pixels color change, 1 step
-   NEOPIXELS_COPY_PIXELS    =  $0B; // move pixels from src to dest
+   // NeoPixel NEOPIXEL_DATA = $51          hybridgroup/FirmataNeopixel
+   MAX_NEOPIXELS       =	3;
+   NEOPIXEL_OFF        =      $00; // set strip to be off
+   NEOPIXEL_CONFIG     =      $01; // configure the strip
+   NEOPIXEL_SHOW       =      $02; // latch the pixels and show them
+   NEOPIXEL_SET_PIXEL  =      $03; // set the color value of pixel n
+   NEOPIXEL_FADE_RUN_PAUSE =  $04; // run and pause fade
+   NEOPIXEL_SET_BRIGHTNESS =  $05; // set the brightness of pixel n using 8bit value
+   NEOPIXEL_SHIFT_CONFIG   =  $06; // shift pixels places along the strip
+   NEOPIXEL_FILL_SEGMENT   =  $07; // Fills all or a given start+length of strip.
+   NEOPIXEL_FADE_CONFIG    =  $08; // progressive pixels color change
+   NEOPIXEL_SHIFT_RUN      =  $09; // run shift step
+   NEOPIXEL_FADE_ONE_STEP  =  $0A; // progressive pixels color change, 1 step
+   NEOPIXEL_MOVE_PIXELS    =  $0B; // move pixels from src to dest
 
 
 

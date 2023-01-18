@@ -2,7 +2,7 @@
   This source is only used to compile and install the package.
  }
 
-unit Firmata;
+unit firmata;
 
 {$warn 5023 off : no warning about unused units}
 interface
@@ -18,5 +18,5 @@ begin
 end;
 
 initialization
-  RegisterPackage('Firmata', @Register);
+  RegisterPackage('firmata', @Register);
 end.

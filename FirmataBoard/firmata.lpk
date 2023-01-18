@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
-  <Package Version="4">
+  <Package Version="5">
     <PathDelim Value="\"/>
-    <Name Value="Firmata"/>
+    <Name Value="firmata"/>
     <Type Value="RunAndDesignTime"/>
     <AutoUpdate Value="OnRebuildingAll"/>
     <CompilerOptions>
@@ -12,7 +12,7 @@
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
     </CompilerOptions>
-    <Version Minor="12"/>
+    <Version Major="2" Minor="6" Release="2"/>
     <Files Count="3">
       <Item1>
         <Filename Value="firmataboard.pas"/>
@@ -28,6 +28,7 @@
         <Type Value="LRS"/>
       </Item3>
     </Files>
+    <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="2">
       <Item1>
         <PackageName Value="LCLBase"/>
